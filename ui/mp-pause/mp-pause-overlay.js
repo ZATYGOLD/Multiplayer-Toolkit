@@ -1,5 +1,5 @@
 /**
- * Enhanced Pause Menu - resume countdown overlay.
+ * Multiplayer Toolkit - resume countdown overlay.
  *
  * A small, self-contained component that owns the full-screen "UNPAUSING..."
  * element. It only manipulates its own DOM, so it can be reused/replaced
@@ -7,7 +7,7 @@
  */
 import { CONFIG } from './mp-pause-config.js';
 
-const OVERLAY_ID = "epm-countdown";
+const OVERLAY_ID = "mpt-countdown";
 
 class PauseCountdownOverlay {
   element = null;
@@ -20,8 +20,8 @@ class PauseCountdownOverlay {
     const el = document.createElement("div");
     el.id = OVERLAY_ID;
     el.innerHTML =
-      '<div class="epm-count-label">Unpausing...</div>' +
-      '<div class="epm-count-num">' + CONFIG.resumeCountdownSeconds + '</div>';
+      '<div class="mpt-count-label">Unpausing...</div>' +
+      '<div class="mpt-count-num">' + CONFIG.resumeCountdownSeconds + '</div>';
     document.body.appendChild(el);
     this.element = el;
   }
@@ -29,7 +29,7 @@ class PauseCountdownOverlay {
   /** Show or hide the overlay. */
   show(visible) {
     if (this.element) {
-      this.element.classList.toggle("epm-show", !!visible);
+      this.element.classList.toggle("mpt-show", !!visible);
     }
   }
 
@@ -38,7 +38,7 @@ class PauseCountdownOverlay {
     if (!this.element) {
       return;
     }
-    const num = this.element.querySelector(".epm-count-num");
+    const num = this.element.querySelector(".mpt-count-num");
     if (!num) {
       return;
     }

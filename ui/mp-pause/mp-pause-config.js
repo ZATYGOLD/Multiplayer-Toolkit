@@ -1,5 +1,5 @@
 /**
- * Enhanced Pause Menu - configuration & constants.
+ * Multiplayer Toolkit - configuration & constants.
  *
  * Centralizes every tunable value and identifier so the manager, overlay and
  * styles stay consistent. Mirrors the data/logic separation used across the
@@ -7,7 +7,7 @@
  */
 
 /** Source tag used when registering/removing engine input filters. */
-const FILTER_SOURCE = "EnhancedPauseMenu";
+const FILTER_SOURCE = "MultiplayerToolkit";
 
 /** Interface mode that shows the built-in pause menu. */
 const PAUSE_MENU_MODE = "INTERFACEMODE_PAUSE_MENU";
@@ -41,10 +41,10 @@ const PROGRESS_ACTIONS = [
 
 /** Localization keys for the injected buttons (see text/en_us/mp-pause-text.xml). */
 const LOC = {
-  pauseGame: "LOC_EPM_PAUSE_GAME",
-  ready: "LOC_EPM_READY",
-  cancelReady: "LOC_EPM_CANCEL_READY",
-  resumeHost: "LOC_EPM_RESUME_HOST",
+  pauseGame: "LOC_MPT_PAUSE_GAME",
+  ready: "LOC_MPT_READY",
+  cancelReady: "LOC_MPT_CANCEL_READY",
+  resumeHost: "LOC_MPT_RESUME_HOST",
   viewMap: "LOC_ADVANCED_START_VIEW_MAP"  // reuse the base game's existing string
 };
 

@@ -1,5 +1,5 @@
 /**
- * Enhanced Pause Menu - multiplayer pause manager (singleton).
+ * Multiplayer Toolkit - multiplayer pause manager (singleton).
  *
  * Loaded as an in-game UIScript (scope="game"); active only in multiplayer.
  * Mirrors the base game's manager pattern (see base-standard
@@ -31,12 +31,12 @@ import PauseCountdownOverlay from './mp-pause-overlay.js';
 
 const STATE = { IDLE: "idle", PAUSED: "paused", COUNTDOWN: "countdown" };
 
-const STYLE_ELEMENT_ID = "epm-styles";
-const READY_BUTTON_ID = "epm-ready-button";
-const VIEW_MAP_BUTTON_ID = "epm-viewmap-button";
-const PAUSE_BUTTON_ID = "epm-pause-button";
-const HOST_HINT_ID = "epm-host-hint";
-const FOOTER_READY_ID = "epm-footer-ready";
+const STYLE_ELEMENT_ID = "mpt-styles";
+const READY_BUTTON_ID = "mpt-ready-button";
+const VIEW_MAP_BUTTON_ID = "mpt-viewmap-button";
+const PAUSE_BUTTON_ID = "mpt-pause-button";
+const HOST_HINT_ID = "mpt-host-hint";
+const FOOTER_READY_ID = "mpt-footer-ready";
 const PAUSE_MENU_CONTAINER = "#pause-menu-button-container";
 const NATIVE_RESUME_BUTTON = "#pause-menu-resume-button";
 
@@ -78,8 +78,8 @@ class MultiplayerPauseManager {
   }
 
   // ============================ Small helpers ============================
-  log(m) { try { console.log("[EnhancedPauseMenu] " + m); } catch (e) {} }
-  warn(m) { try { console.warn("[EnhancedPauseMenu] " + m); } catch (e) {} }
+  log(m) { try { console.log("[MultiplayerToolkit] " + m); } catch (e) {} }
+  warn(m) { try { console.warn("[MultiplayerToolkit] " + m); } catch (e) {} }
 
   amHost() {
     try { return GameContext.localPlayerID === Network.getHostPlayerId(); }
@@ -135,15 +135,15 @@ class MultiplayerPauseManager {
   // passes through untouched. No base-game files are modified.
   suppressNativePausePopup() {
     const mgr = this.dialogBox;
-    if (!mgr || typeof mgr.createDialog_MultiOption !== "function" || mgr.__epmPatched) return;
+    if (!mgr || typeof mgr.createDialog_MultiOption !== "function" || mgr.__mptPatched) return;
     const original = mgr.createDialog_MultiOption.bind(mgr);
     mgr.createDialog_MultiOption = function (params) {
       if (params && params.title === NATIVE_PAUSE_DIALOG_TITLE) {
-        return "epm-suppressed-pause-dialog";
+        return "mpt-suppressed-pause-dialog";
       }
       return original(params);
     };
-    mgr.__epmPatched = true;
+    mgr.__mptPatched = true;
     this.log("Native 'Game Paused' popup suppressed.");
   }
 
@@ -218,7 +218,7 @@ class MultiplayerPauseManager {
   makeButton(id, caption, onActivate) {
     const btn = document.createElement("fxs-button");
     btn.id = id;
-    btn.classList.add("pause-menu-button", "epm-injected");
+    btn.classList.add("pause-menu-button", "mpt-injected");
     btn.setAttribute("caption", caption);
     btn.addEventListener("action-activate", onActivate);
     return btn;
@@ -226,7 +226,7 @@ class MultiplayerPauseManager {
   injectMenuButtons(container) {
     const paused = this.state === STATE.PAUSED;
     const nativeResume = container.querySelector(NATIVE_RESUME_BUTTON);
-    container.querySelectorAll(".epm-injected").forEach((el) => el.remove());
+    container.querySelectorAll(".mpt-injected").forEach((el) => el.remove());
 
     if (paused) {
       // The native ui-next "Resume Game" hero button can't be reliably hooked to
@@ -234,7 +234,7 @@ class MultiplayerPauseManager {
       if (nativeResume) nativeResume.style.display = "none";
 
       const hint = document.createElement("div");
-      hint.className = "epm-host-hint epm-injected";
+      hint.className = "mpt-host-hint mpt-injected";
       hint.id = HOST_HINT_ID;
       hint.innerHTML = this.hostHintHTML();
 
@@ -272,8 +272,8 @@ class MultiplayerPauseManager {
   applyFooterClass(el) {
     const n = this.totalPlayers();
     const enough = this.converged() && n > 0 && (this.readyCount() / n) >= CONFIG.voteThreshold;
-    el.classList.toggle("epm-enough", enough);
-    el.classList.toggle("epm-not-enough", !enough);
+    el.classList.toggle("mpt-enough", enough);
+    el.classList.toggle("mpt-not-enough", !enough);
   }
   injectFooterReady() {
     let el = document.querySelector("#" + FOOTER_READY_ID);
@@ -282,7 +282,7 @@ class MultiplayerPauseManager {
       if (!fc) return;
       el = document.createElement("div");
       el.id = FOOTER_READY_ID;
-      el.className = "epm-footer-ready";
+      el.className = "mpt-footer-ready";
       fc.appendChild(el);
     }
     el.textContent = this.footerReadyText();
@@ -293,7 +293,7 @@ class MultiplayerPauseManager {
     if (el) el.remove();
   }
   hostHintHTML() {
-    const reason = this.pauseReason ? ('<span class="epm-reason">' + this.pauseReason + '</span>') : "";
+    const reason = this.pauseReason ? ('<span class="mpt-reason">' + this.pauseReason + '</span>') : "";
     let line;
     if (this.amHost()) line = "You are the host. Resume when ready.";
     else if (!this.iHoldFlag) line = "You are ready. Waiting for the host to resume.";
@@ -562,8 +562,8 @@ class MultiplayerPauseManager {
   }
   async onReady() {
     this.isMultiplayer = this.isMultiplayerGame();
-    if (!this.isMultiplayer) { this.log("Single-player; Enhanced Pause Menu dormant."); return; }
-    this.log("Multiplayer; initializing Enhanced Pause Menu.");
+    if (!this.isMultiplayer) { this.log("Single-player; Multiplayer Toolkit dormant."); return; }
+    this.log("Multiplayer; initializing Multiplayer Toolkit.");
     await this.loadCoreSingletons();
     this.injectStyles();
     this.overlay.build();

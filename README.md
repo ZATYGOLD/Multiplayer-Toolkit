@@ -1,18 +1,26 @@
-# Enhanced Pause Menu
+# Multiplayer Toolkit
 
-A multiplayer pause for **Sid Meier's Civilization VII**, built on the game's
-own pause menu and UI components. Any player can pause; the pause menu opens for
-everyone with a **Ready / Resume** button and a **View Map** button; a
-synchronized **countdown** plays before the game resumes. No base-game files are
-modified.
+A toolkit of multiplayer quality-of-life features for **Sid Meier's Civilization
+VII**, built on the game's own UI components.
+
+The first tool is a **synchronized multiplayer pause**: any player can pause;
+the pause menu opens for everyone with a **Ready / Resume** button and a
+**View Map** button; a synchronized **countdown** plays before the game resumes.
+
+> Note: the mod id is now `multiplayer-toolkit` (manifest:
+> `multiplayer-toolkit.modinfo`) and the display name is **Multiplayer Toolkit**.
+> The on-disk folder is still named `Enhanced Pause Menu` — the game identifies
+> mods by the id, not the folder, so this is fine; rename the folder to
+> `Multiplayer Toolkit` if you like. Because the id changed, **re-enable the mod
+> once** in **Additional Content**.
 
 ---
 
 ## Installation
 
-1. Keep/copy the **`Enhanced Pause Menu`** folder in your mods folder:
+1. Keep/copy the mod folder (currently **`Enhanced Pause Menu`**) in your mods folder:
    `…\Sid Meier's Civilization VII\Mods\Enhanced Pause Menu\`
-2. In game: **Main Menu → Additional Content** and enable **Enhanced Pause Menu**.
+2. In game: **Main Menu → Additional Content** and enable **Multiplayer Toolkit**.
 3. **Every player must install and enable the mod.** The pause *state* is
    synchronized by the engine, but the menu, ready tally, countdown and resume
    rules run per-client, so everyone needs it.
@@ -148,7 +156,7 @@ are **not** blocked.
 
 ```
 Enhanced Pause Menu/
-├─ enhanced-pause-menu.modinfo        # manifest (loads text + UI scripts in-game)
+├─ multiplayer-toolkit.modinfo        # manifest (loads text + UI scripts in-game)
 ├─ text/en_us/mp-pause-text.xml       # button caption strings (LOC_EPM_*)
 ├─ ui/mp-pause/                       # feature folder (mirrors the base game's ui/<feature>/)
 │  ├─ mp-pause-config.js              # constants & tunable settings (data)
@@ -162,4 +170,3 @@ The manager is a class-based singleton constructed on `engine.whenReady`, like t
 base game's `mp-ingame-mgr.js`. Tunables live in `mp-pause-config.js`
 (`CONFIG.resumeCountdownSeconds`, `voteThreshold`, `voteDelayMs`,
 `hostOverrideDelayMs`, …); styles live in `mp-pause.scss.js`.
-No base-game files are modified.
