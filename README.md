@@ -170,3 +170,22 @@ The manager is a class-based singleton constructed on `engine.whenReady`, like t
 base game's `mp-ingame-mgr.js`. Tunables live in `mp-pause-config.js`
 (`CONFIG.resumeCountdownSeconds`, `voteThreshold`, `voteDelayMs`,
 `hostOverrideDelayMs`, …); styles live in `mp-pause.scss.js`.
+
+---
+
+## License
+
+Copyright (C) 2026 Zatygold
+
+Multiplayer Toolkit is free software: you can redistribute it and/or modify it
+under the terms of the **GNU General Public License** as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program. If not, see <https://www.gnu.org/licenses/>. The full text is in
+the [`LICENSE`](LICENSE) file.
