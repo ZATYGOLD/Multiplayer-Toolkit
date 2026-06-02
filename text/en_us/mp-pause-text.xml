@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Database>
+  <EnglishText>
+    <Row Tag="LOC_MPT_PAUSE_GAME">
+      <Text>Pause Game</Text>
+    </Row>
+    <Row Tag="LOC_MPT_READY">
+      <Text>Ready</Text>
+    </Row>
+    <Row Tag="LOC_MPT_CANCEL_READY">
+      <Text>Cancel Ready</Text>
+    </Row>
+    <Row Tag="LOC_MPT_RESUME_HOST">
+      <Text>Resume (Host)</Text>
+    </Row>
+  </EnglishText>
+</Database>
