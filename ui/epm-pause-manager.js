@@ -1,332 +1,293 @@
 /**
- * Enhanced Pause Menu - synchronized multiplayer pause manager.
+ * Enhanced Pause Menu - synchronized multiplayer pause built on the game's
+ * own pause menu and components.
  *
- * Loaded as an in-game UIScript (scope="game"). It activates only when the
- * current game is a multiplayer game; in single-player it does nothing (the
- * stock pause menu already pauses the simulation there).
+ * Loaded as an in-game UIScript (scope="game"). Active only in multiplayer.
  *
- * Design summary (see README.md for the full rationale):
+ * WHAT IT DOES
+ *  - Adds a "Pause Game" button to the built-in pause menu (Esc menu). Any
+ *    player can use it to pause the multiplayer game.
+ *  - When the game is paused, the built-in pause menu is opened on EVERY
+ *    player's screen, with a "Ready / Resume" button and a "View Map" button
+ *    (View Map reuses the game's own LOC_ADVANCED_START_VIEW_MAP string and
+ *    simply returns to the world so players can look around; Esc re-opens the
+ *    pause menu).
+ *  - Game-advancing input is blocked while paused (engine InputFilterManager),
+ *    but the camera, information screens and city/production panels remain
+ *    viewable - you just can't commit anything (the engine pause prevents it).
+ *  - When the unpause is triggered, every open pause menu is closed first, then
+ *    a synchronized 3-2-1 countdown plays for everyone before play resumes.
  *
- *   - The authoritative pause is the engine's own multiplayer pause
- *     (Network.toggleMultiplayerPause / GamePauseStateChanged). This is the
- *     ONLY thing that truly halts turn progression across every client, so it
- *     is the backbone of the mod. Everything else is layered on top of it.
+ * HOW PAUSE / READY / RESUME IS SYNCHRONIZED
+ *  The engine exposes a multiplayer pause that is paused while ANY player holds
+ *  a "want pause" flag, unpaused the instant all flags are cleared, and fully
+ *  synchronized via the GamePauseStateChanged event. The only synchronized
+ *  per-player primitive is therefore this binary flag plus an aggregate count
+ *  (Network.getNumWantPausePlayers). We build everything on it:
  *
- *   - Requirement 4 (any player can pause): the on-screen "Pause" button calls
- *     Network.toggleMultiplayerPause(). Because every pause/unpause is funneled
- *     through this script, each client always knows whether IT initiated the
- *     pause, which is what makes host-only resume deterministic. The stock
- *     "multiplayer-pause" keybind is filtered out so it cannot create an
- *     untracked pause that would bypass the host-authority logic.
+ *    flag held  == "this player is NOT ready to resume"
+ *    flag clear == "this player is ready to resume"
  *
- *   - Requirement 1 (pause overlay): a lightweight DOM overlay is shown on
- *     every client from the synchronized GamePauseStateChanged event. Its
- *     backdrop uses pointer-events:none so the 3D map underneath stays
- *     draggable/zoomable (requirement 5 - "looking at the map is ok").
+ *  On pause, every client holds a flag (so the game stays paused and the menu
+ *  is shown to all). Clicking Ready clears your own flag. readyCount = N-count
+ *  is identical on every client, giving a synchronized "Ready X / N" tally.
+ *  The game unpauses (synchronized) the moment the last flag clears, which
+ *  happens via:
+ *    - Consensus: everyone clicks Ready, or
+ *    - Vote: after VOTE_DELAY, once >= VOTE_THRESHOLD are ready, the remaining
+ *      clients auto-clear (each evaluates the same shared count + its own
+ *      timer), or
+ *    - Override: after HOST_OVERRIDE_DELAY, any readiness clears the rest
+ *      (anti-AFK safety / host force-resume).
+ *  The host's button is labelled as the authoritative Resume.
  *
- *   - Requirement 5 (block progressing input): while paused (and during the
- *     resume countdown) all game-advancing input actions are added to the
- *     engine's InputFilterManager, which sits first in the input handler chain.
- *     Camera and information/read-only actions are deliberately NOT filtered.
- *     The engine pause itself already prevents the simulation from advancing,
- *     so this is belt-and-suspenders for the UI layer.
- *
- *   - Requirement 3 (only host can resume): only the host's overlay shows a
- *     "Resume" button. To guarantee the host can actually clear the pause even
- *     when a NON-host started it (the engine tracks a per-player "want pause"
- *     flag and a client can only clear its own), the script performs a
- *     host-ownership handoff: when a non-host starts a pause, the host adds its
- *     own want-pause flag and the original initiator then drops theirs, leaving
- *     the host as the sole flag holder. From then on only the host can unpause.
- *
- *   - Requirement 2 (end-pause countdown): when the host resumes, the engine
- *     fires GamePauseStateChanged(unpaused) on every client simultaneously.
- *     Each client then runs an identical 3-2-1 countdown (keeping input blocked
- *     and the overlay up) before fully handing control back, so the countdown
- *     is synchronized without any custom network message.
+ *  NOTE/LIMITATION: the engine provides no per-player or host-specific pause
+ *  query and no custom UI network message, so a *unilateral, instant* host-only
+ *  override that other clients could detect on the wire is not possible from a
+ *  UI mod. Host authority is therefore expressed through the configurable
+ *  thresholds above (host force-resume becomes effective after
+ *  HOST_OVERRIDE_DELAY). All timings/thresholds are configurable below.
  */
 (function () {
   "use strict";
 
-  // ---------------------------------------------------------------------------
-  // Configuration
-  // ---------------------------------------------------------------------------
+  // ----------------------------- Configuration ------------------------------
   const FILTER_SOURCE = "EnhancedPauseMenu";
-  const RESUME_COUNTDOWN_SECONDS = 3;
-  const HANDOFF_POLL_MS = 200;       // how often a non-host initiator checks for host takeover
-  const HANDOFF_TIMEOUT_MS = 6000;   // give up waiting for host takeover after this long
-  const RESUME_MAX_ATTEMPTS = 25;    // bound the host resume wait (~5s) for missing-mod safety
+  const RESUME_COUNTDOWN_SECONDS = 5;   // length of the resume countdown
+  const POLL_MS = 250;                  // tally / condition evaluation interval
+  const CONVERGENCE_DELAY_MS = 2000;    // wait for all clients to flag in
+  const VOTE_THRESHOLD = 0.60;          // 60% ready to trigger a vote resume
+  const VOTE_DELAY_MS = 20000;          // vote resume only after this long
+  const HOST_OVERRIDE_DELAY_MS = 45000; // any readiness resumes after this long
 
-  // Input actions that advance / change the game state. Blocked while paused.
-  // (Verified against Base/modules/core/config/Input.xml.)
+  const PAUSE_MENU_MODE = "INTERFACEMODE_PAUSE_MENU";
+
+  // Input actions that advance / change game state (blocked while paused).
+  // Verified against Base/modules/core/config/Input.xml. Camera, selection,
+  // information screens and city/production panels are intentionally allowed.
   const PROGRESS_ACTIONS = [
-    "next-action",        // advance to next action / end turn
-    "keyboard-enter",     // mapped to LOC_NEXT_ACTION (end turn / confirm)
-    "force-end-turn",     // force end the turn
-    "unit-move",          // issue a move order
-    "unit-ranged-attack", // issue a ranged attack
-    "unit-skip-turn",     // skip / spend the unit's turn
-    "unit-sleep",
-    "unit-fortify",
-    "unit-heal",
-    "unit-alert",
-    "unit-auto-explore",
-    "trigger-accept-dip", // accept a diplomatic action
-    "quick-load"          // reloading a save mid-pause
+    "next-action", "keyboard-enter", "force-end-turn",
+    "unit-move", "unit-ranged-attack", "unit-skip-turn", "unit-sleep",
+    "unit-fortify", "unit-heal", "unit-alert", "unit-auto-explore",
+    "trigger-accept-dip", "quick-load"
   ];
 
-  // Filtered for the WHOLE session so the stock keybind can never create an
-  // untracked pause/unpause that bypasses the host-authority logic. Pausing is
-  // done exclusively through this mod's on-screen button.
-  const ALWAYS_FILTERED = ["multiplayer-pause"];
-
-  // ---------------------------------------------------------------------------
-  // State
-  // ---------------------------------------------------------------------------
+  // ------------------------------- State -------------------------------------
   const STATE = { IDLE: "idle", PAUSED: "paused", COUNTDOWN: "countdown" };
   let state = STATE.IDLE;
 
   let isMultiplayer = false;
-  let inputFilter = null;        // InputFilterManager singleton (dynamically imported)
-  let contextManager = null;     // ContextManager singleton (dynamically imported, best effort)
-
-  let iHoldPauseFlag = false;    // does THIS client currently hold a want-pause flag?
-  let iInitiatedPause = false;   // did THIS client start the current pause?
-  let handoffPoll = null;
-  let handoffDeadline = 0;
-  let progressFiltersActive = false;
+  let iHoldFlag = false;
+  let pauseStart = 0;
+  let maxCount = 0;
+  let pollTimer = null;
   let countdownTimer = null;
-  let dialogObserver = null;
+  let progressFiltersActive = false;
+  let pauseReason = "";   // optional cause shown in the menu (e.g. a disconnect)
 
-  // DOM references
-  let overlayRoot = null;
-  let overlayTitle = null;
-  let overlaySub = null;
-  let overlayControls = null;
-  let overlayCountdown = null;
-  let pauseButton = null;
+  // Core singletons (dynamically imported; gameplay still works if any fail).
+  let InputFilter = null;
+  let InterfaceModeRef = null;
+  let DialogBoxMgr = null;
+
+  // DOM
   let styleEl = null;
+  let countdownEl = null;
 
-  // ---------------------------------------------------------------------------
-  // Small helpers
-  // ---------------------------------------------------------------------------
-  function log(msg) { try { console.log("[EnhancedPauseMenu] " + msg); } catch (e) {} }
-  function warn(msg) { try { console.warn("[EnhancedPauseMenu] " + msg); } catch (e) {} }
+  // ------------------------------- Helpers -----------------------------------
+  function log(m) { try { console.log("[EnhancedPauseMenu] " + m); } catch (e) {} }
+  function warn(m) { try { console.warn("[EnhancedPauseMenu] " + m); } catch (e) {} }
 
   function amHost() {
     try { return GameContext.localPlayerID === Network.getHostPlayerId(); }
     catch (e) { return false; }
   }
-
   function numWantPause() {
-    try { return Network.getNumWantPausePlayers(); } catch (e) { return 0; }
+    try { return Network.getNumWantPausePlayers() | 0; } catch (e) { return 0; }
   }
-
-  function wantPauseName() {
-    try { return Network.getWantPausePlayerName() || ""; } catch (e) { return ""; }
-  }
-
   function toggleEnginePause() {
     try { Network.toggleMultiplayerPause(); return true; }
     catch (e) { warn("toggleMultiplayerPause failed: " + e); return false; }
   }
+  function humanPlayerCount() {
+    let n = 0;
+    try {
+      const ids = Players.getAliveMajorIds();
+      for (let i = 0; i < ids.length; i++) {
+        const p = Players.get(ids[i]);
+        if (p && p.isHuman) n++;
+      }
+    } catch (e) { /* fall through */ }
+    return n;
+  }
+  // N = best estimate of participating players; self-calibrates to the observed
+  // flag count so it is correct once everyone has flagged in.
+  function totalPlayers() {
+    const humans = humanPlayerCount();
+    return Math.max(humans, maxCount, 1);
+  }
+  function readyCount() {
+    return Math.max(0, totalPlayers() - numWantPause());
+  }
+  // True once enough time has passed for every client to have flagged in.
+  function converged() {
+    return (Date.now() - pauseStart) >= CONVERGENCE_DELAY_MS;
+  }
 
-  // ---------------------------------------------------------------------------
-  // Dynamic imports of core singletons (paths can vary by install, so we try a
-  // few). Core gameplay still works if these fail; they only power niceties.
-  // ---------------------------------------------------------------------------
-  async function importFirst(candidates) {
+  // --------------------- Dynamic import of core singletons -------------------
+  async function importModule(candidates) {
     for (const path of candidates) {
-      try {
-        const mod = await import(path);
-        if (mod && (mod.default || mod)) return mod.default || mod;
-      } catch (e) { /* try next */ }
+      try { const m = await import(path); if (m) return m; } catch (e) { /* next */ }
     }
     return null;
   }
-
   async function loadCoreSingletons() {
-    inputFilter = await importFirst([
-      "/core/ui/input/input-filter.js",
+    const inputMod = await importModule([
       "fs://game/core/ui/input/input-filter.js",
-      "../../core/ui/input/input-filter.js",
-      "../core/ui/input/input-filter.js",
-      "core/ui/input/input-filter.js"
+      "/core/ui/input/input-filter.js",
+      "../../core/ui/input/input-filter.js"
     ]);
-    if (inputFilter) {
-      try { inputFilter.allowFilters = true; } catch (e) {}
-      // Permanently neutralize the stock pause keybind.
-      addFilters(ALWAYS_FILTERED);
-      log("InputFilterManager ready.");
-    } else {
-      warn("Could not load InputFilterManager; input blocking degraded (engine pause still stops progression).");
-    }
+    InputFilter = inputMod ? (inputMod.default || inputMod) : null;
+    if (InputFilter) { try { InputFilter.allowFilters = true; } catch (e) {} }
 
-    contextManager = await importFirst([
-      "/core/ui/context-manager/context-manager.js",
-      "fs://game/core/ui/context-manager/context-manager.js",
-      "../../core/ui/context-manager/context-manager.js",
-      "../core/ui/context-manager/context-manager.js",
-      "core/ui/context-manager/context-manager.js"
+    const imMod = await importModule([
+      "fs://game/core/ui/interface-modes/interface-modes.js",
+      "/core/ui/interface-modes/interface-modes.js",
+      "../../core/ui/interface-modes/interface-modes.js"
     ]);
+    InterfaceModeRef = imMod ? (imMod.InterfaceMode || imMod.default || null) : null;
+
+    const dbMod = await importModule([
+      "fs://game/core/ui/dialog-box/manager-dialog-box.js",
+      "/core/ui/dialog-box/manager-dialog-box.js",
+      "../../core/ui/dialog-box/manager-dialog-box.js"
+    ]);
+    DialogBoxMgr = dbMod ? (dbMod.DialogBoxManager || dbMod.default || null) : null;
+
+    log("singletons: InputFilter=" + !!InputFilter + " InterfaceMode=" + !!InterfaceModeRef + " DialogBoxManager=" + !!DialogBoxMgr);
   }
 
-  function addFilters(names) {
-    if (!inputFilter) return;
-    for (const n of names) {
-      try { inputFilter.addInputFilter({ inputName: n, filterSource: FILTER_SOURCE }); } catch (e) {}
-    }
-  }
-
-  function removeFilters(names) {
-    if (!inputFilter) return;
-    for (const n of names) {
-      try { inputFilter.removeInputFilter({ inputName: n, filterSource: FILTER_SOURCE }); } catch (e) {}
-    }
-  }
-
+  // ----------------------------- Input filtering -----------------------------
   function applyProgressFilters() {
-    if (progressFiltersActive) return;
-    addFilters(PROGRESS_ACTIONS);
+    if (progressFiltersActive || !InputFilter) return;
+    for (const n of PROGRESS_ACTIONS) {
+      try { InputFilter.addInputFilter({ inputName: n, filterSource: FILTER_SOURCE }); } catch (e) {}
+    }
     progressFiltersActive = true;
   }
-
   function clearProgressFilters() {
-    if (!progressFiltersActive) return;
-    removeFilters(PROGRESS_ACTIONS);
+    if (!progressFiltersActive || !InputFilter) { progressFiltersActive = false; return; }
+    for (const n of PROGRESS_ACTIONS) {
+      try { InputFilter.removeInputFilter({ inputName: n, filterSource: FILTER_SOURCE }); } catch (e) {}
+    }
     progressFiltersActive = false;
   }
 
-  // ---------------------------------------------------------------------------
-  // Native pause popup suppression
-  // The stock code shows a modal hourglass dialog ("Game Paused") that would
-  // block panning the map. We hide it (CSS) and pop it from the context stack
-  // so the map stays interactive while our own overlay communicates the pause.
-  // ---------------------------------------------------------------------------
-  function suppressNativeDialog() {
-    document.body.classList.add("epm-active");
-    handleNativeDialogs();
-    if (!dialogObserver) {
-      dialogObserver = new MutationObserver(() => {
-        if (state === STATE.PAUSED || state === STATE.COUNTDOWN) handleNativeDialogs();
-      });
-      try { dialogObserver.observe(document.body, { childList: true, subtree: true }); } catch (e) {}
+  // ------------------ Interface mode (open / close pause menu) ----------------
+  function pauseMenuIsOpen() {
+    try {
+      if (InterfaceModeRef && typeof InterfaceModeRef.isInInterfaceMode === "function") {
+        return InterfaceModeRef.isInInterfaceMode(PAUSE_MENU_MODE);
+      }
+    } catch (e) {}
+    return !!document.querySelector("#screen-pause-menu");
+  }
+  function openPauseMenu() {
+    if (pauseMenuIsOpen()) return;
+    try {
+      if (InterfaceModeRef && typeof InterfaceModeRef.switchTo === "function") {
+        InterfaceModeRef.switchTo(PAUSE_MENU_MODE);
+      }
+    } catch (e) { warn("openPauseMenu failed: " + e); }
+  }
+  function closePauseMenu() {
+    if (!pauseMenuIsOpen()) return;
+    try {
+      if (InterfaceModeRef && typeof InterfaceModeRef.switchToDefault === "function") {
+        InterfaceModeRef.switchToDefault();
+      }
+    } catch (e) { warn("closePauseMenu failed: " + e); }
+  }
+
+  // ------------- Dismiss the stock modal "Game Paused" hourglass --------------
+  // The base game pops a modal hourglass dialog (with a mouse guard) on pause,
+  // which would block looking at the map. We dismiss it ONCE per pause (with a
+  // single retry). We deliberately do NOT run a continuous observer here - that
+  // was the cause of the earlier "clicking a unit removed the UI" bug.
+  function dismissNativeHourglass(retries) {
+    retries = retries == null ? 4 : retries;
+    let dlg = null;
+    try { dlg = document.querySelector('screen-dialog-box[displayHourGlass="true"]'); } catch (e) {}
+    if (dlg && DialogBoxMgr && typeof DialogBoxMgr.closeDialogBox === "function") {
+      try { DialogBoxMgr.closeDialogBox(); } catch (e) {}
+    }
+    if (retries > 0 && state === STATE.PAUSED) {
+      setTimeout(() => dismissNativeHourglass(retries - 1), 250);
     }
   }
 
-  function handleNativeDialogs() {
-    let dialogs;
-    try { dialogs = document.querySelectorAll('screen-dialog-box[displayHourGlass="true"]'); }
-    catch (e) { return; }
-    if (!dialogs || dialogs.length === 0) return;
-    // Visually hidden via CSS already; also try to pop it to release any modal
-    // mouse-guard so the camera keeps working.
-    if (contextManager && typeof contextManager.pop === "function") {
-      try { contextManager.pop("screen-dialog-box"); } catch (e) { /* non-fatal */ }
-    }
-  }
-
-  function stopSuppressNativeDialog() {
-    document.body.classList.remove("epm-active");
-    if (dialogObserver) {
-      try { dialogObserver.disconnect(); } catch (e) {}
-      dialogObserver = null;
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // UI construction
-  // ---------------------------------------------------------------------------
+  // ----------------------------- Countdown overlay ---------------------------
   function injectStyles() {
     if (styleEl) return;
     styleEl = document.createElement("style");
     styleEl.id = "epm-styles";
     styleEl.textContent = `
-      /* Hide the stock modal "Game Paused" hourglass dialog while we own pause */
-      body.epm-active screen-dialog-box[displayHourGlass="true"] { display: none !important; }
-
-      #epm-pause-button {
-        position: fixed; top: 12rem; left: 50%; transform: translateX(-50%);
-        z-index: 8990; pointer-events: auto; cursor: pointer;
-        display: flex; align-items: center; gap: 0.5rem;
-        padding: 0.5rem 1.25rem; border-radius: 999px;
-        font-family: "Times New Roman", "BodyFont", serif; font-size: 1rem; letter-spacing: 0.05em;
-        color: #f3e2c0; background: rgba(20,16,10,0.78);
-        border: 1px solid rgba(196,160,90,0.85);
-        box-shadow: 0 0.25rem 1rem rgba(0,0,0,0.5);
-        transition: background 0.15s ease, transform 0.1s ease;
-      }
-      #epm-pause-button:hover { background: rgba(48,38,22,0.95); }
-      #epm-pause-button:active { transform: translateX(-50%) scale(0.97); }
-      #epm-pause-button.epm-hidden { display: none; }
-      #epm-pause-button .epm-icon { font-size: 1.1rem; line-height: 1; }
-
-      #epm-overlay {
+      #epm-countdown {
         position: fixed; inset: 0; z-index: 9000; pointer-events: none;
-        display: none; flex-direction: column; align-items: center; justify-content: space-between;
+        display: none; flex-direction: column; align-items: center; justify-content: center;
+        font-family: "Times New Roman", "BodyFont", serif;
+        background: radial-gradient(rgba(8,10,18,0.10), rgba(8,10,18,0.45));
+      }
+      #epm-countdown.epm-show { display: flex; }
+      #epm-countdown .epm-count-label {
+        width: 100%; text-align: center;
+        font-size: 1.5rem; letter-spacing: 0.14em; text-transform: uppercase; color: #e7d6ab;
+        text-shadow: 0 0.1rem 0.5rem rgba(0,0,0,0.85);
+      }
+      #epm-countdown .epm-count-num {
+        width: 100%; text-align: center;
+        font-size: 9rem; line-height: 1; font-weight: 700; color: #f8ecca;
+        text-shadow: 0 0.2rem 1rem rgba(0,0,0,0.9);
+        animation: epm-pop 1s ease-out;
+      }
+      @keyframes epm-pop {
+        0% { transform: scale(1.7); opacity: 0; }
+        25% { transform: scale(1); opacity: 1; }
+        100% { transform: scale(0.9); opacity: 0.85; }
+      }
+      /* Our injected pause-menu buttons + status, styled to sit with the natives */
+      /* Host / status hint shown directly above the Resume button */
+      .epm-host-hint {
+        width: 100%; text-align: center; margin-bottom: 0.5rem;
+        font-family: "Times New Roman","BodyFont",serif; font-size: 1.05rem;
+        letter-spacing: 0.04em; color: #e7d6ab; text-shadow: 0 0.1rem 0.4rem rgba(0,0,0,0.7);
+      }
+      .epm-host-hint .epm-reason { display: block; color: #f0c98a; margin-bottom: 0.25rem; }
+      /* "Ready: X / N" placed in the footer, under the build number, with a gap */
+      .epm-footer-ready {
+        width: 100%; text-align: center; margin-top: 1.75rem;
+        font-family: "Times New Roman","BodyFont",serif; font-size: 1.7rem; font-weight: 700;
+        letter-spacing: 0.06em; text-shadow: 0 0.12rem 0.5rem rgba(0,0,0,0.9);
+      }
+      .epm-footer-ready.epm-not-enough { color: #ff5555; }
+      .epm-footer-ready.epm-enough { color: #5dff86; }
+
+      /* Resume countdown overlay - top-center of the GAME SCENE */
+      #epm-countdown {
+        position: fixed; top: 6rem; left: 0; right: 0; z-index: 9000; pointer-events: none;
+        display: none; flex-direction: column; align-items: center;
         font-family: "Times New Roman", "BodyFont", serif;
       }
-      #epm-overlay.epm-show { display: flex; }
-      #epm-overlay .epm-vignette {
-        position: absolute; inset: 0; pointer-events: none;
-        box-shadow: inset 0 0 18rem rgba(0,0,0,0.55);
-        background:
-          linear-gradient(rgba(8,10,18,0.30), rgba(8,10,18,0.10) 18%, rgba(8,10,18,0.10) 82%, rgba(8,10,18,0.34));
-        animation: epm-fadein 0.25s ease both;
+      #epm-countdown.epm-show { display: flex; }
+      #epm-countdown .epm-count-label {
+        width: 100%; text-align: center; font-size: 1.7rem; letter-spacing: 0.16em;
+        text-transform: uppercase; color: #e7d6ab; text-shadow: 0 0.1rem 0.5rem rgba(0,0,0,0.9);
       }
-      @keyframes epm-fadein { from { opacity: 0; } to { opacity: 1; } }
-
-      #epm-overlay .epm-banner {
-        position: relative; margin-top: 6rem; pointer-events: none;
-        display: flex; flex-direction: column; align-items: center;
-        padding: 1rem 3rem;
-        background: linear-gradient(rgba(10,8,4,0.72), rgba(10,8,4,0.55));
-        border-top: 1px solid rgba(196,160,90,0.7);
-        border-bottom: 1px solid rgba(196,160,90,0.7);
-        animation: epm-fadein 0.25s ease both;
+      #epm-countdown .epm-count-num {
+        width: 100%; text-align: center; font-size: 7rem; line-height: 1; font-weight: 700;
+        color: #f8ecca; text-shadow: 0 0.2rem 1rem rgba(0,0,0,0.95); animation: epm-pop 1s ease-out;
       }
-      #epm-overlay .epm-title {
-        font-size: 2.6rem; letter-spacing: 0.18em; color: #f6e6bf;
-        text-transform: uppercase; text-shadow: 0 0.15rem 0.6rem rgba(0,0,0,0.8);
-        display: flex; align-items: center; gap: 1rem;
-      }
-      #epm-overlay .epm-title .epm-pulse { animation: epm-pulse 1.6s ease-in-out infinite; }
-      @keyframes epm-pulse { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
-      #epm-overlay .epm-sub { margin-top: 0.4rem; font-size: 1.15rem; color: #d8c79c; letter-spacing: 0.04em; }
-
-      #epm-overlay .epm-controls {
-        position: relative; margin-bottom: 9rem; pointer-events: auto;
-        display: flex; flex-direction: column; align-items: center; gap: 0.6rem;
-      }
-      #epm-overlay .epm-hint { font-size: 1rem; color: #cdbf99; letter-spacing: 0.04em; }
-      #epm-resume-button {
-        pointer-events: auto; cursor: pointer;
-        padding: 0.7rem 2.5rem; border-radius: 6px;
-        font-size: 1.25rem; letter-spacing: 0.08em; text-transform: uppercase;
-        color: #1a1408; background: linear-gradient(#f0d9a4, #c79a4f);
-        border: 1px solid #f4e6c2; box-shadow: 0 0.3rem 0.9rem rgba(0,0,0,0.55);
-        transition: filter 0.15s ease, transform 0.1s ease;
-      }
-      #epm-resume-button:hover { filter: brightness(1.08); }
-      #epm-resume-button:active { transform: scale(0.97); }
-      #epm-resume-button.epm-hidden { display: none; }
-
-      #epm-overlay .epm-countdown {
-        position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-        display: none; align-items: center; justify-content: center; pointer-events: none;
-        flex-direction: column;
-      }
-      #epm-overlay .epm-countdown.epm-show { display: flex; }
-      #epm-overlay .epm-countdown .epm-count-label {
-        font-size: 1.4rem; letter-spacing: 0.12em; color: #e7d6ab; text-transform: uppercase;
-        text-shadow: 0 0.1rem 0.5rem rgba(0,0,0,0.8);
-      }
-      #epm-overlay .epm-countdown .epm-count-num {
-        font-size: 8rem; line-height: 1; color: #f8ecca; font-weight: 700;
-        text-shadow: 0 0.2rem 1rem rgba(0,0,0,0.85);
-        animation: epm-count-pop 1s ease-out;
-      }
-      @keyframes epm-count-pop {
+      @keyframes epm-pop {
         0% { transform: scale(1.6); opacity: 0; }
         25% { transform: scale(1); opacity: 1; }
         100% { transform: scale(0.9); opacity: 0.85; }
@@ -334,227 +295,262 @@
     `;
     document.head.appendChild(styleEl);
   }
-
-  function buildUI() {
-    injectStyles();
-
-    // --- Pause button (any player) ---
-    pauseButton = document.createElement("div");
-    pauseButton.id = "epm-pause-button";
-    pauseButton.classList.add("epm-hidden");
-    pauseButton.innerHTML = '<span class="epm-icon">&#10073;&#10073;</span><span>Pause Game</span>';
-    pauseButton.addEventListener("click", onPauseButtonClick);
-    document.body.appendChild(pauseButton);
-
-    // --- Overlay ---
-    overlayRoot = document.createElement("div");
-    overlayRoot.id = "epm-overlay";
-
-    const vignette = document.createElement("div");
-    vignette.className = "epm-vignette";
-    overlayRoot.appendChild(vignette);
-
-    const banner = document.createElement("div");
-    banner.className = "epm-banner";
-    overlayTitle = document.createElement("div");
-    overlayTitle.className = "epm-title";
-    overlayTitle.innerHTML = '<span class="epm-pulse">&#10073;&#10073;</span><span>Game Paused</span>';
-    overlaySub = document.createElement("div");
-    overlaySub.className = "epm-sub";
-    overlaySub.textContent = "";
-    banner.appendChild(overlayTitle);
-    banner.appendChild(overlaySub);
-    overlayRoot.appendChild(banner);
-
-    overlayControls = document.createElement("div");
-    overlayControls.className = "epm-controls";
-    const resumeBtn = document.createElement("div");
-    resumeBtn.id = "epm-resume-button";
-    resumeBtn.textContent = "Resume";
-    resumeBtn.addEventListener("click", onResumeButtonClick);
-    const hint = document.createElement("div");
-    hint.className = "epm-hint";
-    overlayControls.appendChild(resumeBtn);
-    overlayControls.appendChild(hint);
-    overlayRoot.appendChild(overlayControls);
-
-    overlayCountdown = document.createElement("div");
-    overlayCountdown.className = "epm-countdown";
-    overlayCountdown.innerHTML =
-      '<div class="epm-count-label">Resuming in</div><div class="epm-count-num">3</div>';
-    overlayRoot.appendChild(overlayCountdown);
-
-    document.body.appendChild(overlayRoot);
+  // Simple resume countdown overlay shown top-center on the game scene.
+  function buildCountdown() {
+    if (countdownEl) return;
+    countdownEl = document.createElement("div");
+    countdownEl.id = "epm-countdown";
+    countdownEl.innerHTML =
+      '<div class="epm-count-label">Unpausing...</div>' +
+      '<div class="epm-count-num">' + RESUME_COUNTDOWN_SECONDS + '</div>';
+    document.body.appendChild(countdownEl);
+  }
+  function showCountdown(show) {
+    if (countdownEl) countdownEl.classList.toggle("epm-show", !!show);
   }
 
-  function showPauseButton() {
-    if (pauseButton && state === STATE.IDLE) pauseButton.classList.remove("epm-hidden");
-  }
-  function hidePauseButton() {
-    if (pauseButton) pauseButton.classList.add("epm-hidden");
-  }
-
-  function refreshOverlayForPaused() {
-    const name = wantPauseName();
-    overlaySub.textContent = name ? ("Paused by " + name) : "The game is paused.";
-    const resumeBtn = document.getElementById("epm-resume-button");
-    const hint = overlayControls.querySelector(".epm-hint");
-    if (amHost()) {
-      resumeBtn.classList.remove("epm-hidden");
-      hint.textContent = "You are the host — only you can resume the game.";
-    } else {
-      resumeBtn.classList.add("epm-hidden");
-      hint.textContent = "Waiting for the host to resume the game…";
-    }
-  }
-
-  function showOverlay() {
-    overlayRoot.classList.add("epm-show");
-    overlayCountdown.classList.remove("epm-show");
-  }
-  function hideOverlay() {
-    overlayRoot.classList.remove("epm-show");
-    overlayCountdown.classList.remove("epm-show");
-  }
-
-  // ---------------------------------------------------------------------------
-  // Button handlers
-  // ---------------------------------------------------------------------------
-  function onPauseButtonClick() {
-    if (!isMultiplayer || state !== STATE.IDLE) return;
-    if (numWantPause() > 0) return; // already paused somewhere
-    iInitiatedPause = true;
-    iHoldPauseFlag = true;
-    hidePauseButton();
-    toggleEnginePause(); // -> GamePauseStateChanged(paused) on all clients
-  }
-
-  function onResumeButtonClick() {
-    if (!amHost() || state !== STATE.PAUSED) return;
-    requestHostResume(0);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Host-only resume
-  // The host must be the sole want-pause flag holder for a single toggle to
-  // unpause everyone. The handoff (below) ensures that. If a non-host hand-off
-  // is still settling, we wait briefly and retry (bounded).
-  // ---------------------------------------------------------------------------
-  function requestHostResume(attempt) {
+  // --------------------- Pause-menu button injection -------------------------
+  // We inject the game's own fxs-button components into the built-in pause menu
+  // button container so they match the native look exactly.
+  let menuModeListener = null;
+  function tryInjectWhenMenuReady(attempt) {
     attempt = attempt || 0;
-    const count = numWantPause();
-    if (count > 1 && attempt < RESUME_MAX_ATTEMPTS) {
-      // A non-host flag is still being handed off; wait for it to settle
-      // (bounded so a client missing the mod can't hang resume forever).
-      setTimeout(() => {
-        if (state === STATE.PAUSED && amHost()) requestHostResume(attempt + 1);
-      }, HANDOFF_POLL_MS);
-      return;
+    const container = document.querySelector("#pause-menu-button-container");
+    if (container) { injectMenuButtons(container); return; }
+    if (attempt < 20) setTimeout(() => tryInjectWhenMenuReady(attempt + 1), 50);
+  }
+  // We hook the lightweight "interface-mode-changed" event (not a DOM observer)
+  // so injection only runs when the pause menu actually opens. Re-running this
+  // also refreshes the buttons when our pause state changes while the menu is up.
+  function startMenuObserver() {
+    if (!menuModeListener) {
+      menuModeListener = () => { if (pauseMenuIsOpen()) tryInjectWhenMenuReady(0); };
+      window.addEventListener("interface-mode-changed", menuModeListener);
     }
-    // Host drops its flag. If we are the sole holder this unpauses everyone;
-    // if a stuck flag remains it is the host's best-effort attempt.
-    iHoldPauseFlag = false;
-    iInitiatedPause = false;
-    toggleEnginePause(); // -> GamePauseStateChanged(unpaused) -> countdown on all clients
+    if (pauseMenuIsOpen()) tryInjectWhenMenuReady(0);
+  }
+  function stopMenuObserver() {
+    // Listener is cheap and idempotent; keep it for the session so the Pause
+    // button is offered whenever the pause menu is opened while idle.
   }
 
-  // ---------------------------------------------------------------------------
-  // Host-ownership handoff
-  // ---------------------------------------------------------------------------
-  function hostEnsureOwnership() {
-    // Host takes the pause over by adding its own flag if it didn't start it.
-    if (!iHoldPauseFlag) {
-      iHoldPauseFlag = true;
-      toggleEnginePause(); // host now also holds a want-pause flag
+  function makeButton(id, caption, onActivate) {
+    const btn = document.createElement("fxs-button");
+    btn.id = id;
+    btn.classList.add("pause-menu-button", "epm-injected");
+    btn.setAttribute("caption", caption);
+    // fxs-button dispatches "action-activate" for both mouse and controller,
+    // exactly as the base game's own buttons do. Using only this avoids the
+    // double-invocation that adding a separate "click" listener would cause.
+    btn.addEventListener("action-activate", onActivate);
+    return btn;
+  }
+
+  function injectMenuButtons(container) {
+    const paused = (state === STATE.PAUSED);
+    const nativeResume = container.querySelector("#pause-menu-resume-button");
+
+    // Remove any of our previous injections so we can rebuild for the state.
+    container.querySelectorAll(".epm-injected").forEach((el) => el.remove());
+
+    if (paused) {
+      // The native hero "Resume Game" button is a ui-next component that can't be
+      // reliably hooked (it would only close the menu), so hide it and provide our
+      // own working Resume/Ready button as the primary action.
+      if (nativeResume) nativeResume.style.display = "none";
+
+      // Host hint (or waiting text) ABOVE the Resume button.
+      const hint = document.createElement("div");
+      hint.className = "epm-host-hint epm-injected";
+      hint.id = "epm-host-hint";
+      hint.innerHTML = hostHintHTML();
+
+      const readyCaption = amHost()
+        ? "LOC_EPM_RESUME_HOST"
+        : (iHoldFlag ? "LOC_EPM_READY" : "LOC_EPM_CANCEL_READY");
+      const readyBtn = makeButton("epm-ready-button", readyCaption, onReadyClick);
+      const viewBtn = makeButton("epm-viewmap-button", "LOC_ADVANCED_START_VIEW_MAP", onViewMapClick);
+
+      // Order at the top of the menu: hint, Resume button, then View Map below it.
+      const first = container.firstChild;
+      container.insertBefore(hint, first);
+      container.insertBefore(readyBtn, first);
+      container.insertBefore(viewBtn, first);
+
+      injectFooterReady();
+    } else {
+      // Not paused: keep the native Resume and put Pause Game BELOW it.
+      if (nativeResume) nativeResume.style.display = "";
+      removeFooterReady();
+      const pauseBtn = makeButton("epm-pause-button", "LOC_EPM_PAUSE_GAME", onPauseClick);
+      if (nativeResume) container.insertBefore(pauseBtn, nativeResume.nextSibling);
+      else container.insertBefore(pauseBtn, container.firstChild);
     }
   }
 
-  function startInitiatorHandoff() {
-    // A non-host that started the pause waits until the host has also flagged
-    // pause (count >= 2), then drops its own flag so only the host controls it.
-    stopInitiatorHandoff();
-    handoffDeadline = Date.now() + HANDOFF_TIMEOUT_MS;
-    handoffPoll = setInterval(() => {
-      if (state !== STATE.PAUSED) { stopInitiatorHandoff(); return; }
-      if (numWantPause() >= 2) {
-        // Host has taken ownership; release our flag.
-        iHoldPauseFlag = false;
-        iInitiatedPause = false;
-        toggleEnginePause();
-        stopInitiatorHandoff();
-      } else if (Date.now() > handoffDeadline) {
-        // Host never took over (e.g. host lacks the mod). Keep our flag so the
-        // game stays paused; stop polling.
-        warn("Host did not take pause ownership within timeout; keeping initiator flag.");
-        stopInitiatorHandoff();
-      }
-    }, HANDOFF_POLL_MS);
+  // The footer container that holds the game / build info at the bottom.
+  function footerContainer() {
+    const gi = document.querySelector(".pause-menu-game-info");
+    return gi ? gi.parentElement : null;
+  }
+  function applyFooterClass(el) {
+    const n = totalPlayers();
+    const enough = converged() && n > 0 && (readyCount() / n) >= VOTE_THRESHOLD;
+    el.classList.toggle("epm-enough", enough);
+    el.classList.toggle("epm-not-enough", !enough);
+  }
+  function injectFooterReady() {
+    let el = document.querySelector("#epm-footer-ready");
+    if (!el) {
+      const fc = footerContainer();
+      if (!fc) return;
+      el = document.createElement("div");
+      el.id = "epm-footer-ready";
+      el.className = "epm-footer-ready";
+      fc.appendChild(el);
+    }
+    el.textContent = footerReadyText();
+    applyFooterClass(el);
+  }
+  function removeFooterReady() {
+    const el = document.querySelector("#epm-footer-ready");
+    if (el) el.remove();
   }
 
-  function stopInitiatorHandoff() {
-    if (handoffPoll) { clearInterval(handoffPoll); handoffPoll = null; }
+  function footerReadyText() {
+    const n = totalPlayers();
+    // Avoid showing a misleading tally before all clients have flagged in.
+    const r = converged() ? readyCount() : 0;
+    return "Ready: " + r + " / " + n;
+  }
+  function hostHintHTML() {
+    const reason = pauseReason ? ('<span class="epm-reason">' + pauseReason + '</span>') : "";
+    let line;
+    if (amHost()) line = "You are the host. Resume when ready.";
+    else if (!iHoldFlag) line = "You are ready. Waiting for the host to resume.";
+    else line = "Waiting for the host to resume.";
+    return reason + line;
+  }
+  function refreshStatus() {
+    const hint = document.querySelector("#epm-host-hint");
+    if (hint) hint.innerHTML = hostHintHTML();
+    let footer = document.querySelector("#epm-footer-ready");
+    if (!footer && state === STATE.PAUSED) { injectFooterReady(); footer = document.querySelector("#epm-footer-ready"); }
+    if (footer) { footer.textContent = footerReadyText(); applyFooterClass(footer); }
+    const rb = document.querySelector("#epm-ready-button");
+    if (rb && !amHost()) rb.setAttribute("caption", iHoldFlag ? "LOC_EPM_READY" : "LOC_EPM_CANCEL_READY");
   }
 
-  // ---------------------------------------------------------------------------
-  // State transitions driven by the synchronized engine pause event
-  // ---------------------------------------------------------------------------
+  // ------------------------------ Button handlers ----------------------------
+  function onPauseClick(ev) {
+    if (ev) { try { ev.stopPropagation(); } catch (e) {} }
+    if (!isMultiplayer || state !== STATE.IDLE) return;
+    if (numWantPause() > 0) return;       // already paused elsewhere
+    pauseReason = "";                     // manual pause has no special reason
+    iHoldFlag = true;                     // we will hold the first flag
+    toggleEnginePause();                  // -> GamePauseStateChanged(paused) for all
+  }
+
+  function onReadyClick(ev) {
+    if (ev) { try { ev.stopPropagation(); } catch (e) {} }
+    if (state !== STATE.PAUSED) return;
+    // Toggle our readiness by toggling our own want-pause flag.
+    if (iHoldFlag) { iHoldFlag = false; toggleEnginePause(); }   // become ready
+    else { iHoldFlag = true; toggleEnginePause(); }              // cancel ready
+    refreshStatus();
+  }
+
+  function onViewMapClick(ev) {
+    if (ev) { try { ev.stopPropagation(); } catch (e) {} }
+    if (state !== STATE.PAUSED) return;
+    // Return to the world to look at the map. Esc re-opens the pause menu.
+    closePauseMenu();
+  }
+
+  // ---------------------- Synchronized pause state machine --------------------
   function onGamePauseStateChanged(data) {
     if (!isMultiplayer) return;
     const paused = !!data && Number(data.data) === 1;
     if (paused) {
-      if (state === STATE.PAUSED) { refreshOverlayForPaused(); return; }
-      enterPaused();
+      if (state !== STATE.PAUSED) enterPaused();
     } else {
-      if (state === STATE.PAUSED) {
-        beginResumeCountdown();
-      } else {
-        enterIdle();
-      }
+      if (state === STATE.PAUSED) beginCountdown();
+      else enterIdle();
     }
   }
 
   function enterPaused() {
     state = STATE.PAUSED;
-    hidePauseButton();
-    showOverlay();
-    refreshOverlayForPaused();
-    applyProgressFilters();
-    suppressNativeDialog();
+    pauseStart = Date.now();
+    maxCount = numWantPause();
 
-    if (amHost()) {
-      // Make sure the host owns a flag so it can authoritatively resume later.
-      hostEnsureOwnership();
-    } else if (iInitiatedPause) {
-      // Non-host that started this pause: hand ownership to the host.
-      startInitiatorHandoff();
+    // Ensure THIS client holds a flag (everyone "not ready" baseline).
+    if (!iHoldFlag) { iHoldFlag = true; toggleEnginePause(); }
+
+    applyProgressFilters();
+    dismissNativeHourglass();   // one-shot (with a few short retries)
+    openPauseMenu();            // bring the pause menu up for this player
+    startMenuObserver();        // (re)inject our buttons whenever the menu opens
+    startPoll();
+  }
+
+  function startPoll() {
+    stopPoll();
+    pollTimer = setInterval(onPoll, POLL_MS);
+  }
+  function stopPoll() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  }
+
+  function onPoll() {
+    if (state !== STATE.PAUSED) return;
+    const count = numWantPause();
+    if (count > maxCount) maxCount = count;
+    // The pause menu is a reactive (SolidJS) screen; if a re-render dropped our
+    // injected buttons while the menu is open, put them back.
+    if (pauseMenuIsOpen() && !document.querySelector("#epm-viewmap-button")) {
+      const c = document.querySelector("#pause-menu-button-container");
+      if (c) injectMenuButtons(c);
+    }
+    refreshStatus();
+
+    // Auto-resume evaluation (only matters if WE still hold a flag).
+    if (!iHoldFlag) return;
+    const t = Date.now() - pauseStart;
+    if (t < CONVERGENCE_DELAY_MS) return;
+
+    const n = totalPlayers();
+    const ready = readyCount();
+    const ratio = n > 0 ? ready / n : 0;
+
+    const voteResume = (t >= VOTE_DELAY_MS) && (ratio >= VOTE_THRESHOLD);
+    const overrideResume = (t >= HOST_OVERRIDE_DELAY_MS) && (ready >= 1);
+
+    if (voteResume || overrideResume) {
+      iHoldFlag = false;
+      toggleEnginePause();   // contribute to count -> 0 (cascades to unpause)
     }
   }
 
-  function beginResumeCountdown() {
+  function beginCountdown() {
     if (state === STATE.COUNTDOWN) return;
     state = STATE.COUNTDOWN;
-    stopInitiatorHandoff();
-    stopSuppressNativeDialog();
-    // Keep input blocked & overlay up during the countdown.
+    stopPoll();
+    // Close any open pause menu BEFORE the countdown shows.
+    closePauseMenu();
+    // Keep input blocked during the countdown.
     applyProgressFilters();
 
+    // Top-center "UNPAUSING..." countdown overlay (synchronized via the
+    // unpause event; every client runs the same 5-second count).
+    showCountdown(true);
     let remaining = RESUME_COUNTDOWN_SECONDS;
-    const label = overlayCountdown.querySelector(".epm-count-label");
-    const num = overlayCountdown.querySelector(".epm-count-num");
-    if (label) label.textContent = "Resuming in";
-    overlayCountdown.classList.add("epm-show");
-
+    const num = countdownEl ? countdownEl.querySelector(".epm-count-num") : null;
     const tick = () => {
-      if (remaining <= 0) {
-        finishCountdown();
-        return;
-      }
+      if (remaining <= 0) { finishCountdown(); return; }
       if (num) {
         num.textContent = String(remaining);
-        // restart the pop animation each second
-        num.style.animation = "none";
-        void num.offsetWidth; // force reflow
-        num.style.animation = "";
+        num.style.animation = "none"; void num.offsetWidth; num.style.animation = "";
       }
       remaining -= 1;
       countdownTimer = setTimeout(tick, 1000);
@@ -564,57 +560,72 @@
 
   function finishCountdown() {
     if (countdownTimer) { clearTimeout(countdownTimer); countdownTimer = null; }
+    showCountdown(false);
     enterIdle();
   }
 
   function enterIdle() {
     state = STATE.IDLE;
+    stopPoll();
     if (countdownTimer) { clearTimeout(countdownTimer); countdownTimer = null; }
-    stopInitiatorHandoff();
-    stopSuppressNativeDialog();
+    showCountdown(false);
     clearProgressFilters();
-    hideOverlay();
-    iInitiatedPause = false;
-    iHoldPauseFlag = false;
-    showPauseButton();
+    // Restore native resume button visibility if the menu happens to be open.
+    const nativeResume = document.querySelector("#pause-menu-resume-button");
+    if (nativeResume) nativeResume.style.display = "";
+    iHoldFlag = false;
+    maxCount = 0;
+    pauseReason = "";
+    removeFooterReady();
+    // Keep the menu observer running so the Pause button is offered next time
+    // the player opens the pause menu while idle.
+    startMenuObserver();
   }
 
-  // ---------------------------------------------------------------------------
-  // Lifecycle
-  // ---------------------------------------------------------------------------
+  // ----------------- Pause on player disconnect (before AI takes over) -------
+  // When a player drops, we pause IMMEDIATELY on the disconnect event so the
+  // synchronized simulation halts before the next turn-processing step where
+  // the AI would take over the absent player. The AI naturally resumes control
+  // after the game is unpaused if that player has not returned.
+  function onPlayerDisconnected(data) {
+    if (!isMultiplayer) return;
+    let name = "";
+    try { name = (data && (data.playerNameT2gp || data.playerName1Pgp)) || ""; } catch (e) {}
+    const reason = name ? (name + " disconnected.") : "A player disconnected.";
+    // Record the reason on EVERY client so all menus can show it, regardless of
+    // which client wins the race to trigger the pause.
+    if (state !== STATE.COUNTDOWN) pauseReason = reason;
+    if (state !== STATE.IDLE) { refreshStatus(); return; }   // already paused
+    if (numWantPause() > 0) { refreshStatus(); return; }     // pause in progress
+    try { if (document.querySelector("#screen-endgame")) return; } catch (e) {}
+    iHoldFlag = true;
+    toggleEnginePause();   // pause now, before any automatic AI action
+    log("Auto-paused due to player disconnect.");
+  }
+
+  // -------------------------------- Lifecycle --------------------------------
   function detectMultiplayer() {
-    try {
-      const cfg = Configuration.getGame();
-      return !!(cfg && cfg.isAnyMultiplayer);
-    } catch (e) { return false; }
+    try { const c = Configuration.getGame(); return !!(c && c.isAnyMultiplayer); }
+    catch (e) { return false; }
   }
 
   async function onReady() {
     isMultiplayer = detectMultiplayer();
-    if (!isMultiplayer) {
-      log("Single-player game detected; Enhanced Pause Menu stays dormant.");
-      return;
-    }
-    log("Multiplayer game detected; initializing Enhanced Pause Menu.");
-
+    if (!isMultiplayer) { log("Single-player; Enhanced Pause Menu dormant."); return; }
+    log("Multiplayer; initializing Enhanced Pause Menu.");
     await loadCoreSingletons();
-    buildUI();
-
+    injectStyles();
+    buildCountdown();
     engine.on("GamePauseStateChanged", onGamePauseStateChanged);
-
-    // If we joined while already paused, reflect it.
-    if (numWantPause() > 0) {
-      onGamePauseStateChanged({ data: 1 });
-    } else {
-      enterIdle();
-    }
+    // Pause the instant a player drops, before the AI can take over their turn.
+    engine.on("MultiplayerPostPlayerDisconnected", onPlayerDisconnected);
+    if (numWantPause() > 0) onGamePauseStateChanged({ data: 1 });
+    else enterIdle();
   }
 
-  // engine.whenReady resolves once the UI engine is up.
   try {
     engine.whenReady.then(onReady).catch((e) => warn("onReady failed: " + e));
   } catch (e) {
-    // Fallback: if whenReady is unavailable, attempt immediate init.
     try { onReady(); } catch (e2) { warn("init failed: " + e2); }
   }
 })();

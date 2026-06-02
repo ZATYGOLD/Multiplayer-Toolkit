@@ -4,7 +4,7 @@
     <Properties>
         <Name>Enhanced Pause Menu</Name>
         <Description>A fully synchronized multiplayer pause. Any player can pause the game; only the host can resume. Shows a pause overlay, an end-pause countdown, suppresses the default modal pause popup so players can still pan the map and read information, and blocks all input that would progress the game while paused.</Description>
-        <Authors>Jonathan</Authors>
+        <Authors>Zatygold</Authors>
         <Package>Mod</Package>
         <AffectsSavedGames>0</AffectsSavedGames>
         <ShowInBrowser>1</ShowInBrowser>
@@ -25,6 +25,9 @@
                 <LoadOrder>100</LoadOrder>
             </Properties>
             <Actions>
+                <UpdateText>
+                    <Item>text/en_us/EnhancedPauseMenuText.xml</Item>
+                </UpdateText>
                 <UIScripts>
                     <Item>ui/epm-pause-manager.js</Item>
                 </UIScripts>

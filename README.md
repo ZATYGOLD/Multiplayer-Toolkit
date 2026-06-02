@@ -1,110 +1,138 @@
 # Enhanced Pause Menu
 
-A multiplayer pause system for **Sid Meier's Civilization VII**. Any player can
-pause the game, only the **host** can resume it, a pause overlay is shown to
-everyone, an end-pause **countdown** plays before play resumes, and all input
-that would advance the game is blocked while paused — while you can still pan
-the map, zoom, and read information.
-
-This mod is built entirely on top of the game's own multiplayer-pause netcode
-(`Network.toggleMultiplayerPause` / the synchronized `GamePauseStateChanged`
-event). It does **not** modify any base-game files.
+A multiplayer pause for **Sid Meier's Civilization VII**, built on the game's
+own pause menu and UI components. Any player can pause; the pause menu opens for
+everyone with a **Ready / Resume** button and a **View Map** button; a
+synchronized **countdown** plays before the game resumes. No base-game files are
+modified.
 
 ---
 
 ## Installation
 
-1. Copy the whole **`Enhanced Pause Menu`** folder into your Civ VII mods
-   folder (this is where it already lives if you are reading this):
-
+1. Keep/copy the **`Enhanced Pause Menu`** folder in your mods folder:
    `…\Sid Meier's Civilization VII\Mods\Enhanced Pause Menu\`
+2. In game: **Main Menu → Additional Content** and enable **Enhanced Pause Menu**.
+3. **Every player must install and enable the mod.** The pause *state* is
+   synchronized by the engine, but the menu, ready tally, countdown and resume
+   rules run per-client, so everyone needs it.
 
-2. Launch Civ VII → **Main Menu → Additional Content** (Mods) and make sure
-   **Enhanced Pause Menu** is enabled.
-
-3. **Every player in the multiplayer game must install and enable the mod.**
-   The pause *state* itself is synchronized by the game engine, but the
-   overlay, the host-only resume rules, the countdown, and the host-ownership
-   handoff all run inside this script on each machine, so everyone needs it for
-   the experience to be consistent.
-
-The mod is inert in single-player games (the normal pause menu already freezes
-single-player), so it is safe to leave enabled all the time.
+The mod is dormant in single-player.
 
 ---
 
-## How to use it
+## How to use
 
-- **Pause (any player):** click the **“Pause Game”** button (top-center of the
-  screen) at any time during a multiplayer game. The game pauses for everyone.
-- **While paused:** everybody sees the **GAME PAUSED** overlay. You can still
-  drag/rotate/zoom the camera and open information screens (tech tree, civics,
-  Civilopedia, rankings, etc.). Anything that would *advance* the game —
-  ending the turn, moving or ordering units, etc. — is blocked.
-- **Resume (host only):** only the host sees a **Resume** button. Clicking it
-  starts a synchronized **3 · 2 · 1** countdown on every player's screen, then
-  hands control back to everyone at once.
+- **Pause (any player):** open the pause menu (Esc) and click **Pause Game**.
+  The game pauses for everyone and the pause menu opens on every player's screen.
+- **While paused** every player sees the pause menu with:
+  - **Resume (Host) / Ready** – the primary button (a working `fxs-button`; the
+    native ui-next "Resume Game" hero button can't be hooked to actually unpause,
+    so it is hidden while paused). A short hint sits **above** it ("You are the
+    host. Resume when ready." for the host; a waiting note for others), and the
+    live **"Ready: X / N"** tally sits in the **footer**, under the build number.
+  - **View Map** – directly **below** the Resume button; returns you to the
+    world so you can pan the map and open information / city & production panels.
+    Press **Esc** to bring the pause menu back. You can look at anything; you
+    just can't advance the game.
+  - The **Pause Game** button (when not paused) sits **below** the menu's
+    normal Resume button.
+- **Resuming:** when the resume is triggered, every open pause menu is closed,
+  then a top-center **UNPAUSING…** overlay runs a synchronized **5-second
+  countdown** on every player's game scene before control is handed back
+  together.
 
 ---
 
 ## How each requirement is met
 
-| # | Requirement | Implementation |
-|---|-------------|----------------|
-| 1 | **Pause overlay** | A DOM overlay (`#epm-overlay`) is shown on every client from the synchronized `GamePauseStateChanged` event. Its backdrop is `pointer-events:none` so the map underneath stays fully interactive. |
-| 2 | **End-pause countdown** | When the host resumes, the engine fires `GamePauseStateChanged(unpaused)` on all clients at the same instant. Each client then runs an identical 3-2-1 countdown — keeping the overlay up and input blocked — before releasing control, so the countdown is synchronized with no custom messaging. |
-| 3 | **Only the host can unpause** | Host is detected via `GameContext.localPlayerID === Network.getHostPlayerId()`. Only the host's overlay has a Resume button, and the stock `multiplayer-pause` keybind is filtered out so no one can toggle pause behind the mod's back. Because the engine tracks a *per-player* "want pause" flag (and a client can only clear its own), the mod performs a **host-ownership handoff**: when a non-host starts a pause, the host adds its own flag and the original initiator drops theirs — leaving the host as the sole flag holder, so only the host can clear the pause. |
-| 4 | **Any player can pause** | The on-screen “Pause Game” button calls `Network.toggleMultiplayerPause()` for any player. Routing every pause through the mod's button is what lets each client know whether it started the pause (needed for the handoff in #3). |
-| 5 | **Block progressing input, allow reading/looking** | While paused (and during the countdown) all game-advancing input actions are registered with the engine's `InputFilterManager`, which sits first in the input-handler chain and blocks them before any gameplay handler runs. Camera actions (pan/rotate/zoom) and information screens are deliberately left untouched. The engine pause already freezes the simulation on every client, so no progression can occur regardless. The stock modal “Game Paused” popup (which would block the map) is suppressed so the map stays viewable. |
+| Requirement | Implementation |
+|---|---|
+| Pause button **in the pause menu** | An `fxs-button` (the game's own button component) labelled **Pause Game** is injected into the built-in pause menu's `#pause-menu-button-container`. |
+| **View Map** button, only while paused | An `fxs-button` reusing the game's existing **`LOC_ADVANCED_START_VIEW_MAP`** ("View Map") string, shown only when paused. It calls `InterfaceMode.switchToDefault()` to return to the world; Esc re-opens the pause menu. |
+| Pause menu **opens for all** with **Ready** + **View Map** | On the synchronized `GamePauseStateChanged` event every client opens `INTERFACEMODE_PAUSE_MENU` and the Ready / View Map buttons + "Ready X/N" tally are injected. |
+| **Countdown** appears when unpausing | Triggered by the synchronized unpause event; all open pause menus are closed first, then a top-center **UNPAUSING…** overlay runs an identical 5-second countdown on every client before release. |
+| **Ready tally is unmissable** | The footer "Ready: X / N" is large and turns **bright red** until enough players are ready, then **bright green** (≥ the vote threshold). |
+| See **production / town panels**, but can't advance | Only game-advancing input actions are filtered (see below). Selecting cities/units and opening production & information panels is allowed; the engine pause prevents any change from actually taking effect. |
+| **Pause before the AI takes over** on pause / disconnect | A manual pause freezes the synchronized simulation immediately, so the AI never acts while paused. On a **player disconnect** the mod pauses instantly from the `MultiplayerPostPlayerDisconnected` event — before the next turn-processing step where the AI would take over the absent player. The AI resumes control normally once the game is unpaused if that player hasn't returned. |
 
-### Blocked input actions while paused
-`next-action`, `keyboard-enter` (end turn / confirm), `force-end-turn`,
-`unit-move`, `unit-ranged-attack`, `unit-skip-turn`, `unit-sleep`,
-`unit-fortify`, `unit-heal`, `unit-alert`, `unit-auto-explore`,
-`trigger-accept-dip`, `quick-load`, and the stock `multiplayer-pause` keybind.
+### The unpause / "Ready" model
 
-### Deliberately **not** blocked (reading / looking is allowed)
-Camera pan/rotate/zoom, mouse-wheel, edge/scroll pan, plot-cursor movement,
-unit cycling, tooltips, and all `open-*` / `toggle-*` information screens.
+The engine keeps the game paused while **any** player holds a "want pause" flag,
+and unpauses (synchronized) the instant all flags clear; a client can only clear
+its **own** flag. The mod uses that primitive directly:
+
+> flag held = "not ready", flag cleared = "ready". `Ready = N − wantPauseCount`,
+> identical on every client, so the "Ready X/N" tally is synchronized for free.
+
+Resume happens (last flag clears → engine unpauses) via, in order:
+
+1. **Consensus** – everyone (the host included, whose flag is required) clicks
+   Ready.
+2. **60% vote** – after `VOTE_DELAY` seconds, once ≥ `VOTE_THRESHOLD` (default
+   60%) are ready, the remaining clients auto-ready and the game resumes.
+3. **Override** – after `HOST_OVERRIDE_DELAY` seconds, any readiness resumes the
+   game (anti-AFK / host force-resume).
+
+Because the host's own flag is required for the consensus path, the host
+effectively gates a normal resume; the vote/override tiers are the time-limited
+fallbacks you asked for. All values are configurable at the top of
+`ui/epm-pause-manager.js`:
+
+```
+RESUME_COUNTDOWN_SECONDS, VOTE_THRESHOLD, VOTE_DELAY_MS, HOST_OVERRIDE_DELAY_MS
+```
+
+**Engine limitation (honest note):** Civ VII exposes only an *aggregate*
+want-pause count — there is no per-player or host-specific pause query and no
+custom UI network message a mod can send. A *unilateral, instant* host-only
+override that other clients could detect on the wire is therefore not possible
+from a UI mod, so host authority is expressed through the configurable
+thresholds above rather than as an instant force. If you'd prefer a strict
+"only the host's flag controls the pause" model (clean instant host resume, but
+no cross-client ready/vote tally), that's a one-setting change — just ask.
+
+### Pause on disconnect (before AI takeover)
+
+When any player drops, every remaining client receives
+`MultiplayerPostPlayerDisconnected` and immediately requests the pause, so the
+networked simulation halts before the AI can take the disconnected player's
+turn. The pause menu then opens for everyone with a note naming who dropped, and
+the usual Ready / vote / override rules decide when to resume. If the player
+reconnects (or the game resumes), the AI takes over only from the moment play
+continues, exactly as the base game would.
+
+*Honest scope:* a UI mod reacts to the disconnect **event** (it cannot pre-empt
+the engine's internal scheduler below that), but in Civ VII's multiplayer flow
+that event precedes the turn-processing where AI actions for an absent player
+occur, so the pause lands first in normal play.
+
+### Blocked while paused
+`next-action`, `keyboard-enter`, `force-end-turn`, `unit-move`,
+`unit-ranged-attack`, `unit-skip-turn`, `unit-sleep`, `unit-fortify`,
+`unit-heal`, `unit-alert`, `unit-auto-explore`, `trigger-accept-dip`,
+`quick-load`. Camera, selection, information screens and city/production panels
+are **not** blocked.
 
 ---
 
-## Design notes & assumptions
+## Notes
 
-- **The engine pause is the real lever.** In a networked game the authoritative
-  turn timer lives on the host/server, so a UI-only block could never truly
-  stop progression on other machines. Using `Network.toggleMultiplayerPause`
-  means the simulation is genuinely frozen on every client; the overlay and
-  input filter are the player-facing layer on top of that.
-- **Per-player "want pause" model.** The base game's in-game manager
-  (`ui/mp-ingame-mgr/mp-ingame-mgr.js`) and the string
-  `"{1_Number} Players have paused the game including {2_PlayerName}"` show that
-  the game stays paused while *any* player wants pause, and each player toggles
-  only their own flag. The host-ownership handoff (#3) is built around this
-  model so that "only the host can resume" is enforceable.
-- **Countdown timing.** The countdown is triggered by the synchronized unpause
-  event, so for the few seconds it plays the simulation has technically already
-  resumed — but local input stays blocked and the overlay stays up until the
-  count reaches zero, so no player can act before everyone is released
-  together. This keeps the countdown perfectly in sync with zero custom
-  network traffic.
-- **Graceful degradation.** Core singletons (`InputFilterManager`,
-  `ContextManager`) are loaded with a small list of candidate import paths and
-  `try/catch`. If a future patch moves them, the mod still pauses/overlays/
-  counts down correctly; only the extra input-filtering / popup-suppression
-  niceties would be reduced (and the engine pause still prevents progression).
-
----
+- The earlier "clicking a unit removed the UI" bug is fixed: it was caused by a
+  continuous DOM observer that popped the wrong UI context. That mechanism is
+  gone — the stock modal "Game Paused" popup is now dismissed exactly once via
+  `DialogBoxManager.closeDialogBox()`, and buttons are injected only when the
+  pause menu actually opens (via the `interface-mode-changed` event).
+- Core singletons are imported with several candidate paths and `try/catch`; if
+  a future patch relocates them the mod still pauses, shows the menu and counts
+  down (only the input-filter / popup-dismiss niceties would degrade).
 
 ## Files
-
 ```
 Enhanced Pause Menu/
-├─ enhanced-pause-menu.modinfo   # mod manifest (loads the UI script in-game)
-├─ ui/
-│  └─ epm-pause-manager.js       # all logic: overlay, countdown, input filter,
-│                                #   host-only resume, any-player pause
+├─ enhanced-pause-menu.modinfo          # manifest (loads text + UI script in-game)
+├─ text/en_us/EnhancedPauseMenuText.xml # button caption strings
+├─ ui/epm-pause-manager.js              # all logic
 └─ README.md
 ```
-
 No base-game files are modified.
