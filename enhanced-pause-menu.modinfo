@@ -3,7 +3,7 @@
     xmlns="ModInfo">
     <Properties>
         <Name>Enhanced Pause Menu</Name>
-        <Description>A fully synchronized multiplayer pause. Any player can pause the game; only the host can resume. Shows a pause overlay, an end-pause countdown, suppresses the default modal pause popup so players can still pan the map and read information, and blocks all input that would progress the game while paused.</Description>
+        <Description>A fully synchronized multiplayer pause. Any player can pause the game; the host (or a timed vote) resumes it. Adds Pause / Ready / View Map controls to the built-in pause menu, keeps the game paused through an "UNPAUSING..." countdown, blocks game-advancing input while paused, and pauses on player disconnect before the AI can take over. No base-game files are modified.</Description>
         <Authors>Zatygold</Authors>
         <Package>Mod</Package>
         <AffectsSavedGames>0</AffectsSavedGames>
@@ -19,17 +19,22 @@
     </ActionCriteria>
     <ActionGroups>
         <!-- scope="game" => loaded for every in-game UI context (single & multiplayer).
-             The script itself no-ops outside of multiplayer at runtime. -->
+             The manager no-ops outside of multiplayer at runtime. -->
         <ActionGroup id="epm-ingame" scope="game" criteria="always">
             <Properties>
                 <LoadOrder>100</LoadOrder>
             </Properties>
             <Actions>
                 <UpdateText>
-                    <Item>text/en_us/EnhancedPauseMenuText.xml</Item>
+                    <Item>text/en_us/mp-pause-text.xml</Item>
                 </UpdateText>
+                <!-- The manager imports the config / styles / overlay modules; all
+                     are listed so they are guaranteed present in the VFS. -->
                 <UIScripts>
-                    <Item>ui/epm-pause-manager.js</Item>
+                    <Item>ui/mp-pause/mp-pause-config.js</Item>
+                    <Item>ui/mp-pause/mp-pause.scss.js</Item>
+                    <Item>ui/mp-pause/mp-pause-overlay.js</Item>
+                    <Item>ui/mp-pause/mp-pause-mgr.js</Item>
                 </UIScripts>
             </Actions>
         </ActionGroup>

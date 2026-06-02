@@ -55,7 +55,7 @@ The mod is dormant in single-player.
 | **Countdown** appears when unpausing, game stays paused during it | When all flags clear, each client immediately re-asserts its pause flag and runs a 5-second top-center **UNPAUSING…** countdown; the engine only truly unpauses when every client's countdown has finished, so no game-advancing action is possible during the timer. |
 | **Ready tally is unmissable** | The footer "Ready: X / N" is large and turns **bright red** until enough players are ready, then **bright green** (≥ the vote threshold). |
 | See **production / town panels**, but can't advance | Only game-advancing input actions are filtered (see below). Selecting cities/units and opening production & information panels is allowed; the engine pause prevents any change from actually taking effect. |
-| **Pause before the AI takes over** on pause / disconnect | A manual pause freezes the synchronized simulation immediately, so the AI never acts while paused. On a **player disconnect** the mod pauses instantly from the `MultiplayerPostPlayerDisconnected` event — before the next turn-processing step where the AI would take over the absent player. The AI resumes control normally once the game is unpaused if that player hasn't returned. |
+| **Pause before the AI takes over** on pause / disconnect | Three layers: the `MultiplayerPostPlayerDisconnected` event, a `Network.isPlayerConnected` watchdog polled every 0.5s, and a turn-activation guard (`PlayerTurnActivated` / `RemotePlayerTurnBegin`). Any human drop pauses the game before the AI can take that player's turn. After a deliberate resume the AI may take over an acknowledged absentee; a fresh drop pauses again. |
 
 ### The unpause / "Ready" model
 
@@ -78,7 +78,7 @@ Resume happens (last flag clears → engine unpauses) via, in order:
 Because the host's own flag is required for the consensus path, the host
 effectively gates a normal resume; the vote/override tiers are the time-limited
 fallbacks you asked for. All values are configurable at the top of
-`ui/epm-pause-manager.js`:
+`ui/mp-pause/mp-pause-config.js`:
 
 ```
 RESUME_COUNTDOWN_SECONDS, VOTE_THRESHOLD, VOTE_DELAY_MS, HOST_OVERRIDE_DELAY_MS
@@ -93,20 +93,33 @@ thresholds above rather than as an instant force. If you'd prefer a strict
 "only the host's flag controls the pause" model (clean instant host resume, but
 no cross-client ready/vote tally), that's a one-setting change — just ask.
 
-### Pause on disconnect (before AI takeover)
+### Pause on disconnect (before AI takeover) — three layers
 
-When any player drops, every remaining client receives
-`MultiplayerPostPlayerDisconnected` and immediately requests the pause, so the
-networked simulation halts before the AI can take the disconnected player's
-turn. The pause menu then opens for everyone with a note naming who dropped, and
-the usual Ready / vote / override rules decide when to resume. If the player
-reconnects (or the game resumes), the AI takes over only from the moment play
-continues, exactly as the base game would.
+Preventing the AI from acting for a dropped player is the most important
+guarantee of this mod, so it is defended at **every UI hook the engine exposes**
+(a UI mod cannot run code inside the engine's AI turn-processing itself). All
+three layers funnel into one `requestDisconnectPause()` path:
 
-*Honest scope:* a UI mod reacts to the disconnect **event** (it cannot pre-empt
-the engine's internal scheduler below that), but in Civ VII's multiplayer flow
-that event precedes the turn-processing where AI actions for an absent player
-occur, so the pause lands first in normal play.
+1. **Disconnect event** — `MultiplayerPostPlayerDisconnected` pauses immediately
+   (reactive).
+2. **Connection watchdog** — a timer polls `Network.isPlayerConnected(id)` for
+   every human slot (every `connectionWatchMs`, default 0.5s) and pauses the
+   instant a player's connection drops, even if the event is late or missed
+   (proactive).
+3. **Turn-activation guard** — on `PlayerTurnActivated` / `RemotePlayerTurnBegin`
+   (the exact moment the engine would hand an absent player's turn to the AI),
+   if any human is disconnected the game pauses first.
+
+**Resume vs. re-pause.** The first drop always pauses before the AI. Once the
+players *deliberately* resume with someone still absent, that player is
+"acknowledged" so the guard does not fight the choice and the AI may take over
+(as you specified). If that player reconnects and later drops again, it is a
+fresh disconnect and pauses again.
+
+*Honest scope:* the guarantee is as strong as a UI mod can make it — the
+turn-activation guard fires at the start of turn processing, before AI orders
+execute — but it is still event/poll-driven rather than a hook inside the
+engine's AI loop.
 
 ### Blocked while paused
 `next-action`, `keyboard-enter`, `force-end-turn`, `unit-move`,
@@ -131,12 +144,22 @@ are **not** blocked.
   a future patch relocates them the mod still pauses, shows the menu and counts
   down (only the input-filter / popup-dismiss niceties would degrade).
 
-## Files
+## Project structure
+
 ```
 Enhanced Pause Menu/
-├─ enhanced-pause-menu.modinfo          # manifest (loads text + UI script in-game)
-├─ text/en_us/EnhancedPauseMenuText.xml # button caption strings
-├─ ui/epm-pause-manager.js              # all logic
+├─ enhanced-pause-menu.modinfo        # manifest (loads text + UI scripts in-game)
+├─ text/en_us/mp-pause-text.xml       # button caption strings (LOC_EPM_*)
+├─ ui/mp-pause/                       # feature folder (mirrors the base game's ui/<feature>/)
+│  ├─ mp-pause-config.js              # constants & tunable settings (data)
+│  ├─ mp-pause.scss.js                # styles, shipped as a string (base "*.scss.js" convention)
+│  ├─ mp-pause-overlay.js             # reusable "UNPAUSING..." countdown overlay component
+│  └─ mp-pause-mgr.js                 # manager singleton / entry point (mirrors mp-ingame-mgr.js)
 └─ README.md
 ```
+
+The manager is a class-based singleton constructed on `engine.whenReady`, like the
+base game's `mp-ingame-mgr.js`. Tunables live in `mp-pause-config.js`
+(`CONFIG.resumeCountdownSeconds`, `voteThreshold`, `voteDelayMs`,
+`hostOverrideDelayMs`, …); styles live in `mp-pause.scss.js`.
 No base-game files are modified.
