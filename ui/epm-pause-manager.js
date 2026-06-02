@@ -84,6 +84,7 @@
   let countdownTimer = null;
   let progressFiltersActive = false;
   let pauseReason = "";   // optional cause shown in the menu (e.g. a disconnect)
+  let finalizing = false; // true once the countdown finished and we are releasing
 
   // Core singletons (dynamically imported; gameplay still works if any fail).
   let InputFilter = null;
@@ -164,6 +165,26 @@
     ]);
     DialogBoxMgr = dbMod ? (dbMod.DialogBoxManager || dbMod.default || null) : null;
 
+    // Suppress the base game's modal "Game Paused" popup at the source. It is
+    // created via DialogBoxManager.createDialog_MultiOption({title:
+    // "LOC_MP_PAUSE_POPUP_TITLE", ...}) in mp-ingame-mgr.js. Because we share the
+    // same DialogBoxManager singleton, we wrap that one call so this specific
+    // popup is never built (our own pause menu + overlay replace it). All other
+    // dialogs pass through untouched.
+    if (DialogBoxMgr && typeof DialogBoxMgr.createDialog_MultiOption === "function" && !DialogBoxMgr.__epmPatched) {
+      const origMulti = DialogBoxMgr.createDialog_MultiOption.bind(DialogBoxMgr);
+      DialogBoxMgr.createDialog_MultiOption = function (params) {
+        try {
+          if (params && params.title === "LOC_MP_PAUSE_POPUP_TITLE") {
+            return "epm-suppressed-pause-dialog";
+          }
+        } catch (e) { /* fall through to original */ }
+        return origMulti(params);
+      };
+      DialogBoxMgr.__epmPatched = true;
+      log("Native 'Game Paused' popup suppressed.");
+    }
+
     log("singletons: InputFilter=" + !!InputFilter + " InterfaceMode=" + !!InterfaceModeRef + " DialogBoxManager=" + !!DialogBoxMgr);
   }
 
@@ -232,29 +253,6 @@
     styleEl = document.createElement("style");
     styleEl.id = "epm-styles";
     styleEl.textContent = `
-      #epm-countdown {
-        position: fixed; inset: 0; z-index: 9000; pointer-events: none;
-        display: none; flex-direction: column; align-items: center; justify-content: center;
-        font-family: "Times New Roman", "BodyFont", serif;
-        background: radial-gradient(rgba(8,10,18,0.10), rgba(8,10,18,0.45));
-      }
-      #epm-countdown.epm-show { display: flex; }
-      #epm-countdown .epm-count-label {
-        width: 100%; text-align: center;
-        font-size: 1.5rem; letter-spacing: 0.14em; text-transform: uppercase; color: #e7d6ab;
-        text-shadow: 0 0.1rem 0.5rem rgba(0,0,0,0.85);
-      }
-      #epm-countdown .epm-count-num {
-        width: 100%; text-align: center;
-        font-size: 9rem; line-height: 1; font-weight: 700; color: #f8ecca;
-        text-shadow: 0 0.2rem 1rem rgba(0,0,0,0.9);
-        animation: epm-pop 1s ease-out;
-      }
-      @keyframes epm-pop {
-        0% { transform: scale(1.7); opacity: 0; }
-        25% { transform: scale(1); opacity: 1; }
-        100% { transform: scale(0.9); opacity: 0.85; }
-      }
       /* Our injected pause-menu buttons + status, styled to sit with the natives */
       /* Host / status hint shown directly above the Resume button */
       .epm-host-hint {
@@ -272,11 +270,15 @@
       .epm-footer-ready.epm-not-enough { color: #ff5555; }
       .epm-footer-ready.epm-enough { color: #5dff86; }
 
-      /* Resume countdown overlay - top-center of the GAME SCENE */
+      /* Resume countdown overlay. Full-screen (inset: 0) so the faded vignette
+         covers the whole width/height of the scene, with the text centered.
+         To move the text off-center, swap justify-content for flex-start and
+         add a padding-top. Tweak the rgba alphas to dim more/less. */
       #epm-countdown {
-        position: fixed; top: 6rem; left: 0; right: 0; z-index: 9000; pointer-events: none;
-        display: none; flex-direction: column; align-items: center;
+        position: fixed; inset: 0; width: 100%; height: 100%; z-index: 9000; pointer-events: none;
+        display: none; flex-direction: column; align-items: center; justify-content: center;
         font-family: "Times New Roman", "BodyFont", serif;
+        background: radial-gradient(ellipse 120% 90% at center, rgba(8,10,18,0.12), rgba(8,10,18,0.55));
       }
       #epm-countdown.epm-show { display: flex; }
       #epm-countdown .epm-count-label {
@@ -472,10 +474,20 @@
     if (!isMultiplayer) return;
     const paused = !!data && Number(data.data) === 1;
     if (paused) {
-      if (state !== STATE.PAUSED) enterPaused();
+      // Engine is paused (some flag is held).
+      if (state === STATE.IDLE) enterPaused();
+      else if (state === STATE.PAUSED) refreshStatus();
+      // state === COUNTDOWN: this is our own re-pause during the countdown -> ignore.
     } else {
-      if (state === STATE.PAUSED) beginCountdown();
-      else enterIdle();
+      // Engine is unpaused (all flags cleared).
+      if (state === STATE.PAUSED) {
+        beginCountdown();              // run the countdown FIRST, keeping the game paused
+      } else if (state === STATE.COUNTDOWN) {
+        if (finalizing) enterIdle();   // genuine release after the countdown finished
+        // else: brief transient before our re-pause lands -> ignore
+      } else {
+        enterIdle();
+      }
     }
   }
 
@@ -535,19 +547,24 @@
   function beginCountdown() {
     if (state === STATE.COUNTDOWN) return;
     state = STATE.COUNTDOWN;
+    finalizing = false;
     stopPoll();
     // Close any open pause menu BEFORE the countdown shows.
     closePauseMenu();
-    // Keep input blocked during the countdown.
+    // KEEP THE GAME PAUSED during the countdown: immediately re-assert our own
+    // pause flag so the simulation stays frozen until the timer reaches zero.
+    // (The last flag-clear briefly unpaused the engine to fire this event; we
+    // re-pause right away so no game-advancing action can happen during the
+    // countdown.) The real unpause only happens in finalizeResume().
+    if (!iHoldFlag) { iHoldFlag = true; toggleEnginePause(); }
     applyProgressFilters();
 
-    // Top-center "UNPAUSING..." countdown overlay (synchronized via the
-    // unpause event; every client runs the same 5-second count).
+    // Top-center "UNPAUSING..." countdown overlay.
     showCountdown(true);
     let remaining = RESUME_COUNTDOWN_SECONDS;
     const num = countdownEl ? countdownEl.querySelector(".epm-count-num") : null;
     const tick = () => {
-      if (remaining <= 0) { finishCountdown(); return; }
+      if (remaining <= 0) { finalizeResume(); return; }
       if (num) {
         num.textContent = String(remaining);
         num.style.animation = "none"; void num.offsetWidth; num.style.animation = "";
@@ -558,10 +575,16 @@
     tick();
   }
 
-  function finishCountdown() {
+  // Countdown reached zero: release our pause flag. The game only truly resumes
+  // once EVERY client's countdown has finished and all flags are cleared, so it
+  // stays frozen for everyone until the slowest countdown completes.
+  function finalizeResume() {
     if (countdownTimer) { clearTimeout(countdownTimer); countdownTimer = null; }
+    finalizing = true;
     showCountdown(false);
-    enterIdle();
+    if (iHoldFlag) { iHoldFlag = false; toggleEnginePause(); }   // drop -> unpause when last
+    // Backstop: if no unpause event arrives (we weren't the last holder), idle out.
+    setTimeout(() => { if (state === STATE.COUNTDOWN) enterIdle(); }, 4000);
   }
 
   function enterIdle() {
@@ -574,6 +597,7 @@
     const nativeResume = document.querySelector("#pause-menu-resume-button");
     if (nativeResume) nativeResume.style.display = "";
     iHoldFlag = false;
+    finalizing = false;
     maxCount = 0;
     pauseReason = "";
     removeFooterReady();

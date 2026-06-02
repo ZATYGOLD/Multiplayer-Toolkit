@@ -37,10 +37,11 @@ The mod is dormant in single-player.
     just can't advance the game.
   - The **Pause Game** button (when not paused) sits **below** the menu's
     normal Resume button.
-- **Resuming:** when the resume is triggered, every open pause menu is closed,
-  then a top-center **UNPAUSING…** overlay runs a synchronized **5-second
-  countdown** on every player's game scene before control is handed back
-  together.
+- **Resuming:** when the resume is triggered, every open pause menu is closed
+  and a top-center **UNPAUSING…** overlay runs a **5-second countdown**. The game
+  stays fully **paused during the countdown** (the mod re-asserts the pause flag
+  for the duration), so no one can take a game-advancing action until the timer
+  hits zero — only then does play actually resume, together.
 
 ---
 
@@ -51,7 +52,7 @@ The mod is dormant in single-player.
 | Pause button **in the pause menu** | An `fxs-button` (the game's own button component) labelled **Pause Game** is injected into the built-in pause menu's `#pause-menu-button-container`. |
 | **View Map** button, only while paused | An `fxs-button` reusing the game's existing **`LOC_ADVANCED_START_VIEW_MAP`** ("View Map") string, shown only when paused. It calls `InterfaceMode.switchToDefault()` to return to the world; Esc re-opens the pause menu. |
 | Pause menu **opens for all** with **Ready** + **View Map** | On the synchronized `GamePauseStateChanged` event every client opens `INTERFACEMODE_PAUSE_MENU` and the Ready / View Map buttons + "Ready X/N" tally are injected. |
-| **Countdown** appears when unpausing | Triggered by the synchronized unpause event; all open pause menus are closed first, then a top-center **UNPAUSING…** overlay runs an identical 5-second countdown on every client before release. |
+| **Countdown** appears when unpausing, game stays paused during it | When all flags clear, each client immediately re-asserts its pause flag and runs a 5-second top-center **UNPAUSING…** countdown; the engine only truly unpauses when every client's countdown has finished, so no game-advancing action is possible during the timer. |
 | **Ready tally is unmissable** | The footer "Ready: X / N" is large and turns **bright red** until enough players are ready, then **bright green** (≥ the vote threshold). |
 | See **production / town panels**, but can't advance | Only game-advancing input actions are filtered (see below). Selecting cities/units and opening production & information panels is allowed; the engine pause prevents any change from actually taking effect. |
 | **Pause before the AI takes over** on pause / disconnect | A manual pause freezes the synchronized simulation immediately, so the AI never acts while paused. On a **player disconnect** the mod pauses instantly from the `MultiplayerPostPlayerDisconnected` event — before the next turn-processing step where the AI would take over the absent player. The AI resumes control normally once the game is unpaused if that player hasn't returned. |
@@ -120,9 +121,12 @@ are **not** blocked.
 
 - The earlier "clicking a unit removed the UI" bug is fixed: it was caused by a
   continuous DOM observer that popped the wrong UI context. That mechanism is
-  gone — the stock modal "Game Paused" popup is now dismissed exactly once via
-  `DialogBoxManager.closeDialogBox()`, and buttons are injected only when the
-  pause menu actually opens (via the `interface-mode-changed` event).
+  gone. The stock modal "Game Paused / [player] has paused the game" popup is now
+  suppressed at the source — the mod shares the engine's `DialogBoxManager`
+  singleton and intercepts that one popup (by its `LOC_MP_PAUSE_POPUP_TITLE`
+  title) so it is never created, while every other dialog passes through
+  untouched. Buttons are injected only when the pause menu actually opens (via
+  the `interface-mode-changed` event).
 - Core singletons are imported with several candidate paths and `try/catch`; if
   a future patch relocates them the mod still pauses, shows the menu and counts
   down (only the input-filter / popup-dismiss niceties would degrade).
