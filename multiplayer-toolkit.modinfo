@@ -25,7 +25,7 @@
             </Properties>
             <Actions>
                 <UpdateText>
-                    <Item>text/en_us/mp-pause-text.xml</Item>
+                    <Item>text/en_us/mpt-text.xml</Item>
                 </UpdateText>
                 <UIScripts>
                     <Item>ui/mp-pause/mp-pause-config.js</Item>
@@ -33,6 +33,19 @@
                     <Item>ui/mp-pause/mp-pause-overlay.js</Item>
                     <Item>ui/mp-pause/mp-pause-mgr.js</Item>
                 </UIScripts>
+            </Actions>
+        </ActionGroup>
+        <ActionGroup id="mpt-shell" scope="shell" criteria="always">
+            <Properties>
+                <LoadOrder>1000</LoadOrder>
+            </Properties>
+            <Actions>
+                <UpdateDatabase>
+                    <Item>config/turn-timers.sql</Item>
+                </UpdateDatabase>
+                <UpdateText>
+                    <Item>text/en_us/mpt-text.xml</Item>
+                </UpdateText>
             </Actions>
         </ActionGroup>
     </ActionGroups>

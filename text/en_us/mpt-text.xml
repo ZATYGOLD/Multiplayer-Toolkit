@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Database>
+  <EnglishText>
+  <!-- MPT Pause -->
+    <Row Tag="LOC_MPT_PAUSE_GAME">
+      <Text>Pause Game</Text>
+    </Row>
+    <Row Tag="LOC_MPT_READY">
+      <Text>Ready</Text>
+    </Row>
+    <Row Tag="LOC_MPT_CANCEL_READY">
+      <Text>Cancel Ready</Text>
+    </Row>
+    <Row Tag="LOC_MPT_RESUME_HOST">
+      <Text>Resume (Host)</Text>
+    </Row>
+
+    <!-- MPT Timers -->
+    <Replace Tag="LOC_GAME_TURNTIMER_DESC">  <!-- Override the base Turn Timer parameter description -->
+      <Text>
+        Determines how long Players have to take their Turn.
+        [n]None - Players take Turns without time constraints.[n]Standard - Turn time is based on the Turn Time option (in seconds).
+        [n]Dynamic - Turn time is dynamically scaled based on the number of Cities and Units in play.
+        [n]Competitive - Turn time tuned for competitive play.
+      </Text>
+    </Replace>
+    <Row Tag="LOC_MPT_TURNTIMER_COMPETITIVE">
+      <Text>Competitive</Text>
+    </Row>
+    <Row Tag="LOC_MPT_TURNTIMER_COMPETITIVE_DESC">
+      <Text>Turn Time tuned for competitive play.</Text>
+    </Row>
+  </EnglishText>
+</Database>
