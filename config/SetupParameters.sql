@@ -1,6 +1,5 @@
 -- config/SetupParameters.sql
 -- Author: Zatygold
---
 
 --*******************************************************
 --***************** TURN TIMER SETTINGS *****************

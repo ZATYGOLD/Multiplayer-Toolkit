@@ -20,6 +20,12 @@
 
     <ActionCriteria>
         <Criteria id="always"><AlwaysMet/></Criteria>
+
+<!--*************************** CRITERIA: COMPETITIVE TIMER ****************************************-->
+
+  		<Criteria id="competitive-timer-antiquity"><AgeInUse>AGE_ANTIQUITY</AgeInUse></Criteria>
+        <Criteria id="competitive-timer-exploration"><AgeInUse>AGE_EXPLORATION</AgeInUse></Criteria>
+        <Criteria id="competitive-timer-modern"><AgeInUse>AGE_MODERN</AgeInUse></Criteria>
     </ActionCriteria>
 
 <!--*************************** SHELL: TEXT/SETTINGS ***********************************************-->
@@ -39,7 +45,7 @@
 
 <!--******************************** GAME: TEXT **************************************************-->
 
-        <ActionGroup id="mpt-pause-button" scope="game" criteria="always">
+        <ActionGroup id="mpt-game-text" scope="game" criteria="always">
             <Properties><LoadOrder>500</LoadOrder></Properties>
             <Actions>
                 <UpdateText>
@@ -64,11 +70,29 @@
 
 <!--**************************** GAME: TURN TIMER ************************************************-->
 
-        <ActionGroup id="mpt-turn-timer" scope="game" criteria="always">
+        <ActionGroup id="mpt-turn-timer-antiquity" scope="game" criteria="competitive-timer-antiquity">
             <Properties><LoadOrder>1000</LoadOrder></Properties>
             <Actions>
             	<UpdateDatabase>
 					<Item>data/timers/antiquity/CompetitiveTimer.sql</Item>
+				</UpdateDatabase>
+            </Actions>
+        </ActionGroup>
+
+        <ActionGroup id="mpt-turn-timer-exploration" scope="game" criteria="competitive-timer-exploration">
+            <Properties><LoadOrder>1000</LoadOrder></Properties>
+            <Actions>
+            	<UpdateDatabase>
+					<Item>data/timers/exploration/CompetitiveTimer.sql</Item>
+				</UpdateDatabase>
+            </Actions>
+        </ActionGroup>
+
+        <ActionGroup id="mpt-turn-timer-modern" scope="game" criteria="competitive-timer-modern">
+            <Properties><LoadOrder>1000</LoadOrder></Properties>
+            <Actions>
+            	<UpdateDatabase>
+					<Item>data/timers/modern/CompetitiveTimer.sql</Item>
 				</UpdateDatabase>
             </Actions>
         </ActionGroup>
