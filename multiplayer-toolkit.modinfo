@@ -68,6 +68,17 @@
             </Actions>
         </ActionGroup>
 
+<!--*********************** GAME: COMPETITIVE TIMER SCRIPT ***************************************-->
+
+        <ActionGroup id="mpt-competitive-timer-script" scope="game" criteria="always">
+            <Properties><LoadOrder>1000</LoadOrder></Properties>
+            <Actions>
+                <UIScripts>
+                    <Item>ui/mp-timer/mp-timer.js</Item>
+                </UIScripts>
+            </Actions>
+        </ActionGroup>
+
 <!--**************************** GAME: TURN TIMER ************************************************-->
 
         <ActionGroup id="mpt-turn-timer-antiquity" scope="game" criteria="competitive-timer-antiquity">
