@@ -1,5 +1,5 @@
 /*
- * Multiplayer Toolkit - Competitive turn timer (enforcement).
+ * Multiplayer Toolkit - Competitive turn timer (enforcement + display).
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * The engine only enforces None/Standard/Dynamic, so the custom "Competitive"
@@ -8,11 +8,18 @@
  * (the per-Age values in data/timers/<age>/CompetitiveTimer.sql) and ends the
  * local turn on expiry. Deterministic: all clients derive the same time from
  * synced state.
+ *
+ * The engine still paints its own fallback countdown for the unknown type, so
+ * we overwrite that element with the real remaining time (a MutationObserver
+ * re-asserts our value whenever the engine repaints it).
  */
 
 const COMPETITIVE_HASH = Database.makeHash('MPT_TURNTIMER_COMPETITIVE');
+const TIMER_ELEMENT_ID = 'action_panel__mp-turntimer';
 
 let countdownHandle = 0;
+let remaining = 0;
+let displayObserver = null;
 
 function isCompetitiveSelected() {
   try { return Configuration.getGame().turnTimerType === COMPETITIVE_HASH; }
@@ -51,17 +58,40 @@ function computeSeconds() {
   return limit.base + (limit.perCity * cities) + (limit.perUnit * units);
 }
 
+/** Overwrite the engine's fallback countdown with our real remaining time. */
+function paintTimer() {
+  const el = document.getElementById(TIMER_ELEMENT_ID);
+  if (!el || remaining <= 0) return;
+  const text = String(remaining);
+  if (el.textContent !== text) el.innerHTML = text;
+}
+
+/** Re-assert our value whenever the engine repaints the element. */
+function watchDisplay() {
+  if (displayObserver) return;
+  const el = document.getElementById(TIMER_ELEMENT_ID);
+  if (!el) return;
+  try {
+    displayObserver = new MutationObserver(paintTimer);
+    displayObserver.observe(el, { childList: true, characterData: true, subtree: true });
+  } catch (e) { /* observer unavailable; interval still repaints */ }
+}
+
 function stopCountdown() {
   if (countdownHandle) { clearInterval(countdownHandle); countdownHandle = 0; }
+  remaining = 0;
 }
 
 function onLocalPlayerTurnBegin() {
   stopCountdown();
   if (!isCompetitiveSelected()) return;
-  let remaining = computeSeconds();
+  remaining = computeSeconds();
   if (remaining <= 0) return;
+  watchDisplay();
+  paintTimer();
   countdownHandle = setInterval(() => {
     remaining -= 1;
+    paintTimer();
     if (remaining <= 0) {
       stopCountdown();
       try { GameContext.sendTurnComplete(); } catch (e) { /* ignore */ }
