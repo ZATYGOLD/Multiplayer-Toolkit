@@ -1,8 +1,8 @@
--- data/timers/antiquity/CompetitiveTimer.sql
+-- data/timers/exploration/CompetitiveTimer.sql
 -- Author: Zatygold
 
 UPDATE TurnSegments
-SET TimeLimit_Base = 500,
-    TimeLimit_PerCity = 10,
-    TimeLimit_PerUnit = 20
+SET TimeLimit_Base = 30,
+    TimeLimit_PerCity = 1,
+    TimeLimit_PerUnit = 2
 WHERE TurnSegmentType = 'TURN_SEGMENT_SINGLEPHASE';
