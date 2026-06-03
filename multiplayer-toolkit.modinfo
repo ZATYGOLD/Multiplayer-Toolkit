@@ -41,6 +41,7 @@
             </Properties>
             <Actions>
                 <UpdateDatabase>
+                    <Item>data/timers/CompetitiveTimer.sql</Item>
                 </UpdateDatabase>
                 <UpdateText>
                     <Item>text/en_us/mpt-text.xml</Item>
