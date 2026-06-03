@@ -7,19 +7,12 @@ The first tool is a **synchronized multiplayer pause**: any player can pause;
 the pause menu opens for everyone with a **Ready / Resume** button and a
 **View Map** button; a synchronized **countdown** plays before the game resumes.
 
-> Note: the mod id is now `multiplayer-toolkit` (manifest:
-> `multiplayer-toolkit.modinfo`) and the display name is **Multiplayer Toolkit**.
-> The on-disk folder is still named `Enhanced Pause Menu` — the game identifies
-> mods by the id, not the folder, so this is fine; rename the folder to
-> `Multiplayer Toolkit` if you like. Because the id changed, **re-enable the mod
-> once** in **Additional Content**.
-
 ---
 
 ## Installation
 
-1. Keep/copy the mod folder (currently **`Enhanced Pause Menu`**) in your mods folder:
-   `…\Sid Meier's Civilization VII\Mods\Enhanced Pause Menu\`
+1. Keep/copy the mod folder (currently **`multiplayer-toolkit`**) in your mods folder:
+   `…\Sid Meier's Civilization VII\Mods\multiplayer-toolkit\`
 2. In game: **Main Menu → Additional Content** and enable **Multiplayer Toolkit**.
 3. **Every player must install and enable the mod.** The pause *state* is
    synchronized by the engine, but the menu, ready tally, countdown and resume
