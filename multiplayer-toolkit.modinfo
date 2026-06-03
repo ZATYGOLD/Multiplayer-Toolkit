@@ -1,12 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Mod id="multiplayer-toolkit" version="00500" xmlns="ModInfo">
     <Properties>
-        <Name>Multiplayer Toolkit (BETA)</Name>
-        <Description>
-            A toolkit of multiplayer quality-of-life features for Civilization VII. 
-            Its first tool is a fully synchronized pause: any player can pause; the host (or a timed vote) resumes. 
-            It adds Pause / Ready / View Map controls to the built-in pause menu, keeps the game paused through an "UNPAUSING..." countdown, blocks game-advancing input while paused, and pauses on a player disconnect before the AI can take over.
-        </Description>
+        <Name>LOC_MOD_MPT_NAME</Name>
+        <Description>LOC_MOD_MPT_DESCRIPTION</Description>
         <Authors>Zatygold</Authors>
         <Package>Mod</Package>
         <AffectsSavedGames>0</AffectsSavedGames>
@@ -40,4 +36,7 @@
             </Actions>
         </ActionGroup>
     </ActionGroups>
+    <LocalizedText>
+		<File>text/en_us/mod-info-text.xml</File>
+	</LocalizedText>
 </Mod>
