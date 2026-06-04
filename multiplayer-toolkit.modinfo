@@ -1,36 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Mod id="multiplayer-toolkit" version="00500" xmlns="ModInfo">
+<Mod id="multiplayer-toolkit" version="00501" xmlns="ModInfo">
     <Properties>
-        <Name>Multiplayer Toolkit (BETA)</Name>
-        <Description>
-            A toolkit of multiplayer quality-of-life features for Civilization VII. 
-            Its first tool is a fully synchronized pause: any player can pause; the host (or a timed vote) resumes. 
-            It adds Pause / Ready / View Map controls to the built-in pause menu, keeps the game paused through an "UNPAUSING..." countdown, blocks game-advancing input while paused, and pauses on a player disconnect before the AI can take over.
-        </Description>
+        <Name>LOC_MOD_MPT_NAME</Name>
+        <Description>LOC_MOD_MPT_DESCRIPTION</Description>
         <Authors>Zatygold</Authors>
         <Package>Mod</Package>
         <AffectsSavedGames>0</AffectsSavedGames>
-        <Version>0.5.0</Version>
-		<LastUpdated>2026-06-02</LastUpdated>
+        <Version>0.5.1</Version>
+		<LastUpdated>2026-06-04</LastUpdated>
         <ShowInBrowser>1</ShowInBrowser>
     </Properties>
+
     <Dependencies>
         <Mod id="base-standard" title="LOC_MODULE_BASE_STANDARD_NAME" />
+        <Mod id="age-antiquity" title="LOC_MODULE_AGE_ANTIQUITY_NAME"/>
+		<Mod id="age-exploration" title="LOC_MODULE_AGE_EXPLORATION_NAME"/>
+		<Mod id="age-modern" title="LOC_MODULE_AGE_MODERN_NAME"/>
     </Dependencies>
+
     <ActionCriteria>
-        <Criteria id="always">
-            <AlwaysMet />
-        </Criteria>
+        <Criteria id="always"><AlwaysMet/></Criteria>
+
+<!--*************************** CRITERIA: COMPETITIVE TIMER ****************************************-->
+
+  		<Criteria id="competitive-timer-antiquity"><AgeInUse>AGE_ANTIQUITY</AgeInUse></Criteria>
+        <Criteria id="competitive-timer-exploration"><AgeInUse>AGE_EXPLORATION</AgeInUse></Criteria>
+        <Criteria id="competitive-timer-modern"><AgeInUse>AGE_MODERN</AgeInUse></Criteria>
     </ActionCriteria>
+
+<!--*************************** SHELL: TEXT/SETTINGS ***********************************************-->
+
     <ActionGroups>
-        <ActionGroup id="mpt-ingame" scope="game" criteria="always">
-            <Properties>
-                <LoadOrder>1000</LoadOrder>
-            </Properties>
+        <ActionGroup id="mpt-shell" scope="shell" criteria="always">
+            <Properties><LoadOrder>1000</LoadOrder></Properties>
             <Actions>
                 <UpdateText>
-                    <Item>text/en_us/mp-pause-text.xml</Item>
+                    <Item>text/en_us/mpt-text.xml</Item>
                 </UpdateText>
+                <UpdateDatabase>
+                    <Item>config/SetupParameters.sql</Item>
+                </UpdateDatabase>
+            </Actions>
+        </ActionGroup>
+
+<!--******************************** GAME: TEXT **************************************************-->
+
+        <ActionGroup id="mpt-game-text" scope="game" criteria="always">
+            <Properties><LoadOrder>500</LoadOrder></Properties>
+            <Actions>
+                <UpdateText>
+                    <Item>text/en_us/mpt-text.xml</Item>
+                </UpdateText>
+            </Actions>
+        </ActionGroup>
+
+<!--*************************** GAME: PAUSE BUTTON ***********************************************-->
+
+        <ActionGroup id="mpt-pause-button" scope="game" criteria="always">
+            <Properties><LoadOrder>1000</LoadOrder></Properties>
+            <Actions>
                 <UIScripts>
                     <Item>ui/mp-pause/mp-pause-config.js</Item>
                     <Item>ui/mp-pause/mp-pause.scss.js</Item>
@@ -39,5 +67,61 @@
                 </UIScripts>
             </Actions>
         </ActionGroup>
+
+<!--*********************** GAME: COMPETITIVE TIMER SCRIPT ***************************************-->
+
+        <ActionGroup id="mpt-competitive-timer-script" scope="game" criteria="always">
+            <Properties><LoadOrder>1000</LoadOrder></Properties>
+            <Actions>
+                <UIScripts>
+                    <Item>ui/mp-timer/mp-timer-config.js</Item>
+                    <Item>ui/mp-timer/mp-timer.js</Item>
+                </UIScripts>
+            </Actions>
+        </ActionGroup>
+
+<!--**************************** GAME: TURN TIMER ************************************************-->
+
+        <ActionGroup id="mpt-turn-timer-schema" scope="game" criteria="always">
+            <Properties><LoadOrder>900</LoadOrder></Properties>
+            <Actions>
+            	<UpdateDatabase>
+					<Item>data/timers/TimerScaling.sql</Item>
+				</UpdateDatabase>
+            </Actions>
+        </ActionGroup>
+
+        <ActionGroup id="mpt-turn-timer-antiquity" scope="game" criteria="competitive-timer-antiquity">
+            <Properties><LoadOrder>1000</LoadOrder></Properties>
+            <Actions>
+            	<UpdateDatabase>
+					<Item>data/timers/antiquity/CompetitiveTimer.sql</Item>
+				</UpdateDatabase>
+            </Actions>
+        </ActionGroup>
+
+        <ActionGroup id="mpt-turn-timer-exploration" scope="game" criteria="competitive-timer-exploration">
+            <Properties><LoadOrder>1000</LoadOrder></Properties>
+            <Actions>
+            	<UpdateDatabase>
+					<Item>data/timers/exploration/CompetitiveTimer.sql</Item>
+				</UpdateDatabase>
+            </Actions>
+        </ActionGroup>
+
+        <ActionGroup id="mpt-turn-timer-modern" scope="game" criteria="competitive-timer-modern">
+            <Properties><LoadOrder>1000</LoadOrder></Properties>
+            <Actions>
+            	<UpdateDatabase>
+					<Item>data/timers/modern/CompetitiveTimer.sql</Item>
+				</UpdateDatabase>
+            </Actions>
+        </ActionGroup>
     </ActionGroups>
+
+<!--************************* LOCALIZED TEXT ************************************************-->
+
+    <LocalizedText>
+		<File>text/en_us/mod-info-text.xml</File>
+	</LocalizedText>
 </Mod>

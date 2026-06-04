@@ -1,28 +1,92 @@
 # Multiplayer Toolkit
 
 A toolkit of multiplayer quality-of-life features for **Sid Meier's Civilization
-VII**, built on the game's own UI components.
+VII**, built on the game's own UI components. Current version: **0.5.1**.
 
-The first tool is a **synchronized multiplayer pause**: any player can pause;
-the pause menu opens for everyone with a **Ready / Resume** button and a
-**View Map** button; a synchronized **countdown** plays before the game resumes.
+Two tools so far:
+
+- A **Competitive turn timer** — a fourth Turn Timer option in multiplayer setup
+  (alongside None / Standard / Dynamic) whose per-turn time scales with cities,
+  units, human players and the turn number, with orange/red urgency tiers and
+  warning sounds.
+- A **synchronized multiplayer pause** — any player can pause; the pause menu
+  opens for everyone with **Ready / Resume** and **View Map** buttons; a
+  synchronized **countdown** plays before the game resumes.
 
 ---
 
 ## Installation
 
-1. Keep/copy the mod folder (currently **`multiplayer-toolkit`**) in your mods folder:
-   `…\Sid Meier's Civilization VII\Mods\multiplayer-toolkit\`
+1. Copy the mod folder into your mods folder:
+   `…\Sid Meier's Civilization VII\Mods\Multiplayer-Toolkit\`
 2. In game: **Main Menu → Additional Content** and enable **Multiplayer Toolkit**.
-3. **Every player must install and enable the mod.** The pause *state* is
-   synchronized by the engine, but the menu, ready tally, countdown and resume
-   rules run per-client, so everyone needs it.
+3. **Every player must install and enable the mod.** The pause state and the
+   turn clock are synchronized by the engine, but the menus, tallies, countdown
+   display and timer enforcement run per-client, so everyone needs it.
 
 The mod is dormant in single-player.
 
 ---
 
-## How to use
+## Competitive Turn Timer
+
+### How to use
+
+In the multiplayer game setup, set **Turn Timer** to **Competitive** (it sits
+between None and Standard) and play with **Simultaneous** turns. Each turn is
+then bounded by a clock computed for the active Age:
+
+```
+seconds = Base
+        + PerCity  × (most cities any civ has)
+        + PerUnit  × (most units any civ has)
+        + PerHuman × (living human players)
+        + PerTurn  × (current turn number)
+```
+
+City/unit counts use the largest empire, so every player gets the same number —
+one shared, fair clock. When it reaches zero the turn ends automatically; a
+player who un-readies after zero is re-ended within seconds.
+
+### Urgency tiers
+
+| Remaining | Display | Sound |
+|---|---|---|
+| above 30s | normal | engine's 60s warning only |
+| 30s – 16s | **orange** | urgency beep at 30 / 25 / 20 |
+| 15s – 0s | **steady red** | per-second countdown beeps |
+
+### Tuning
+
+| What | Where |
+|---|---|
+| Per-Age `Base` / `PerCity` / `PerUnit` | `data/timers/<age>/CompetitiveTimer.sql` |
+| Default `PerHuman` / `PerTurn` (all Ages) | `data/timers/TimerScaling.sql` |
+| Per-Age `PerHuman` / `PerTurn` overrides | `UPDATE MPT_TimerScaling …` in the Age's file (see antiquity) |
+| Tier thresholds, colours, sounds, debug logging | `ui/mp-timer/mp-timer-config.js` |
+
+### Implementation notes (honest)
+
+- The engine only *enforces* its three built-in timer types; a data-registered
+  fourth type is treated as unknown (fallback 180s display, no enforcement).
+  The mod therefore proxies the action panel's `TurnTimerUpdated` listener and
+  feeds the engine's own renderer the competitive time — so the native text,
+  ring meter, flash and beeps all draw the real clock — and ends the local turn
+  itself via `GameContext.sendTurnComplete()`.
+- Remaining time derives from the engine's **synchronized phase clock**, so
+  readying, un-readying and HUD interaction cannot desync or reset it. New
+  turns are detected via `Game.turn`; backward clock corrections are tolerated;
+  the display pins at zero once expired.
+- A periodic guardian keeps the takeover in place if the action panel
+  re-attaches, and the ring meter self-heals if a stray native render or
+  ready-up reset desyncs it.
+- Known cosmetic: the lobby **Rules** popup prints a debug string for the
+  custom timer type (the base screen only knows the three built-ins). Age
+  transitions use their own long phase and are passed through untouched.
+
+---
+
+## Synchronized Pause
 
 - **Pause (any player):** open the pause menu (Esc) and click **Pause Game**.
   The game pauses for everyone and the pause menu opens on every player's screen.
@@ -44,20 +108,6 @@ The mod is dormant in single-player.
   for the duration), so no one can take a game-advancing action until the timer
   hits zero — only then does play actually resume, together.
 
----
-
-## How each requirement is met
-
-| Requirement | Implementation |
-|---|---|
-| Pause button **in the pause menu** | An `fxs-button` (the game's own button component) labelled **Pause Game** is injected into the built-in pause menu's `#pause-menu-button-container`. |
-| **View Map** button, only while paused | An `fxs-button` reusing the game's existing **`LOC_ADVANCED_START_VIEW_MAP`** ("View Map") string, shown only when paused. It calls `InterfaceMode.switchToDefault()` to return to the world; Esc re-opens the pause menu. |
-| Pause menu **opens for all** with **Ready** + **View Map** | On the synchronized `GamePauseStateChanged` event every client opens `INTERFACEMODE_PAUSE_MENU` and the Ready / View Map buttons + "Ready X/N" tally are injected. |
-| **Countdown** appears when unpausing, game stays paused during it | When all flags clear, each client immediately re-asserts its pause flag and runs a 5-second top-center **UNPAUSING…** countdown; the engine only truly unpauses when every client's countdown has finished, so no game-advancing action is possible during the timer. |
-| **Ready tally is unmissable** | The footer "Ready: X / N" is large and turns **bright red** until enough players are ready, then **bright green** (≥ the vote threshold). |
-| See **production / town panels**, but can't advance | Only game-advancing input actions are filtered (see below). Selecting cities/units and opening production & information panels is allowed; the engine pause prevents any change from actually taking effect. |
-| **Pause before the AI takes over** on pause / disconnect | Three layers: the `MultiplayerPostPlayerDisconnected` event, a `Network.isPlayerConnected` watchdog polled every 0.5s, and a turn-activation guard (`PlayerTurnActivated` / `RemotePlayerTurnBegin`). Any human drop pauses the game before the AI can take that player's turn. After a deliberate resume the AI may take over an acknowledged absentee; a fresh drop pauses again. |
-
 ### The unpause / "Ready" model
 
 The engine keeps the game paused while **any** player holds a "want pause" flag,
@@ -71,35 +121,25 @@ Resume happens (last flag clears → engine unpauses) via, in order:
 
 1. **Consensus** – everyone (the host included, whose flag is required) clicks
    Ready.
-2. **60% vote** – after `VOTE_DELAY` seconds, once ≥ `VOTE_THRESHOLD` (default
-   60%) are ready, the remaining clients auto-ready and the game resumes.
-3. **Override** – after `HOST_OVERRIDE_DELAY` seconds, any readiness resumes the
-   game (anti-AFK / host force-resume).
+2. **60% vote** – after `voteDelayMs`, once ≥ `voteThreshold` (default 60%) are
+   ready, the remaining clients auto-ready and the game resumes.
+3. **Override** – after `hostOverrideDelayMs`, any readiness resumes the game
+   (anti-AFK / host force-resume).
 
 Because the host's own flag is required for the consensus path, the host
 effectively gates a normal resume; the vote/override tiers are the time-limited
-fallbacks you asked for. All values are configurable at the top of
-`ui/mp-pause/mp-pause-config.js`:
-
-```
-RESUME_COUNTDOWN_SECONDS, VOTE_THRESHOLD, VOTE_DELAY_MS, HOST_OVERRIDE_DELAY_MS
-```
+fallbacks. All values are configurable in `ui/mp-pause/mp-pause-config.js`.
 
 **Engine limitation (honest note):** Civ VII exposes only an *aggregate*
 want-pause count — there is no per-player or host-specific pause query and no
 custom UI network message a mod can send. A *unilateral, instant* host-only
 override that other clients could detect on the wire is therefore not possible
 from a UI mod, so host authority is expressed through the configurable
-thresholds above rather than as an instant force. If you'd prefer a strict
-"only the host's flag controls the pause" model (clean instant host resume, but
-no cross-client ready/vote tally), that's a one-setting change — just ask.
+thresholds above rather than as an instant force.
 
 ### Pause on disconnect (before AI takeover) — three layers
 
-Preventing the AI from acting for a dropped player is the most important
-guarantee of this mod, so it is defended at **every UI hook the engine exposes**
-(a UI mod cannot run code inside the engine's AI turn-processing itself). All
-three layers funnel into one `requestDisconnectPause()` path:
+All three layers funnel into one `requestDisconnectPause()` path:
 
 1. **Disconnect event** — `MultiplayerPostPlayerDisconnected` pauses immediately
    (reactive).
@@ -113,9 +153,9 @@ three layers funnel into one `requestDisconnectPause()` path:
 
 **Resume vs. re-pause.** The first drop always pauses before the AI. Once the
 players *deliberately* resume with someone still absent, that player is
-"acknowledged" so the guard does not fight the choice and the AI may take over
-(as you specified). If that player reconnects and later drops again, it is a
-fresh disconnect and pauses again.
+"acknowledged" so the guard does not fight the choice and the AI may take over.
+If that player reconnects and later drops again, it is a fresh disconnect and
+pauses again.
 
 *Honest scope:* the guarantee is as strong as a UI mod can make it — the
 turn-activation guard fires at the start of turn processing, before AI orders
@@ -123,6 +163,7 @@ execute — but it is still event/poll-driven rather than a hook inside the
 engine's AI loop.
 
 ### Blocked while paused
+
 `next-action`, `keyboard-enter`, `force-end-turn`, `unit-move`,
 `unit-ranged-attack`, `unit-skip-turn`, `unit-sleep`, `unit-fortify`,
 `unit-heal`, `unit-alert`, `unit-auto-explore`, `trigger-accept-dip`,
@@ -131,38 +172,33 @@ are **not** blocked.
 
 ---
 
-## Notes
-
-- The earlier "clicking a unit removed the UI" bug is fixed: it was caused by a
-  continuous DOM observer that popped the wrong UI context. That mechanism is
-  gone. The stock modal "Game Paused / [player] has paused the game" popup is now
-  suppressed at the source — the mod shares the engine's `DialogBoxManager`
-  singleton and intercepts that one popup (by its `LOC_MP_PAUSE_POPUP_TITLE`
-  title) so it is never created, while every other dialog passes through
-  untouched. Buttons are injected only when the pause menu actually opens (via
-  the `interface-mode-changed` event).
-- Core singletons are imported with several candidate paths and `try/catch`; if
-  a future patch relocates them the mod still pauses, shows the menu and counts
-  down (only the input-filter / popup-dismiss niceties would degrade).
-
 ## Project structure
 
 ```
-Enhanced Pause Menu/
-├─ multiplayer-toolkit.modinfo        # manifest (loads text + UI scripts in-game)
-├─ text/en_us/mp-pause-text.xml       # button caption strings (LOC_EPM_*)
-├─ ui/mp-pause/                       # feature folder (mirrors the base game's ui/<feature>/)
+Multiplayer-Toolkit/
+├─ multiplayer-toolkit.modinfo        # manifest: shell settings, per-Age data, UI scripts
+├─ config/
+│  └─ SetupParameters.sql             # registers the Competitive option in the lobby dropdown
+├─ data/timers/
+│  ├─ TimerScaling.sql                # MPT_TimerScaling schema + default PerHuman/PerTurn
+│  ├─ antiquity/CompetitiveTimer.sql  # Antiquity segment values + scaling overrides
+│  ├─ exploration/CompetitiveTimer.sql
+│  └─ modern/CompetitiveTimer.sql
+├─ text/en_us/
+│  ├─ mod-info-text.xml               # mod name/description (Additional Content screen)
+│  └─ mpt-text.xml                    # button captions + Competitive timer strings
+├─ ui/mp-pause/                       # synchronized pause feature
 │  ├─ mp-pause-config.js              # constants & tunable settings (data)
-│  ├─ mp-pause.scss.js                # styles, shipped as a string (base "*.scss.js" convention)
-│  ├─ mp-pause-overlay.js             # reusable "UNPAUSING..." countdown overlay component
-│  └─ mp-pause-mgr.js                 # manager singleton / entry point (mirrors mp-ingame-mgr.js)
-└─ README.md
+│  ├─ mp-pause.scss.js                # styles, shipped as a string
+│  ├─ mp-pause-overlay.js             # reusable "UNPAUSING..." countdown overlay
+│  └─ mp-pause-mgr.js                 # manager singleton / entry point
+└─ ui/mp-timer/                       # competitive turn timer feature
+   ├─ mp-timer-config.js              # constants & tunable settings (data)
+   └─ mp-timer.js                     # takeover proxy, tiers, enforcement (logic)
 ```
 
-The manager is a class-based singleton constructed on `engine.whenReady`, like the
-base game's `mp-ingame-mgr.js`. Tunables live in `mp-pause-config.js`
-(`CONFIG.resumeCountdownSeconds`, `voteThreshold`, `voteDelayMs`,
-`hostOverrideDelayMs`, …); styles live in `mp-pause.scss.js`.
+Each feature follows the same pattern: a `*-config.js` data module and a logic
+module, mirroring the base game's UI conventions.
 
 ---
 

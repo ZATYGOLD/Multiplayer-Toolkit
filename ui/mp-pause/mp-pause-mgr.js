@@ -42,10 +42,7 @@
  * network message, so a unilateral instant host-only override is not possible;
  * host authority is expressed through the configurable vote/override delays.
  */
-import {
-  FILTER_SOURCE, PAUSE_MENU_MODE, NATIVE_PAUSE_DIALOG_TITLE,
-  CONFIG, PROGRESS_ACTIONS, LOC, coreCandidates
-} from './mp-pause-config.js';
+import { FILTER_SOURCE, PAUSE_MENU_MODE, NATIVE_PAUSE_DIALOG_TITLE, CONFIG, PROGRESS_ACTIONS, LOC, coreCandidates } from './mp-pause-config.js';
 import styles from './mp-pause.scss.js';
 import PauseCountdownOverlay from './mp-pause-overlay.js';
 
