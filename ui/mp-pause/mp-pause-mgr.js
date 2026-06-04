@@ -75,6 +75,7 @@ class MultiplayerPauseManager {
   connectionTimer = 0;
   acknowledged = {};          // disconnected ids the players deliberately resumed past
   disconnectNotices = [];     // { id, name } per currently-disconnected player (menu display)
+  viewHiddenForcedEl = null;  // production chooser element we forced "View Hidden" on
 
   // --- core singletons (resolved lazily in loadCoreSingletons) ---
   inputFilter = null;
@@ -411,10 +412,38 @@ class MultiplayerPauseManager {
   stopPoll() {
     if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = 0; }
   }
+  /**
+   * While paused every city operation fails, so with "View Hidden" off the
+   * production chooser renders empty categories. Force it on through the
+   * chooser's own setter (items appear, disabled) once per chooser-open, and
+   * restore it on unpause. The user can still toggle it manually meanwhile.
+   */
+  syncProductionChooser() {
+    const el = document.querySelector("panel-production-chooser");
+    const chooser = el?.maybeComponent;
+    if (!el || !chooser) { this.viewHiddenForcedEl = null; return; }
+    if (this.viewHiddenForcedEl === el) return;   // already handled this open
+    try {
+      if (chooser.viewHidden === false) {
+        chooser.viewHidden = true;
+        this.log("Production chooser: 'View Hidden' forced on while paused.");
+      }
+      this.viewHiddenForcedEl = el;
+    } catch (e) { /* chooser internals changed; leave it alone */ }
+  }
+  restoreProductionChooser() {
+    const chooser = document.querySelector("panel-production-chooser")?.maybeComponent;
+    if (chooser && this.viewHiddenForcedEl) {
+      try { chooser.viewHidden = false; } catch (e) { /* ignore */ }
+    }
+    this.viewHiddenForcedEl = null;
+  }
+
   onPoll() {
     if (this.state !== STATE.PAUSED) return;
     const count = this.numWantPause();
     if (count > this.maxCount) this.maxCount = count;
+    this.syncProductionChooser();
 
     // The pause menu is a reactive (SolidJS) screen; if a re-render dropped our
     // injected buttons while it is open, put them back.
@@ -483,6 +512,7 @@ class MultiplayerPauseManager {
     this.maxCount = 0;
     this.pauseReason = "";
     this.disconnectNotices = [];
+    this.restoreProductionChooser();
     this.removeFooterReady();
     this.startMenuListener();   // keep offering the Pause button while idle
   }
