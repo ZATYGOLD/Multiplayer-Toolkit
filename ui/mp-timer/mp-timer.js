@@ -169,20 +169,23 @@ function decorateText(n) {
     catch (e) { el.textContent = String(n); }
     return;
   }
-  if (STEADY_FLASH && active && n < FLASH_START && n % 2 === 1 && el.textContent === String(n)) {
+  if (STEADY_FLASH && active && n <= FLASH_START && n % 2 === 1 && el.textContent === String(n)) {
     try { el.innerHTML = Locale.stylize(`[STYLE:screen-turntimer_text_turn_active_flash]${n}[/STYLE]`); }
     catch (e) { /* keep the engine's default */ }
   }
 }
 
-/** Warning sound at 30/25/20/15 while in the orange tier. */
+/**
+ * Urgency beep every 5s in the orange tier (30/25/20). The engine itself
+ * beeps at 15 and below, so stopping above FLASH_START avoids a double hit.
+ */
 function warnSounds(n) {
   if (expiredAt >= 0 || !localPlayerTurnActive()) return;
-  if (n > ORANGE_START || n < FLASH_START || n % WARN_EVERY !== 0) return;
+  if (n > ORANGE_START || n <= FLASH_START || n % WARN_EVERY !== 0) return;
   if (n >= lastWarnTick) return;
   lastWarnTick = n;
-  try { UI.sendAudioEvent('turn-timer-warning'); } catch (e) { /* no audio */ }
-  log(`warning sound at ${n}s`);
+  try { UI.sendAudioEvent('turn-timer-countdown'); } catch (e) { /* no audio */ }
+  log(`urgency beep at ${n}s`);
 }
 
 /** Engine's timer handler, fed our total when Competitive is active. */

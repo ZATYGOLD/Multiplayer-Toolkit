@@ -81,6 +81,15 @@
 
 <!--**************************** GAME: TURN TIMER ************************************************-->
 
+        <ActionGroup id="mpt-turn-timer-schema" scope="game" criteria="always">
+            <Properties><LoadOrder>900</LoadOrder></Properties>
+            <Actions>
+            	<UpdateDatabase>
+					<Item>data/timers/TimerScaling.sql</Item>
+				</UpdateDatabase>
+            </Actions>
+        </ActionGroup>
+
         <ActionGroup id="mpt-turn-timer-antiquity" scope="game" criteria="competitive-timer-antiquity">
             <Properties><LoadOrder>1000</LoadOrder></Properties>
             <Actions>
