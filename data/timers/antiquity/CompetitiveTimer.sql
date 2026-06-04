@@ -2,7 +2,7 @@
 -- Author: Zatygold
 
 UPDATE TurnSegments
-SET TimeLimit_Base = 10,
+SET TimeLimit_Base = 60,
     TimeLimit_PerCity = 1,
     TimeLimit_PerUnit = 2
 WHERE TurnSegmentType = 'TURN_SEGMENT_SINGLEPHASE';
