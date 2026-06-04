@@ -7,11 +7,12 @@
 -- Schema and default values; each Age may override below files.
 --   + PerHuman * (living human players)
 --   + PerTurn  * (current turn number)
+-- Decimal values (e.g. 1.25) are supported.
 CREATE TABLE IF NOT EXISTS MPT_TimerScaling 
     (
         ScalingId TEXT NOT NULL, 
-        PerHuman INTEGER NOT NULL DEFAULT 0, 
-        PerTurn INTEGER NOT NULL DEFAULT 0, 
+        PerHuman REAL NOT NULL DEFAULT 0, 
+        PerTurn REAL NOT NULL DEFAULT 0, 
         PRIMARY KEY(ScalingId)
     );
 

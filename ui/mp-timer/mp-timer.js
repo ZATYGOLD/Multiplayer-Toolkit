@@ -110,17 +110,24 @@ function playerTallies() {
   return tallies;
 }
 
-/** Competitive seconds for this turn; 0 if the segment data is unavailable. */
+/**
+ * Competitive seconds for this turn; 0 if the segment data is unavailable.
+ * Decimal scaling values are supported; the result is rounded to the nearest
+ * roundToNearest multiple (never below one step, so a short turn stays timed).
+ */
 function computeSeconds() {
   const limit = segmentLimits();
   if (!limit) return 0;
   const { cities, units, humans } = playerTallies();
   const { perHuman, perTurn } = scalingValues();
-  return limit.base
+  const raw = limit.base
     + (limit.perCity * cities)
     + (limit.perUnit * units)
     + (perHuman * humans)
     + (perTurn * Math.max(0, currentTurn()));
+  if (raw <= 0) return 0;
+  const step = CONFIG.roundToNearest >= 1 ? CONFIG.roundToNearest : 1;
+  return Math.max(step, Math.round(raw / step) * step);
 }
 
 /**

@@ -45,7 +45,9 @@ seconds = Base
 ```
 
 City/unit counts use the largest empire, so every player gets the same number —
-one shared, fair clock. When it reaches zero the turn ends automatically; a
+one shared, fair clock. Decimal weights (e.g. `PerTurn = 1.25`) are supported,
+and the result rounds to the nearest whole second (`roundToNearest` in
+`mp-timer-config.js`). When it reaches zero the turn ends automatically; a
 player who un-readies after zero is re-ended within seconds.
 
 ### Urgency tiers

@@ -9,5 +9,5 @@ WHERE TurnSegmentType = 'TURN_SEGMENT_SINGLEPHASE';
 
 UPDATE MPT_TimerScaling
 SET PerHuman = 1, 
-    PerTurn = 1
+    PerTurn = 1.25
 WHERE ScalingId = 'DEFAULT';
