@@ -73,7 +73,10 @@ function refreshTooltip() {
   if (banner.textContent !== waiting) return;
   const names = pendingPlayerNames();
   if (!names.length) return;
-  const list = names.join(', ');
+  // [N] renders as a line break (tooltip content is Locale.stylize'd), giving a
+  // vertical list; anchoring to "top" makes long lists expand upward instead of
+  // clipping at the bottom of the screen.
+  const list = names.join('[N]');
   let content;
   try { content = Locale.compose(LOC.waitingList, list); }
   catch (e) { content = null; }
@@ -82,7 +85,9 @@ function refreshTooltip() {
   if (!content || content.includes('{1_')) content = list;
   if (button.getAttribute('data-tooltip-content') !== content) {
     button.setAttribute('data-tooltip-content', content);
+    button.setAttribute('data-tooltip-anchor', 'top');
     banner.setAttribute('data-tooltip-content', content);
+    banner.setAttribute('data-tooltip-anchor', 'top');
     log(`waiting on: ${names.join(', ')}`);
   }
 }

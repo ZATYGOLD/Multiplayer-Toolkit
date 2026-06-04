@@ -268,5 +268,21 @@ function enforceTakeover() {
   }
 }
 
+/**
+ * The ring is a wall-clock CSS animation, so it keeps depleting visually while
+ * the game is paused even though the phase clock stops. Freeze it during pause
+ * and force a resync on unpause to realign with the real clock.
+ */
+function onGamePauseChanged(data) {
+  const paused = !!data && Number(data.data) === 1;
+  const rings = panelInstance?.timerAnimationElements;
+  if (rings) {
+    for (const el of rings) el.style.animationPlayState = paused ? 'paused' : 'running';
+  }
+  if (!paused && total > 0) clearRingLatch(lastElapsedSeen);
+  log(paused ? 'game paused - ring frozen' : 'game resumed - ring resynced');
+}
+
+engine.on('GamePauseStateChanged', onGamePauseChanged);
 enforceTakeover();
 setInterval(enforceTakeover, CONFIG.guardianMs);

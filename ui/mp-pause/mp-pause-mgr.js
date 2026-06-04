@@ -74,6 +74,7 @@ class MultiplayerPauseManager {
   watchedHumans = [];         // human player ids monitored for drops
   connectionTimer = 0;
   acknowledged = {};          // disconnected ids the players deliberately resumed past
+  disconnectNotices = [];     // { id, name } per currently-disconnected player (menu display)
 
   // --- core singletons (resolved lazily in loadCoreSingletons) ---
   inputFilter = null;
@@ -89,6 +90,7 @@ class MultiplayerPauseManager {
   interfaceModeChangedListener = () => this.onInterfaceModeChanged();
   playerTurnActivatedListener = () => this.onTurnActivated();
   playerConnectedListener = (data) => this.onPlayerConnected(data);
+  hostMigratedListener = (data) => this.onHostMigrated(data);
 
   constructor() {
     engine.whenReady.then(() => this.onReady());
@@ -288,7 +290,8 @@ class MultiplayerPauseManager {
   }
   applyFooterClass(el) {
     const n = this.totalPlayers();
-    const enough = this.converged() && n > 0 && (this.readyCount() / n) >= CONFIG.voteThreshold;
+    const threshold = CONFIG.votingEnabled ? CONFIG.voteThreshold : 1;   // no voting: green only at consensus
+    const enough = this.converged() && n > 0 && (this.readyCount() / n) >= threshold;
     el.classList.toggle("mpt-enough", enough);
     el.classList.toggle("mpt-not-enough", !enough);
   }
@@ -309,13 +312,38 @@ class MultiplayerPauseManager {
     const el = document.querySelector("#" + FOOTER_READY_ID);
     if (el) el.remove();
   }
+  /** Player display name like "Name#12345": gamertag fields first, LOC keys composed. */
+  composePlayerName(raw) {
+    if (!raw) return "";
+    try { return Locale.compose(raw); } catch (e) { return String(raw); }
+  }
+  playerNameById(id) {
+    try {
+      const pc = Configuration.getPlayer(id);
+      return this.composePlayerName(pc && (pc.nickName_T2GP || pc.nickName || pc.slotName));
+    } catch (e) { return ""; }
+  }
+  addDisconnectNotice(id, name) {
+    if (id !== null && this.disconnectNotices.some((n) => n.id === id)) return;
+    if (name && this.disconnectNotices.some((n) => n.name === name)) return;
+    this.disconnectNotices.push({ id, name: name || "A player" });
+    this.refreshStatus();
+  }
+  removeDisconnectNotice(id) {
+    this.disconnectNotices = this.disconnectNotices.filter((n) => n.id !== id);
+    this.refreshStatus();
+  }
   hostHintHTML() {
-    const reason = this.pauseReason ? ('<span class="mpt-reason">' + this.pauseReason + '</span>') : "";
+    // One line per disconnected player (bright red, padded - see .mpt-reason).
+    const notices = this.disconnectNotices
+      .map((n) => '<div class="mpt-reason">' + n.name + ' disconnected.</div>')
+      .join("");
+    const reason = this.pauseReason ? ('<div class="mpt-reason">' + this.pauseReason + '</div>') : "";
     let line;
     if (this.amHost()) line = "You are the host. Resume when ready.";
     else if (!this.iHoldFlag) line = "You are ready. Waiting for the host to resume.";
     else line = "Waiting for the host to resume.";
-    return reason + line;
+    return notices + reason + line;
   }
   refreshStatus() {
     const hint = document.querySelector("#" + HOST_HINT_ID);
@@ -402,7 +430,7 @@ class MultiplayerPauseManager {
     if (t < CONFIG.convergenceDelayMs) return;
     const n = this.totalPlayers();
     const ratio = n > 0 ? this.readyCount() / n : 0;
-    const voteResume = (t >= CONFIG.voteDelayMs) && (ratio >= CONFIG.voteThreshold);
+    const voteResume = CONFIG.votingEnabled && (t >= CONFIG.voteDelayMs) && (ratio >= CONFIG.voteThreshold);
     const overrideResume = (t >= CONFIG.hostOverrideDelayMs) && (this.readyCount() >= 1);
     if (voteResume || overrideResume) { this.iHoldFlag = false; this.toggleEnginePause(); }
   }
@@ -454,6 +482,7 @@ class MultiplayerPauseManager {
     this.finalizing = false;
     this.maxCount = 0;
     this.pauseReason = "";
+    this.disconnectNotices = [];
     this.removeFooterReady();
     this.startMenuListener();   // keep offering the Pause button while idle
   }
@@ -516,9 +545,13 @@ class MultiplayerPauseManager {
   // Layer 1 - engine disconnect event.
   onPlayerDisconnected(data) {
     if (!this.isMultiplayer) return;
+    let id = null;
+    try { id = data && (data.player ?? data.playerID ?? data.data ?? null); } catch (e) {}
     let name = "";
-    try { name = (data && (data.playerNameT2gp || data.playerName1Pgp)) || ""; } catch (e) {}
-    this.requestDisconnectPause(name ? (name + " disconnected.") : "A player disconnected.");
+    try { name = this.composePlayerName(data && (data.playerNameT2gp || data.playerName1Pgp)); } catch (e) {}
+    if (!name && id !== null) name = this.playerNameById(id);
+    this.addDisconnectNotice(id, name);
+    this.requestDisconnectPause("");
   }
 
   // Layer 2 - connection watchdog (polled).
@@ -548,9 +581,8 @@ class MultiplayerPauseManager {
       const was = this.connState[id];
       this.connState[id] = connected;
       if (was === true && connected === false) {   // newly dropped (edge) -> pause once
-        let name = "";
-        try { const pc = Configuration.getPlayer(id); name = (pc && (pc.nickName || pc.slotName)) || ""; } catch (e) {}
-        this.requestDisconnectPause(name ? (name + " disconnected.") : "A player disconnected.");
+        this.addDisconnectNotice(id, this.playerNameById(id));
+        this.requestDisconnectPause("");
       }
     }
   }
@@ -561,7 +593,37 @@ class MultiplayerPauseManager {
     if (this.watchedHumans.indexOf(id) === -1) this.watchedHumans.push(id);
     this.connState[id] = true;       // reconnected -> a later drop is a fresh edge
     delete this.acknowledged[id];    // and is eligible to pause again if it drops
+    this.removeDisconnectNotice(id);
+    // A rejoin forces every client through a resync/reload; make sure the game
+    // is paused and the pause menu is up on everyone's screen for its duration.
+    const name = this.playerNameById(id);
+    if (this.state === STATE.IDLE) {
+      this.requestDisconnectPause((name || "A player") + " is reconnecting - resyncing.");
+    } else {
+      this.pauseReason = (name || "A player") + " is reconnecting - resyncing.";
+      this.openPauseMenu();
+      this.refreshStatus();
+    }
     this.log("Player " + id + " connected.");
+  }
+
+  /**
+   * Host migration: when the host drops or changes, the pause guarantee must
+   * survive the switch. Pause (if running), re-render the menu so the new
+   * host's controls appear, and refresh every client's hint text.
+   */
+  onHostMigrated(data) {
+    if (!this.isMultiplayer) return;
+    this.log("Host migrated" + (data && data.player !== undefined ? " to player " + data.player : "") + ".");
+    if (this.state === STATE.IDLE) {
+      this.requestDisconnectPause("The host changed.");
+    } else {
+      this.pauseReason = "The host changed.";
+    }
+    // Captions depend on amHost(); rebuild the injected buttons on next poll.
+    document.querySelectorAll(".mpt-injected").forEach((el) => el.remove());
+    if (this.pauseMenuIsOpen()) this.tryInjectWhenMenuReady(0);
+    this.refreshStatus();
   }
 
   // Layer 3 - turn-activation guard (the moment of AI takeover).
@@ -588,6 +650,7 @@ class MultiplayerPauseManager {
     // Disconnect protection layers (see "Disconnect protection" section).
     engine.on("MultiplayerPostPlayerDisconnected", this.playerDisconnectedListener);
     engine.on("MultiplayerPlayerConnected", this.playerConnectedListener);
+    engine.on("MultiplayerHostMigrated", this.hostMigratedListener);
     engine.on("PlayerTurnActivated", this.playerTurnActivatedListener);
     engine.on("RemotePlayerTurnBegin", this.playerTurnActivatedListener);
     this.startConnectionWatch();

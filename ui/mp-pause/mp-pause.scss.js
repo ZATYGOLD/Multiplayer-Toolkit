@@ -31,7 +31,11 @@ const styles = `
     font-family: "Times New Roman", "BodyFont", serif; font-size: 1.05rem;
     letter-spacing: 0.04em; color: #e7d6ab; text-shadow: 0 0.1rem 0.4rem rgba(0,0,0,0.7);
   }
-  .mpt-host-hint .mpt-reason { display: block; color: #f0c98a; margin-bottom: 0.25rem; }
+  /* Disconnect / resync notices: one bright-red line per player, padded below. */
+  .mpt-host-hint .mpt-reason {
+    display: block; color: #ff3b3b; font-weight: 700;
+    margin-bottom: 1rem; text-shadow: 0 0.1rem 0.4rem rgba(0,0,0,0.85);
+  }
 
   /* "Ready: X / N" tally placed in the footer, under the build number. */
   .mpt-footer-ready {

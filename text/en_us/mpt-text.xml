@@ -28,7 +28,7 @@
       <Text>Competitive</Text>
     </Row>
     <Row Tag="LOC_MPT_WAITING_FOR_LIST">
-      <Text>Waiting for: {1_PlayerList}</Text>
+      <Text>Waiting for:[N]{1_PlayerList}</Text>
     </Row>
     <Row Tag="LOC_MPT_TURNTIMER_COMPETITIVE_DESC">
       <Text>Turn time scales with the Cities and Units in play, the number of human Players, and the current Turn, tuned per Age.</Text>
