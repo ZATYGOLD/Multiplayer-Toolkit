@@ -74,6 +74,7 @@
             <Properties><LoadOrder>1000</LoadOrder></Properties>
             <Actions>
                 <UIScripts>
+                    <Item>ui/mp-timer/mp-timer-config.js</Item>
                     <Item>ui/mp-timer/mp-timer.js</Item>
                 </UIScripts>
             </Actions>
