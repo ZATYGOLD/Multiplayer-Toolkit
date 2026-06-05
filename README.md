@@ -3,7 +3,7 @@
 A toolkit of multiplayer quality-of-life features for **Sid Meier's Civilization
 VII**, built on the game's own UI components. Current version: **0.5.3**.
 
-Three tools so far:
+Four tools so far:
 
 - A **Competitive turn timer** — a fourth Turn Timer option in multiplayer setup
   (alongside None / Standard / Dynamic) whose per-turn time scales with cities,
@@ -13,6 +13,10 @@ Three tools so far:
   opens for everyone with **Ready / Resume** and **View Map** buttons; a
   synchronized **countdown** plays before the game resumes. Disconnects, host
   migration and rejoin resyncs all pause the game automatically.
+- **Observer mode** *(experimental)* — every player can choose **Observer**
+  from the **Team** dropdown of their own lobby row to spectate instead of
+  play, marked by an eye badge; picking any team switches back. Built on the
+  engine's own never-surfaced observer slot system.
 - **Lobby UI fixes** — the civilization and leader tooltips in multiplayer
   game setup show each ability's **name** above its description (the base game
   omits it). Patched at runtime, so it coexists with other lobby mods.
@@ -198,6 +202,39 @@ are **not** blocked.
 
 ---
 
+## Observer Mode (experimental)
+
+### How to use
+
+In a multiplayer lobby, open the **Team** dropdown on **your own row** and pick
+**Observer** (it sits below the team numbers). Your row shows an eye badge in
+the team column and "Observer" with the eye icon as your leader; your civ,
+leader and memento choices are cleared and locked. Pick **any team** (or the
+blank no-team entry) to switch back to playing. Each player controls only their
+own role, and roles lock once you ready up — a readied or remote observer still
+shows the eye badge, read-only.
+
+### Implementation notes (honest)
+
+- The engine ships a complete but never-surfaced observer subsystem
+  (`SlotStatus.SS_OBSERVER`, observer IDs/counts, observer-aware lobby ready
+  checks). The mod surfaces it: the Team dropdown gains the Observer entry,
+  and selection routes through `Configuration.editPlayer().setSlotStatus()` —
+  the same engine call the lobby's own slot actions use.
+- Observers are not "participants", and the lobby renders non-participants as
+  bare closed-slot rows, which would strand an observer with no controls. The
+  mod re-shapes observer rows back to the full row template after every lobby
+  update (display only; the engine slot status genuinely remains observer).
+- Swapping into a pre-marked observer seat does **not** work — the engine
+  moves slot positions without changing what you are — which is why the role
+  is a self-service choice rather than a host-assigned seat.
+- **Untested frontier:** what the game does with a seated observer at launch
+  and in-game (camera, HUD, turn flow). The lobby half is solid; the in-game
+  half is the next milestone. `observerSlots` in `mp-lobby-config.js` turns
+  the whole feature off.
+
+---
+
 ## Project structure
 
 ```
@@ -210,16 +247,19 @@ Multiplayer-Toolkit/
 │  ├─ antiquity/CompetitiveTimer.sql  # Antiquity segment values + scaling overrides
 │  ├─ exploration/CompetitiveTimer.sql
 │  └─ modern/CompetitiveTimer.sql
+├─ icons/
+│  └─ mpt_observer.png                # observer eye badge (team + leader columns)
 ├─ text/en_us/
 │  ├─ mod-info-text.xml               # mod name/description (Additional Content screen)
-│  └─ mpt-text.xml                    # button captions + Competitive timer strings
+│  └─ mpt-text.xml                    # button captions + timer/observer strings
 ├─ ui/mp-pause/                       # synchronized pause feature
 │  ├─ mp-pause-config.js              # constants & tunable settings (data)
 │  ├─ mp-pause.scss.js                # styles, shipped as a string
 │  ├─ mp-pause-overlay.js             # reusable "UNPAUSING..." countdown overlay
 │  └─ mp-pause-mgr.js                 # manager singleton / entry point
-├─ ui/mp-lobby/                       # lobby UI fixes (shell scope)
+├─ ui/mp-lobby/                       # lobby UI fixes & observer mode (shell scope)
 │  ├─ mp-lobby-config.js              # constants & tunable settings (data)
+│  ├─ mp-lobby-observer.js            # observer mode: team-dropdown role toggle (logic)
 │  └─ mp-lobby-tooltips.js            # civ/leader ability-title tooltip patch (logic)
 ├─ ui/mp-timer/                       # competitive turn timer feature
 │  ├─ mp-timer-config.js              # constants & tunable settings (data)
@@ -237,6 +277,12 @@ for live-testing with FireTuner.
 
 ### 0.5.3
 
+- **New: Observer mode (experimental)** — pick **Observer** from your own
+  row's Team dropdown to spectate instead of play; pick any team to switch
+  back. Eye badge in the team column, observer "leader", civ/leader/mementos
+  locked while observing; roles lock on ready-up. Surfaces the engine's own
+  hidden observer slot system; the in-game experience after launch is still
+  being tested.
 - **Investigated, not shipped: more players in multiplayer** — the lobby's
   slot capacity can be raised from a mod, but the engine natively validates
   multiplayer player counts against the hosting platform at launch
