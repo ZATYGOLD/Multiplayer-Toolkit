@@ -1,17 +1,21 @@
 # Multiplayer Toolkit
 
 A toolkit of multiplayer quality-of-life features for **Sid Meier's Civilization
-VII**, built on the game's own UI components. Current version: **0.5.1**.
+VII**, built on the game's own UI components. Current version: **0.5.3**.
 
-Two tools so far:
+Three tools so far:
 
 - A **Competitive turn timer** — a fourth Turn Timer option in multiplayer setup
   (alongside None / Standard / Dynamic) whose per-turn time scales with cities,
   units, human players and the turn number, with orange/red urgency tiers and
   warning sounds.
-- A **synchronized multiplayer pause** — any player can pause; the pause menu
+- A **Synchronized Multiplayer Pause** — any player can pause; the pause menu
   opens for everyone with **Ready / Resume** and **View Map** buttons; a
-  synchronized **countdown** plays before the game resumes.
+  synchronized **countdown** plays before the game resumes. Disconnects, host
+  migration and rejoin resyncs all pause the game automatically.
+- A **"Waiting for Players" tooltip** — hovering the end-turn button while
+  waiting shows exactly which players everyone is waiting on, one name per
+  line, expanding upward so long lists never clip.
 
 ---
 
@@ -45,7 +49,9 @@ seconds = Base
 ```
 
 City/unit counts use the largest empire, so every player gets the same number —
-one shared, fair clock. When it reaches zero the turn ends automatically; a
+one shared, fair clock. Decimal weights (e.g. `PerTurn = 1.25`) are supported,
+and the result rounds to the nearest whole second (`roundToNearest` in
+`mp-timer-config.js`). When it reaches zero the turn ends automatically; a
 player who un-readies after zero is re-ended within seconds.
 
 ### Urgency tiers
@@ -69,17 +75,25 @@ player who un-readies after zero is re-ended within seconds.
 
 - The engine only *enforces* its three built-in timer types; a data-registered
   fourth type is treated as unknown (fallback 180s display, no enforcement).
-  The mod therefore proxies the action panel's `TurnTimerUpdated` listener and
-  feeds the engine's own renderer the competitive time — so the native text,
-  ring meter, flash and beeps all draw the real clock — and ends the local turn
-  itself via `GameContext.sendTurnComplete()`.
+  The mod therefore **subclasses the action panel component** itself:
+  `MPT_PanelAction extends` the base game's `PanelAction` (via
+  `Controls.getDefinition` + priority redefinition), feeds the inherited
+  renderer the competitive time — so the native text, ring meter, flash and
+  beeps all draw the real clock — and ends the local turn itself via
+  `GameContext.sendTurnComplete()`. The subclass is only registered when
+  **Competitive** is the chosen timer; any other setting runs the untouched
+  base component.
+- The Competitive numbers live in **mod-owned tables** (`MPT_TurnSegments`,
+  `MPT_TimerScaling`) — the game's own `TurnSegments` is never modified, so the
+  Dynamic timer is completely unaffected.
 - Remaining time derives from the engine's **synchronized phase clock**, so
   readying, un-readying and HUD interaction cannot desync or reset it. New
   turns are detected via `Game.turn`; backward clock corrections are tolerated;
   the display pins at zero once expired.
-- A periodic guardian keeps the takeover in place if the action panel
-  re-attaches, and the ring meter self-heals if a stray native render or
-  ready-up reset desyncs it.
+- The ring meter is **scrubbed to the synchronized clock on every timer tick**
+  (the CSS animation is restarted with a fresh offset each event), so it cannot
+  drift from the number, freezes during a pause, and holds exactly empty at
+  zero.
 - Known cosmetic: the lobby **Rules** popup prints a debug string for the
   custom timer type (the base screen only knows the three built-ins). Age
   transitions use their own long phase and are passed through untouched.
@@ -121,14 +135,14 @@ Resume happens (last flag clears → engine unpauses) via, in order:
 
 1. **Consensus** – everyone (the host included, whose flag is required) clicks
    Ready.
-2. **60% vote** – after `voteDelayMs`, once ≥ `voteThreshold` (default 60%) are
-   ready, the remaining clients auto-ready and the game resumes.
-3. **Override** – after `hostOverrideDelayMs`, any readiness resumes the game
+2. **Override** – after `hostOverrideDelayMs`, any readiness resumes the game
    (anti-AFK / host force-resume).
 
-Because the host's own flag is required for the consensus path, the host
-effectively gates a normal resume; the vote/override tiers are the time-limited
-fallbacks. All values are configurable in `ui/mp-pause/mp-pause-config.js`.
+A third **60% vote** tier exists but is **disabled by default**
+(`votingEnabled: false`); set it to `true` to re-enable auto-resume once
+`voteThreshold` of players are ready after `voteDelayMs`. Because the host's
+own flag is required for the consensus path, the host effectively gates a
+normal resume. All values are configurable in `ui/mp-pause/mp-pause-config.js`.
 
 **Engine limitation (honest note):** Civ VII exposes only an *aggregate*
 want-pause count — there is no per-player or host-specific pause query and no
@@ -156,6 +170,18 @@ players *deliberately* resume with someone still absent, that player is
 "acknowledged" so the guard does not fight the choice and the AI may take over.
 If that player reconnects and later drops again, it is a fresh disconnect and
 pauses again.
+
+**Disconnect notices.** Each disconnected player gets their own bright-red line
+in the pause menu ("Name#12345 disconnected."), using the platform gamertag
+where available; a player's line clears when they rejoin.
+
+**Host migration.** If the host drops or changes, the game pauses (if running),
+"The host changed." is shown, and the menu controls rebuild so the new host
+immediately gets the **Resume (Host)** button.
+
+**Rejoin / resync.** When a player rejoins, the engine forces every client
+through a resync. The mod pauses (if running) and opens the pause menu on every
+screen for the duration, with "*Name* is reconnecting — resyncing."
 
 *Honest scope:* the guarantee is as strong as a UI mod can make it — the
 turn-activation guard fires at the start of turn processing, before AI orders
@@ -192,13 +218,58 @@ Multiplayer-Toolkit/
 │  ├─ mp-pause.scss.js                # styles, shipped as a string
 │  ├─ mp-pause-overlay.js             # reusable "UNPAUSING..." countdown overlay
 │  └─ mp-pause-mgr.js                 # manager singleton / entry point
-└─ ui/mp-timer/                       # competitive turn timer feature
-   ├─ mp-timer-config.js              # constants & tunable settings (data)
-   └─ mp-timer.js                     # takeover proxy, tiers, enforcement (logic)
+├─ ui/mp-timer/                       # competitive turn timer feature
+│  ├─ mp-timer-config.js              # constants & tunable settings (data)
+│  └─ mp-timer.js                     # MPT_PanelAction subclass: tiers, ring sync, enforcement
+├─ ui/mp-waiting/                     # "Waiting for Players" tooltip feature
+│  ├─ mp-waiting-config.js            # constants & tunable settings (data)
+│  └─ mp-waiting-tooltip.js           # pending-player list tooltip (logic)
+└─ TESTING.md                         # FireTuner test guide + MPTTimer debug API
 ```
 
 Each feature follows the same pattern: a `*-config.js` data module and a logic
-module, mirroring the base game's UI conventions.
+module, mirroring the base game's UI conventions. See [`TESTING.md`](TESTING.md)
+for live-testing with FireTuner.
+
+---
+
+## Changelog
+
+### 0.5.3
+
+- **Timer architecture:** the takeover proxy and guardian are gone — the mod
+  now registers `MPT_PanelAction`, a subclass of the game's own action panel
+  component, and only when **Competitive** is the selected timer; every other
+  setting runs the genuine base component.
+- **Timer data separation:** Competitive values moved to mod-owned tables
+  (`MPT_TurnSegments`, `MPT_TimerScaling`); the game's `TurnSegments` is never
+  touched, so the Dynamic timer is completely independent again.
+- **Ring sync:** the ring meter is scrubbed to the synchronized phase clock on
+  every timer tick instead of free-running — no more jumps or drift against
+  the countdown number, and it holds exactly empty at zero.
+
+### 0.5.2
+
+- **New: "Waiting for Players" tooltip** — hover the end-turn button to see who
+  everyone is waiting on, one name per line, expanding upward.
+- **Timer:** decimal scaling weights supported (e.g. `PerTurn = 1.25`); totals
+  round to the nearest whole second (`roundToNearest`); the ring now freezes
+  while the game is paused and resyncs on resume.
+- **Pause:** the 60% vote-resume tier is disabled by default
+  (`votingEnabled`); disconnect notices show each player's gamertag on its own
+  bright-red line and clear on rejoin; host migration pauses the game and hands
+  the new host the resume controls; a player rejoining pauses the game and
+  opens the pause menu on every client during the resync.
+- **Lobby:** the Competitive timer's setup description now explains the
+  scaling, tiers and auto-end behaviour.
+- **Dev:** FireTuner test guide (`TESTING.md`) and an in-game `MPTTimer` debug
+  console API (status / forceRemaining / expire), active while `debug` is on.
+
+### 0.5.1
+
+- Competitive turn timer: per-Age scaling, orange/red urgency tiers with
+  warning sounds, native ring/text rendering, automatic turn end.
+- Code reorganization: config/logic module split for every feature.
 
 ---
 

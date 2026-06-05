@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Mod id="multiplayer-toolkit" version="00501" xmlns="ModInfo">
+<Mod id="multiplayer-toolkit" version="00503" xmlns="ModInfo">
     <Properties>
         <Name>LOC_MOD_MPT_NAME</Name>
         <Description>LOC_MOD_MPT_DESCRIPTION</Description>
         <Authors>Zatygold</Authors>
         <Package>Mod</Package>
         <AffectsSavedGames>0</AffectsSavedGames>
-        <Version>0.5.1</Version>
-		<LastUpdated>2026-06-04</LastUpdated>
+        <Version>0.5.3</Version>
+		<LastUpdated>2026-06-05</LastUpdated>
         <ShowInBrowser>1</ShowInBrowser>
     </Properties>
 
@@ -23,9 +23,15 @@
 
 <!--*************************** CRITERIA: COMPETITIVE TIMER ****************************************-->
 
-  		<Criteria id="competitive-timer-antiquity"><AgeInUse>AGE_ANTIQUITY</AgeInUse></Criteria>
-        <Criteria id="competitive-timer-exploration"><AgeInUse>AGE_EXPLORATION</AgeInUse></Criteria>
-        <Criteria id="competitive-timer-modern"><AgeInUse>AGE_MODERN</AgeInUse></Criteria>
+  		<Criteria id="antiquity-age-current">
+            <AgeInUse>AGE_ANTIQUITY</AgeInUse>
+        </Criteria>
+        <Criteria id="exploration-age-current">
+            <AgeInUse>AGE_EXPLORATION</AgeInUse>
+        </Criteria>
+        <Criteria id="modern-age-current">
+            <AgeInUse>AGE_MODERN</AgeInUse>
+        </Criteria>
     </ActionCriteria>
 
 <!--*************************** SHELL: TEXT/SETTINGS ***********************************************-->
@@ -80,6 +86,18 @@
             </Actions>
         </ActionGroup>
 
+<!--*********************** GAME: WAITING-FOR-PLAYERS TOOLTIP ************************************-->
+
+        <ActionGroup id="mpt-waiting-tooltip" scope="game" criteria="always">
+            <Properties><LoadOrder>1000</LoadOrder></Properties>
+            <Actions>
+                <UIScripts>
+                    <Item>ui/mp-waiting/mp-waiting-config.js</Item>
+                    <Item>ui/mp-waiting/mp-waiting-tooltip.js</Item>
+                </UIScripts>
+            </Actions>
+        </ActionGroup>
+
 <!--**************************** GAME: TURN TIMER ************************************************-->
 
         <ActionGroup id="mpt-turn-timer-schema" scope="game" criteria="always">
@@ -91,7 +109,9 @@
             </Actions>
         </ActionGroup>
 
-        <ActionGroup id="mpt-turn-timer-antiquity" scope="game" criteria="competitive-timer-antiquity">
+    <!--**************************** TURN TIMER: COMPETITIVE *************************************-->
+
+        <ActionGroup id="mpt-turn-timer-antiquity" scope="game" criteria="antiquity-age-current">
             <Properties><LoadOrder>1000</LoadOrder></Properties>
             <Actions>
             	<UpdateDatabase>
@@ -100,7 +120,7 @@
             </Actions>
         </ActionGroup>
 
-        <ActionGroup id="mpt-turn-timer-exploration" scope="game" criteria="competitive-timer-exploration">
+        <ActionGroup id="mpt-turn-timer-exploration" scope="game" criteria="exploration-age-current">
             <Properties><LoadOrder>1000</LoadOrder></Properties>
             <Actions>
             	<UpdateDatabase>
@@ -109,7 +129,7 @@
             </Actions>
         </ActionGroup>
 
-        <ActionGroup id="mpt-turn-timer-modern" scope="game" criteria="competitive-timer-modern">
+        <ActionGroup id="mpt-turn-timer-modern" scope="game" criteria="modern-age-current">
             <Properties><LoadOrder>1000</LoadOrder></Properties>
             <Actions>
             	<UpdateDatabase>

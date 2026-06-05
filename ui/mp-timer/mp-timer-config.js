@@ -30,6 +30,7 @@ const TIMER_TYPE = "MPT_TURNTIMER_COMPETITIVE";
 
 /** Tunable timings / thresholds. */
 const CONFIG = {
+  roundToNearest: 1,        // round the computed total to the nearest multiple (1 = whole seconds)
   orangeStart: 30,          // orange tier begins at this many seconds remaining
   flashStart: 15,           // red flash + per-second beeps begin here
   warnEverySeconds: 5,      // orange-tier urgency beep cadence (30/25/20)

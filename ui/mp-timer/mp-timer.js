@@ -19,7 +19,7 @@
  */
 
 /**
- * Multiplayer Toolkit - Competitive turn timer (enforcement + native display).
+ * Multiplayer Toolkit - Competitive turn timer (component subclass).
  *
  * The engine only enforces None/Standard/Dynamic, so the custom "Competitive"
  * type is driven here, derived from the active Age's TURN_SEGMENT_SINGLEPHASE
@@ -28,12 +28,12 @@
  *   seconds = Base + PerCity*cities + PerUnit*units
  *           + PerHuman*humanPlayers + PerTurn*turnNumber
  *
- * Design: we proxy the action panel's TurnTimerUpdated listener, substitute
- * our total for the engine's fallback 180, and let the engine's own renderer
- * draw the text and ring. Remaining time derives from the engine's synced
- * phase clock (new turns detected via Game.turn, never clock regression;
- * display pinned at zero once expired; large phases like age transition are
- * passed through untouched).
+ * Architecture: instead of proxying the action panel's event listener, the
+ * panel COMPONENT itself is replaced. Controls.define supports priority-based
+ * redefinition, and Controls.getDefinition exposes the base game's PanelAction
+ * class, so MPT_PanelAction extends it - inheriting every piece of base logic
+ * - and overrides only the timer path. The engine then constructs OUR panel:
+ * no listener juggling, no render fighting, one render pipeline.
  *
  * Tiers: the engine hardcodes its red flash + per-second beeps below 20s, so
  * while remaining is above flashStart we clamp what it perceives to keep it
@@ -44,25 +44,25 @@
 import { TIMER_TYPE, CONFIG, ENGINE } from './mp-timer-config.js';
 
 const COMPETITIVE_HASH = Database.makeHash(TIMER_TYPE);
+const DEFINE_RETRY_MS = 200;
+const DEFINE_RETRIES = 50;
 
-let panelInstance = null;
-let panelOriginalTimer = null;
-let proxyInstalled = false;
-
-let total = 0;
-let lastTurn = -1;
-let expiredAt = -1;
-let lastEnforceAt = -Infinity;
-let ringSetAt = Infinity;
-let lastWarnTick = Infinity;
+let MPT_PanelAction = null;
 
 function log(message) {
   if (CONFIG.debug) console.log(`[MPT timer] ${message}`);
 }
 
+// ============================ Pure helpers ============================
+
 function isCompetitiveSelected() {
   try { return Configuration.getGame().turnTimerType === COMPETITIVE_HASH; }
   catch (e) { return false; }
+}
+
+/** The configured timer type, or undefined while the configuration is unreadable. */
+function configuredTimerType() {
+  try { return Configuration.getGame().turnTimerType; } catch (e) { return undefined; }
 }
 
 function currentTurn() {
@@ -76,12 +76,16 @@ function localPlayerTurnActive() {
   } catch (e) { return false; }
 }
 
-/** TimeLimit_Base/PerCity/PerUnit for the active simultaneous segment. */
+/**
+ * TimeLimit_Base/PerCity/PerUnit from the mod-owned MPT_TurnSegments table,
+ * keeping the Competitive numbers fully separate from the Dynamic timer's
+ * (the game's TurnSegments is never modified).
+ */
 function segmentLimits() {
   try {
     const rows = Database.query('gameplay',
       "SELECT TimeLimit_Base AS base, TimeLimit_PerCity AS perCity, TimeLimit_PerUnit AS perUnit " +
-      `FROM TurnSegments WHERE TurnSegmentType = '${ENGINE.segmentType}'`) ?? [];
+      `FROM MPT_TurnSegments WHERE TurnSegmentType = '${ENGINE.segmentType}'`) ?? [];
     return rows[0] ?? null;
   } catch (e) { return null; }
 }
@@ -110,38 +114,24 @@ function playerTallies() {
   return tallies;
 }
 
-/** Competitive seconds for this turn; 0 if the segment data is unavailable. */
+/**
+ * Competitive seconds for this turn; 0 if the segment data is unavailable.
+ * Decimal scaling values are supported; the result is rounded to the nearest
+ * roundToNearest multiple (never below one step, so a short turn stays timed).
+ */
 function computeSeconds() {
   const limit = segmentLimits();
   if (!limit) return 0;
   const { cities, units, humans } = playerTallies();
   const { perHuman, perTurn } = scalingValues();
-  return limit.base
+  const raw = limit.base
     + (limit.perCity * cities)
     + (limit.perUnit * units)
     + (perHuman * humans)
     + (perTurn * Math.max(0, currentTurn()));
-}
-
-/**
- * True when the ring no longer reflects our timer: a stray render re-sized it,
- * the ready-up handler reset its delay, or the clock was corrected back past
- * the point the ring was last synced.
- */
-function ringDesynced(elapsed) {
-  if (!panelInstance) return false;
-  if (panelInstance.mpTimerMaxTime > total) return true;
-  if (elapsed + CONFIG.clockJitterSeconds < ringSetAt) return true;
-  const ring = panelInstance.timerAnimationElements?.[0];
-  if (!ring) return false;
-  if (ring.style.animationDuration !== `${total}s`) return true;
-  return elapsed > 1.5 && ring.style.animationDelay === '0s';
-}
-
-function clearRingLatch(elapsed) {
-  if (!panelInstance) return;
-  panelInstance.mpTimerMaxTime = 0;
-  ringSetAt = elapsed;
+  if (raw <= 0) return 0;
+  const step = CONFIG.roundToNearest >= 1 ? CONFIG.roundToNearest : 1;
+  return Math.max(step, Math.round(raw / step) * step);
 }
 
 /** Engine-styled number, falling back to plain text when stylize fails. */
@@ -150,123 +140,240 @@ function setStyledNumber(el, styleClass, n) {
   catch (e) { el.textContent = String(n); }
 }
 
+/** Ring element class -> [stylesheet keyframes, identical clone] (panel-action.css). */
+const RING_ANIMATIONS = [
+  { className: 'action_panel__mp-timer-left-circle', names: ['rotate-timer-first', 'mpt-rotate-timer-first'] },
+  { className: 'action_panel__mp-timer-right-circle', names: ['rotate-timer-second', 'mpt-rotate-timer-second'] },
+  { className: 'action_panel__mp-timer-left-bk-circle', names: ['fade-in-bg', 'mpt-fade-in-bg'] }
+];
+
+function ringAnimationNames(el) {
+  return RING_ANIMATIONS.find((entry) => el.classList.contains(entry.className))?.names ?? null;
+}
+
 /**
- * Tier styling on top of the engine's render. While the engine is muzzled
- * (16..20s shows its clamped number) the text is always rewritten; the orange
- * tier uses an inline colour, and the red tier keeps a steady flash colour.
+ * Identical clones of the game's ring keyframes. Flipping an element between
+ * its original and clone forces the animation restart that makes a new
+ * animationDelay take effect (see mptSyncRing).
  */
-function decorateText(n) {
-  const el = document.getElementById(ENGINE.timerTextId);
-  if (!el) return;
-  const active = localPlayerTurnActive();
-  const beforeExpiry = expiredAt < 0;
-  if (active && beforeExpiry && n <= CONFIG.orangeStart && n > CONFIG.flashStart) {
-    if (el.style.color !== CONFIG.orangeColor) el.style.color = CONFIG.orangeColor;
-    if (el.textContent !== String(n) || el.firstElementChild) el.textContent = String(n);
+function injectRingKeyframes() {
+  const style = document.createElement('style');
+  style.textContent = `
+@keyframes mpt-rotate-timer-first { 0% { transform: rotate(0deg); } 50% { transform: rotate(-180deg); } 100% { transform: rotate(-180deg); } }
+@keyframes mpt-rotate-timer-second { 0% { transform: rotate(180deg); } 50% { transform: rotate(180deg); } 100% { transform: rotate(0deg); } }
+@keyframes mpt-fade-in-bg { 0% { opacity: 0; } 49% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 1; } }`;
+  document.head.appendChild(style);
+}
+
+// ====================== Component redefinition ========================
+
+/**
+ * Retrieve the base game's PanelAction class and register a subclass in its
+ * place. Everything the base panel does is inherited; only the turn timer
+ * path is extended.
+ */
+function defineMptPanelAction(attempts) {
+  // Only take over the panel when OUR timer is the chosen setting; with any
+  // other timer the game runs its genuine, untouched component. The lobby
+  // choice is fixed before the game UI boots, so a load-time check suffices.
+  // (undefined = configuration not readable yet - keep retrying.)
+  const configured = configuredTimerType();
+  if (configured === undefined) {
+    if (attempts > 0) setTimeout(() => defineMptPanelAction(attempts - 1), DEFINE_RETRY_MS);
+    else log('game configuration never became readable; competitive timer inactive');
     return;
   }
-  if (el.style.color) el.style.color = '';
-  const engineShowsClamp = beforeExpiry && n > CONFIG.flashStart && n < CONFIG.engineFlashHide;
-  if (!active && engineShowsClamp) {
-    setStyledNumber(el, ENGINE.styleInactive, n);
+  if (configured !== COMPETITIVE_HASH) {
+    log('Competitive timer not selected - base panel-action left untouched');
     return;
   }
-  if (CONFIG.steadyFlash && active && n <= CONFIG.flashStart && n % 2 === 1 && el.textContent === String(n)) {
-    setStyledNumber(el, ENGINE.styleActiveFlash, n);
+  let base = null;
+  try { base = Controls.getDefinition('panel-action'); } catch (e) { base = null; }
+  if (!base?.createInstance) {
+    if (attempts > 0) setTimeout(() => defineMptPanelAction(attempts - 1), DEFINE_RETRY_MS);
+    else log('panel-action definition never appeared; competitive timer inactive');
+    return;
+  }
+  const PanelAction = base.createInstance;
+  injectRingKeyframes();
+
+  MPT_PanelAction = class MPT_PanelAction extends PanelAction {
+    // --- competitive timer state (per panel instance) ---
+    mptTotal = 0;
+    mptLastTurn = -1;
+    mptExpiredAt = -1;
+    mptLastEnforceAt = -Infinity;
+    mptLastWarnTick = Infinity;
+    mptPauseListener = (data) => this.mptOnGamePauseChanged(data);
+
+    onAttach() {
+      super.onAttach();
+      engine.on('GamePauseStateChanged', this.mptPauseListener);
+    }
+    onDetach() {
+      engine.off('GamePauseStateChanged', this.mptPauseListener);
+      super.onDetach();
+    }
+
+    /** Single override point: feed the base renderer our clock. */
+    onTurnTimerUpdated(data) {
+      const ctx = this.mptContext(data);
+      super.onTurnTimerUpdated(ctx ? ctx.data : data);
+      if (ctx) {
+        this.mptSyncRing(ctx.ringElapsed);
+        this.mptDecorateText(ctx.n);
+        this.mptWarnSounds(ctx.n);
+      }
+    }
+
+    /**
+     * Substituted event data + display seconds for the competitive timer,
+     * handling new turns, ring resyncs, expiry pinning and enforcement.
+     * Null when the event should pass through to the base panel untouched.
+     */
+    mptContext(data) {
+      const limit = data?.phaseTimeLimit ?? 0;
+      if (limit <= 0 || limit > CONFIG.maxProxyLimit || !isCompetitiveSelected()) return null;
+      const turn = currentTurn();
+      if (turn !== this.mptLastTurn) {
+        this.mptLastTurn = turn;
+        this.mptTotal = computeSeconds();
+        this.mptExpiredAt = -1;
+        this.mptLastEnforceAt = -Infinity;
+        this.mptLastWarnTick = Infinity;
+        // Neutralize the inherited grow-only ring latch: mptSyncRing positions
+        // the ring from the game clock on every event instead.
+        this.mpTimerMaxTime = this.mptTotal;
+        log(`turn ${turn}: total=${this.mptTotal}s`);
+      }
+      if (this.mptTotal <= 0) return null;
+      const total = this.mptTotal;
+      const elapsed = data.elapsedTime ?? 0;
+      if (this.mptExpiredAt < 0 && total - elapsed <= 0) this.mptExpiredAt = elapsed;
+      const n = this.mptExpiredAt >= 0 ? 0 : Math.max(0, Math.round(total - elapsed));
+      // Engine-perceived clock: pinned at zero once expired; clamped while the
+      // remaining time is above flashStart so the inherited sub-20s flash and
+      // beeps stay quiet until our red tier actually begins.
+      let effectiveElapsed = elapsed;
+      if (this.mptExpiredAt >= 0) {
+        effectiveElapsed = Math.max(elapsed, total);
+      } else if (n > CONFIG.flashStart && total >= CONFIG.engineFlashHide + 1) {
+        effectiveElapsed = Math.min(elapsed, total - CONFIG.engineFlashHide);
+      }
+      this.mptEnforceExpiry(elapsed);
+      // The ring scrubs from the TRUE clock (with only the expiry pin), never
+      // from the muzzle-clamped value, or it would freeze in the orange tier.
+      const ringElapsed = this.mptExpiredAt >= 0 ? total : elapsed;
+      return { data: { ...data, phaseTimeLimit: total, elapsedTime: effectiveElapsed }, n, ringElapsed };
+    }
+
+    /**
+     * Scrub the ring to the game clock on every timer event. Changing only
+     * animationDelay on a RUNNING animation does not reposition it - the
+     * delay offsets from the animation's ORIGINAL start time, so the ring ran
+     * at double speed. A new delay is honored from "now" only when the
+     * animation restarts, and a restart is guaranteed when animation-name
+     * changes: each scrub flips the element between the game's keyframes and
+     * an identical clone. Between events the ring free-runs smoothly on wall
+     * clock; each restart corrects the few milliseconds drifted since the
+     * last event. fill-mode holds the ring empty once the animation ends at
+     * expiry. (The inherited startMPTimerAnimation never fires for us:
+     * mpTimerMaxTime is kept equal to the total, so its grow-only guard
+     * stays false.)
+     */
+    mptSyncRing(elapsed) {
+      const total = this.mptTotal;
+      if (total <= 0) return;
+      const position = Math.min(Math.max(elapsed, 0), total);
+      for (const el of this.timerAnimationElements ?? []) {
+        const names = ringAnimationNames(el);
+        if (!names) continue;
+        el.style.animationDuration = `${total}s`;
+        el.style.animationDelay = `${-position}s`;
+        el.style.animationFillMode = 'forwards';
+        el.style.animationName = el.style.animationName === names[1] ? names[0] : names[1];
+      }
+    }
+
+    /**
+     * Tier styling on top of the inherited render. While the engine view is
+     * muzzled (16..20s shows its clamped number) the text is always rewritten;
+     * the orange tier uses an inline colour, and the red tier keeps a steady
+     * flash colour.
+     */
+    mptDecorateText(n) {
+      const el = this.turnTimerElement ?? document.getElementById(ENGINE.timerTextId);
+      if (!el) return;
+      const active = localPlayerTurnActive();
+      const beforeExpiry = this.mptExpiredAt < 0;
+      if (active && beforeExpiry && n <= CONFIG.orangeStart && n > CONFIG.flashStart) {
+        if (el.style.color !== CONFIG.orangeColor) el.style.color = CONFIG.orangeColor;
+        if (el.textContent !== String(n) || el.firstElementChild) el.textContent = String(n);
+        return;
+      }
+      if (el.style.color) el.style.color = '';
+      const engineShowsClamp = beforeExpiry && n > CONFIG.flashStart && n < CONFIG.engineFlashHide;
+      if (!active && engineShowsClamp) {
+        setStyledNumber(el, ENGINE.styleInactive, n);
+        return;
+      }
+      if (CONFIG.steadyFlash && active && n <= CONFIG.flashStart && n % 2 === 1 && el.textContent === String(n)) {
+        setStyledNumber(el, ENGINE.styleActiveFlash, n);
+      }
+    }
+
+    /**
+     * Urgency beep through the orange tier (30/25/20). The inherited renderer
+     * beeps at flashStart and below, so stopping above it avoids a double hit.
+     */
+    mptWarnSounds(n) {
+      if (this.mptExpiredAt >= 0 || !localPlayerTurnActive()) return;
+      if (n > CONFIG.orangeStart || n <= CONFIG.flashStart || n % CONFIG.warnEverySeconds !== 0) return;
+      if (n >= this.mptLastWarnTick) return;
+      this.mptLastWarnTick = n;
+      try { UI.sendAudioEvent(ENGINE.audioUrgency); } catch (e) { /* no audio */ }
+      log(`urgency beep at ${n}s`);
+    }
+
+    /** Ends the local turn once expired; repeats if the player unreadies at zero. */
+    mptEnforceExpiry(elapsed) {
+      if (this.mptExpiredAt < 0 || elapsed - this.mptLastEnforceAt < CONFIG.enforceRetrySeconds || !localPlayerTurnActive()) return;
+      this.mptLastEnforceAt = elapsed;
+      log(`time expired at ${Math.round(elapsed)}s - ending local turn`);
+      try { GameContext.sendTurnComplete(); } catch (e) { /* ignore */ }
+    }
+
+    /**
+     * The ring animates on wall clock between scrubs, so it would keep moving
+     * while the game is paused even though the phase clock stops. Freeze it
+     * during pause; the first event after unpause scrubs it back into place.
+     */
+    mptOnGamePauseChanged(data) {
+      const paused = !!data && Number(data.data) === 1;
+      const rings = this.timerAnimationElements;
+      if (rings) {
+        for (const el of rings) el.style.animationPlayState = paused ? 'paused' : 'running';
+      }
+      log(paused ? 'game paused - ring frozen' : 'game resumed');
+    }
+  };
+
+  Controls.define('panel-action', {
+    ...base,
+    createInstance: MPT_PanelAction,
+    description: (base.description ?? '') + ' (Multiplayer Toolkit competitive timer)',
+    priority: (base.priority ?? 0) + 1
+  });
+  log('panel-action redefined as MPT_PanelAction');
+
+  // If the HUD already built the panel with the base class, our subclass only
+  // applies to future creations - surface that loudly for testing.
+  const existing = document.querySelector('panel-action')?.maybeComponent;
+  if (existing && !(existing instanceof MPT_PanelAction)) {
+    log('WARNING: an existing panel-action predates the redefinition; timer inactive until it is recreated');
   }
 }
 
-/**
- * Urgency beep through the orange tier (30/25/20). The engine itself beeps at
- * flashStart and below, so stopping above it avoids a double hit.
- */
-function warnSounds(n) {
-  if (expiredAt >= 0 || !localPlayerTurnActive()) return;
-  if (n > CONFIG.orangeStart || n <= CONFIG.flashStart || n % CONFIG.warnEverySeconds !== 0) return;
-  if (n >= lastWarnTick) return;
-  lastWarnTick = n;
-  try { UI.sendAudioEvent(ENGINE.audioUrgency); } catch (e) { /* no audio */ }
-  log(`urgency beep at ${n}s`);
-}
+defineMptPanelAction(DEFINE_RETRIES);
 
-/** Ends the local turn once expired; repeats if the player unreadies at zero. */
-function enforceExpiry(elapsed) {
-  if (expiredAt < 0 || elapsed - lastEnforceAt < CONFIG.enforceRetrySeconds || !localPlayerTurnActive()) return;
-  lastEnforceAt = elapsed;
-  log(`time expired at ${Math.round(elapsed)}s - ending local turn`);
-  try { GameContext.sendTurnComplete(); } catch (e) { /* ignore */ }
-}
-
-/**
- * Substituted event data + display seconds for the competitive timer, handling
- * new turns, ring resyncs, expiry pinning and enforcement. Null when the event
- * should pass through to the engine untouched.
- */
-function competitiveContext(data) {
-  const limit = data?.phaseTimeLimit ?? 0;
-  if (limit <= 0 || limit > CONFIG.maxProxyLimit || !isCompetitiveSelected()) return null;
-  const turn = currentTurn();
-  if (turn !== lastTurn) {
-    lastTurn = turn;
-    total = computeSeconds();
-    expiredAt = -1;
-    lastEnforceAt = -Infinity;
-    lastWarnTick = Infinity;
-    clearRingLatch(0);
-    log(`turn ${turn}: total=${total}s`);
-  }
-  if (total <= 0) return null;
-  const elapsed = data.elapsedTime ?? 0;
-  if (ringDesynced(elapsed)) {
-    clearRingLatch(elapsed);
-    log(`ring resync at ${Math.round(elapsed)}s elapsed`);
-  }
-  if (expiredAt < 0 && total - elapsed <= 0) expiredAt = elapsed;
-  const n = expiredAt >= 0 ? 0 : Math.max(0, Math.round(total - elapsed));
-  // Engine-perceived clock: pinned at zero once expired; clamped while the
-  // remaining time is above flashStart so its hardcoded sub-20s flash and
-  // beeps stay quiet until our red tier actually begins.
-  let effectiveElapsed = elapsed;
-  if (expiredAt >= 0) {
-    effectiveElapsed = Math.max(elapsed, total);
-  } else if (n > CONFIG.flashStart && total >= CONFIG.engineFlashHide + 1) {
-    effectiveElapsed = Math.min(elapsed, total - CONFIG.engineFlashHide);
-  }
-  enforceExpiry(elapsed);
-  return { data: { ...data, phaseTimeLimit: total, elapsedTime: effectiveElapsed }, n };
-}
-
-/** Engine's timer handler, fed our context when Competitive is active. */
-function timerProxy(data) {
-  const ctx = competitiveContext(data);
-  try { panelOriginalTimer.call(panelInstance, ctx?.data ?? data); } catch (e) { /* ignore */ }
-  if (ctx) {
-    decorateText(ctx.n);
-    warnSounds(ctx.n);
-  }
-}
-
-/**
- * Keep the takeover in place: strip the engine's direct listener whenever a
- * panel (re)attach restores it, and follow the instance if it was recreated.
- */
-function enforceTakeover() {
-  const panel = document.querySelector('panel-action')?.maybeComponent;
-  if (!panel || typeof panel.onTurnTimerUpdated !== 'function') return;
-  if (panel !== panelInstance) {
-    panelInstance = panel;
-    panelOriginalTimer = panel.onTurnTimerUpdated;
-    log('bound to action panel instance');
-  }
-  try { engine.off('TurnTimerUpdated', panelOriginalTimer, panelInstance); } catch (e) { /* not registered */ }
-  if (!proxyInstalled) {
-    try {
-      engine.on('TurnTimerUpdated', timerProxy, panelInstance);
-      proxyInstalled = true;
-      log('timer takeover installed');
-    } catch (e) { /* retry on next sweep */ }
-  }
-}
-
-enforceTakeover();
-setInterval(enforceTakeover, CONFIG.guardianMs);
+export { MPT_PanelAction };

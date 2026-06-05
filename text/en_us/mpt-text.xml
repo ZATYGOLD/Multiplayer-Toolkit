@@ -21,14 +21,17 @@
         Determines how long Players have to take their Turn.
         [n]None - Players take Turns without time constraints.[n]Standard - Turn time is based on the Turn Time option (in seconds).
         [n]Dynamic - Turn time is dynamically scaled based on the number of Cities and Units in play.
-        [n]Competitive - Turn time tuned for competitive play.
+        [n]Competitive - Turn time scales with Cities, Units, human Players and the current Turn, tuned per Age. Warning tones begin at 30 seconds; the Turn ends automatically at zero.
       </Text>
     </Replace>
     <Row Tag="LOC_MPT_TURNTIMER_COMPETITIVE">
       <Text>Competitive</Text>
     </Row>
+    <Row Tag="LOC_MPT_WAITING_FOR_LIST">
+      <Text>Waiting for:[N]{1_PlayerList}</Text>
+    </Row>
     <Row Tag="LOC_MPT_TURNTIMER_COMPETITIVE_DESC">
-      <Text>Turn Time tuned for competitive play.</Text>
+      <Text>Turn time scales with the Cities and Units in play, the number of human Players, and the current Turn, tuned per Age.</Text>
     </Row>
   </EnglishText>
 </Database>

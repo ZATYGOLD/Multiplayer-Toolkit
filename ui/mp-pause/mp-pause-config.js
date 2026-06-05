@@ -40,6 +40,7 @@ const CONFIG = {
   resumeCountdownSeconds: 5,   // length of the "UNPAUSING..." countdown
   pollMs: 250,                 // tally / condition evaluation interval
   convergenceDelayMs: 2000,    // wait for all clients to flag in before voting
+  votingEnabled: false,        // 60% vote-resume tier (disabled for now; revisit)
   voteThreshold: 0.60,         // fraction ready that triggers a vote resume
   voteDelayMs: 20000,          // a vote resume is only allowed after this long
   hostOverrideDelayMs: 45000,  // after this long, any readiness resumes (anti-AFK)
