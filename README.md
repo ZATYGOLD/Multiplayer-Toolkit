@@ -3,7 +3,7 @@
 A toolkit of multiplayer quality-of-life features for **Sid Meier's Civilization
 VII**, built on the game's own UI components. Current version: **0.5.3**.
 
-Three tools so far:
+Two tools so far:
 
 - A **Competitive turn timer** — a fourth Turn Timer option in multiplayer setup
   (alongside None / Standard / Dynamic) whose per-turn time scales with cities,
@@ -13,9 +13,6 @@ Three tools so far:
   opens for everyone with **Ready / Resume** and **View Map** buttons; a
   synchronized **countdown** plays before the game resumes. Disconnects, host
   migration and rejoin resyncs all pause the game automatically.
-- A **"Waiting for Players" tooltip** — hovering the end-turn button while
-  waiting shows exactly which players everyone is waiting on, one name per
-  line, expanding upward so long lists never clip.
 
 ---
 
@@ -221,9 +218,6 @@ Multiplayer-Toolkit/
 ├─ ui/mp-timer/                       # competitive turn timer feature
 │  ├─ mp-timer-config.js              # constants & tunable settings (data)
 │  └─ mp-timer.js                     # MPT_PanelAction subclass: tiers, ring sync, enforcement
-├─ ui/mp-waiting/                     # "Waiting for Players" tooltip feature
-│  ├─ mp-waiting-config.js            # constants & tunable settings (data)
-│  └─ mp-waiting-tooltip.js           # pending-player list tooltip (logic)
 └─ TESTING.md                         # FireTuner test guide + MPTTimer debug API
 ```
 
@@ -237,6 +231,9 @@ for live-testing with FireTuner.
 
 ### 0.5.3
 
+- **Removed: "Waiting for Players" tooltip** — redundant with the base game:
+  the end-turn button's own waiting tooltip already lists the pending players,
+  and the diplo ribbon marks every player whose turn is still active.
 - **Timer architecture:** the takeover proxy and guardian are gone — the mod
   now registers `MPT_PanelAction`, a subclass of the game's own action panel
   component, and only when **Competitive** is the selected timer; every other

@@ -86,18 +86,6 @@
             </Actions>
         </ActionGroup>
 
-<!--*********************** GAME: WAITING-FOR-PLAYERS TOOLTIP ************************************-->
-
-        <ActionGroup id="mpt-waiting-tooltip" scope="game" criteria="always">
-            <Properties><LoadOrder>1000</LoadOrder></Properties>
-            <Actions>
-                <UIScripts>
-                    <Item>ui/mp-waiting/mp-waiting-config.js</Item>
-                    <Item>ui/mp-waiting/mp-waiting-tooltip.js</Item>
-                </UIScripts>
-            </Actions>
-        </ActionGroup>
-
 <!--**************************** GAME: TURN TIMER ************************************************-->
 
         <ActionGroup id="mpt-turn-timer-schema" scope="game" criteria="always">
