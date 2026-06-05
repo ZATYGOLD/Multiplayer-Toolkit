@@ -46,6 +46,10 @@
                 <UpdateDatabase>
                     <Item>config/SetupParameters.sql</Item>
                 </UpdateDatabase>
+                <UIScripts>
+                    <Item>ui/mp-lobby/mp-lobby-config.js</Item>
+                    <Item>ui/mp-lobby/mp-lobby-tooltips.js</Item>
+                </UIScripts>
             </Actions>
         </ActionGroup>
 

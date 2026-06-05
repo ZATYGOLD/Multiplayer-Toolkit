@@ -3,7 +3,7 @@
 A toolkit of multiplayer quality-of-life features for **Sid Meier's Civilization
 VII**, built on the game's own UI components. Current version: **0.5.3**.
 
-Two tools so far:
+Three tools so far:
 
 - A **Competitive turn timer** — a fourth Turn Timer option in multiplayer setup
   (alongside None / Standard / Dynamic) whose per-turn time scales with cities,
@@ -13,6 +13,9 @@ Two tools so far:
   opens for everyone with **Ready / Resume** and **View Map** buttons; a
   synchronized **countdown** plays before the game resumes. Disconnects, host
   migration and rejoin resyncs all pause the game automatically.
+- **Lobby UI fixes** — the civilization and leader tooltips in multiplayer
+  game setup show each ability's **name** above its description (the base game
+  omits it). Patched at runtime, so it coexists with other lobby mods.
 
 ---
 
@@ -215,6 +218,9 @@ Multiplayer-Toolkit/
 │  ├─ mp-pause.scss.js                # styles, shipped as a string
 │  ├─ mp-pause-overlay.js             # reusable "UNPAUSING..." countdown overlay
 │  └─ mp-pause-mgr.js                 # manager singleton / entry point
+├─ ui/mp-lobby/                       # lobby UI fixes (shell scope)
+│  ├─ mp-lobby-config.js              # constants & tunable settings (data)
+│  └─ mp-lobby-tooltips.js            # civ/leader ability-title tooltip patch (logic)
 ├─ ui/mp-timer/                       # competitive turn timer feature
 │  ├─ mp-timer-config.js              # constants & tunable settings (data)
 │  └─ mp-timer.js                     # MPT_PanelAction subclass: tiers, ring sync, enforcement
@@ -231,6 +237,10 @@ for live-testing with FireTuner.
 
 ### 0.5.3
 
+- **New: Lobby UI fixes** — the game-setup civilization and leader tooltips
+  now show each ability's name above its description. Same fix as the
+  "Multiplayer UI Fix" Workshop mod (credit to p0kiehl for spotting it),
+  reimplemented as a runtime patch instead of a base-file replacement.
 - **Removed: "Waiting for Players" tooltip** — redundant with the base game:
   the end-turn button's own waiting tooltip already lists the pending players,
   and the diplo ribbon marks every player whose turn is still active.
