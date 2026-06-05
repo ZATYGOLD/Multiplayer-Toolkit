@@ -237,6 +237,12 @@ for live-testing with FireTuner.
 
 ### 0.5.3
 
+- **Investigated, not shipped: more players in multiplayer** — the lobby's
+  slot capacity can be raised from a mod, but the engine natively validates
+  multiplayer player counts against the hosting platform at launch
+  (`BAD_MAPSIZE` / "Map Size Unsupported") and hard-caps network games at 8
+  players. Not moddable from data or UI scripts; mods like Scapeh's Unlocked
+  Player Limits work in single player only for the same reason.
 - **New: Lobby UI fixes** — the game-setup civilization and leader tooltips
   now show each ability's name above its description. Same fix as the
   "Multiplayer UI Fix" Workshop mod (credit to p0kiehl for spotting it),
