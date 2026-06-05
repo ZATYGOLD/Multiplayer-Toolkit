@@ -71,12 +71,16 @@ function localPlayerTurnActive() {
   } catch (e) { return false; }
 }
 
-/** TimeLimit_Base/PerCity/PerUnit for the active simultaneous segment. */
+/**
+ * TimeLimit_Base/PerCity/PerUnit from the mod-owned MPT_TurnSegments table,
+ * keeping the Competitive numbers fully separate from the Dynamic timer's
+ * (the game's TurnSegments is never modified).
+ */
 function segmentLimits() {
   try {
     const rows = Database.query('gameplay',
       "SELECT TimeLimit_Base AS base, TimeLimit_PerCity AS perCity, TimeLimit_PerUnit AS perUnit " +
-      `FROM TurnSegments WHERE TurnSegmentType = '${ENGINE.segmentType}'`) ?? [];
+      `FROM MPT_TurnSegments WHERE TurnSegmentType = '${ENGINE.segmentType}'`) ?? [];
     return rows[0] ?? null;
   } catch (e) { return null; }
 }

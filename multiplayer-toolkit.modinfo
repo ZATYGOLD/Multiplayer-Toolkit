@@ -23,9 +23,15 @@
 
 <!--*************************** CRITERIA: COMPETITIVE TIMER ****************************************-->
 
-  		<Criteria id="competitive-timer-antiquity"><AgeInUse>AGE_ANTIQUITY</AgeInUse></Criteria>
-        <Criteria id="competitive-timer-exploration"><AgeInUse>AGE_EXPLORATION</AgeInUse></Criteria>
-        <Criteria id="competitive-timer-modern"><AgeInUse>AGE_MODERN</AgeInUse></Criteria>
+  		<Criteria id="competitive-timer-antiquity">
+            <AgeInUse>AGE_ANTIQUITY</AgeInUse>
+        </Criteria>
+        <Criteria id="competitive-timer-exploration">
+            <AgeInUse>AGE_EXPLORATION</AgeInUse>
+        </Criteria>
+        <Criteria id="competitive-timer-modern">
+            <AgeInUse>AGE_MODERN</AgeInUse>
+        </Criteria>
     </ActionCriteria>
 
 <!--*************************** SHELL: TEXT/SETTINGS ***********************************************-->
