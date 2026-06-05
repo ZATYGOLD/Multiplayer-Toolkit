@@ -60,6 +60,11 @@ function isCompetitiveSelected() {
   catch (e) { return false; }
 }
 
+/** The configured timer type, or undefined while the configuration is unreadable. */
+function configuredTimerType() {
+  try { return Configuration.getGame().turnTimerType; } catch (e) { return undefined; }
+}
+
 function currentTurn() {
   try { return Game.turn ?? -1; } catch (e) { return -1; }
 }
@@ -143,6 +148,20 @@ function setStyledNumber(el, styleClass, n) {
  * path is extended.
  */
 function defineMptPanelAction(attempts) {
+  // Only take over the panel when OUR timer is the chosen setting; with any
+  // other timer the game runs its genuine, untouched component. The lobby
+  // choice is fixed before the game UI boots, so a load-time check suffices.
+  // (undefined = configuration not readable yet - keep retrying.)
+  const configured = configuredTimerType();
+  if (configured === undefined) {
+    if (attempts > 0) setTimeout(() => defineMptPanelAction(attempts - 1), DEFINE_RETRY_MS);
+    else log('game configuration never became readable; competitive timer inactive');
+    return;
+  }
+  if (configured !== COMPETITIVE_HASH) {
+    log('Competitive timer not selected - base panel-action left untouched');
+    return;
+  }
   let base = null;
   try { base = Controls.getDefinition('panel-action'); } catch (e) { base = null; }
   if (!base?.createInstance) {

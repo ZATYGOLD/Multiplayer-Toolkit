@@ -23,13 +23,13 @@
 
 <!--*************************** CRITERIA: COMPETITIVE TIMER ****************************************-->
 
-  		<Criteria id="competitive-timer-antiquity">
+  		<Criteria id="antiquity-age-current">
             <AgeInUse>AGE_ANTIQUITY</AgeInUse>
         </Criteria>
-        <Criteria id="competitive-timer-exploration">
+        <Criteria id="exploration-age-current">
             <AgeInUse>AGE_EXPLORATION</AgeInUse>
         </Criteria>
-        <Criteria id="competitive-timer-modern">
+        <Criteria id="modern-age-current">
             <AgeInUse>AGE_MODERN</AgeInUse>
         </Criteria>
     </ActionCriteria>
@@ -111,7 +111,7 @@
 
     <!--**************************** TURN TIMER: COMPETITIVE *************************************-->
 
-        <ActionGroup id="mpt-turn-timer-antiquity" scope="game" criteria="competitive-timer-antiquity">
+        <ActionGroup id="mpt-turn-timer-antiquity" scope="game" criteria="antiquity-age-current">
             <Properties><LoadOrder>1000</LoadOrder></Properties>
             <Actions>
             	<UpdateDatabase>
@@ -120,7 +120,7 @@
             </Actions>
         </ActionGroup>
 
-        <ActionGroup id="mpt-turn-timer-exploration" scope="game" criteria="competitive-timer-exploration">
+        <ActionGroup id="mpt-turn-timer-exploration" scope="game" criteria="exploration-age-current">
             <Properties><LoadOrder>1000</LoadOrder></Properties>
             <Actions>
             	<UpdateDatabase>
@@ -129,7 +129,7 @@
             </Actions>
         </ActionGroup>
 
-        <ActionGroup id="mpt-turn-timer-modern" scope="game" criteria="competitive-timer-modern">
+        <ActionGroup id="mpt-turn-timer-modern" scope="game" criteria="modern-age-current">
             <Properties><LoadOrder>1000</LoadOrder></Properties>
             <Actions>
             	<UpdateDatabase>
