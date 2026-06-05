@@ -1,7 +1,7 @@
 # Multiplayer Toolkit
 
 A toolkit of multiplayer quality-of-life features for **Sid Meier's Civilization
-VII**, built on the game's own UI components. Current version: **0.5.2**.
+VII**, built on the game's own UI components. Current version: **0.5.3**.
 
 Three tools so far:
 
@@ -75,17 +75,25 @@ player who un-readies after zero is re-ended within seconds.
 
 - The engine only *enforces* its three built-in timer types; a data-registered
   fourth type is treated as unknown (fallback 180s display, no enforcement).
-  The mod therefore proxies the action panel's `TurnTimerUpdated` listener and
-  feeds the engine's own renderer the competitive time — so the native text,
-  ring meter, flash and beeps all draw the real clock — and ends the local turn
-  itself via `GameContext.sendTurnComplete()`.
+  The mod therefore **subclasses the action panel component** itself:
+  `MPT_PanelAction extends` the base game's `PanelAction` (via
+  `Controls.getDefinition` + priority redefinition), feeds the inherited
+  renderer the competitive time — so the native text, ring meter, flash and
+  beeps all draw the real clock — and ends the local turn itself via
+  `GameContext.sendTurnComplete()`. The subclass is only registered when
+  **Competitive** is the chosen timer; any other setting runs the untouched
+  base component.
+- The Competitive numbers live in **mod-owned tables** (`MPT_TurnSegments`,
+  `MPT_TimerScaling`) — the game's own `TurnSegments` is never modified, so the
+  Dynamic timer is completely unaffected.
 - Remaining time derives from the engine's **synchronized phase clock**, so
   readying, un-readying and HUD interaction cannot desync or reset it. New
   turns are detected via `Game.turn`; backward clock corrections are tolerated;
   the display pins at zero once expired.
-- A periodic guardian keeps the takeover in place if the action panel
-  re-attaches, and the ring meter self-heals if a stray native render or
-  ready-up reset desyncs it.
+- The ring meter is **scrubbed to the synchronized clock on every timer tick**
+  (the CSS animation is restarted with a fresh offset each event), so it cannot
+  drift from the number, freezes during a pause, and holds exactly empty at
+  zero.
 - Known cosmetic: the lobby **Rules** popup prints a debug string for the
   custom timer type (the base screen only knows the three built-ins). Age
   transitions use their own long phase and are passed through untouched.
@@ -212,7 +220,7 @@ Multiplayer-Toolkit/
 │  └─ mp-pause-mgr.js                 # manager singleton / entry point
 ├─ ui/mp-timer/                       # competitive turn timer feature
 │  ├─ mp-timer-config.js              # constants & tunable settings (data)
-│  └─ mp-timer.js                     # takeover proxy, tiers, enforcement (logic)
+│  └─ mp-timer.js                     # MPT_PanelAction subclass: tiers, ring sync, enforcement
 ├─ ui/mp-waiting/                     # "Waiting for Players" tooltip feature
 │  ├─ mp-waiting-config.js            # constants & tunable settings (data)
 │  └─ mp-waiting-tooltip.js           # pending-player list tooltip (logic)
@@ -226,6 +234,19 @@ for live-testing with FireTuner.
 ---
 
 ## Changelog
+
+### 0.5.3
+
+- **Timer architecture:** the takeover proxy and guardian are gone — the mod
+  now registers `MPT_PanelAction`, a subclass of the game's own action panel
+  component, and only when **Competitive** is the selected timer; every other
+  setting runs the genuine base component.
+- **Timer data separation:** Competitive values moved to mod-owned tables
+  (`MPT_TurnSegments`, `MPT_TimerScaling`); the game's `TurnSegments` is never
+  touched, so the Dynamic timer is completely independent again.
+- **Ring sync:** the ring meter is scrubbed to the synchronized phase clock on
+  every timer tick instead of free-running — no more jumps or drift against
+  the countdown number, and it holds exactly empty at zero.
 
 ### 0.5.2
 
