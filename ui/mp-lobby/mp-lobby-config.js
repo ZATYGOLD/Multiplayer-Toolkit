@@ -25,6 +25,7 @@
 /** Tunable settings. */
 const CONFIG = {
   titleStyle: "text-negative-light", // engine text style for ability title lines
+  observerSlots: true,               // EXPERIMENTAL: host-only "Observer" slot action in the MP lobby
   debug: true
 };
 

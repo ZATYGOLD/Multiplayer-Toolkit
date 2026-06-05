@@ -14,6 +14,12 @@
     <Row Tag="LOC_MPT_RESUME_HOST">
       <Text>Resume (Host)</Text>
     </Row>
+    <Row Tag="LOC_MPT_TEAM_OBSERVER">
+      <Text>Observer</Text>
+    </Row>
+    <Row Tag="LOC_MPT_TEAM_OBSERVER_DESC">
+      <Text>Watch the game as a spectator instead of playing. Pick any team to play again.</Text>
+    </Row>
 
     <!-- MPT Timers -->
     <Replace Tag="LOC_GAME_TURNTIMER_DESC">  <!-- Override the base Turn Timer parameter description -->
