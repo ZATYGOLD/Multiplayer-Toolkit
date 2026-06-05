@@ -140,6 +140,31 @@ function setStyledNumber(el, styleClass, n) {
   catch (e) { el.textContent = String(n); }
 }
 
+/** Ring element class -> [stylesheet keyframes, identical clone] (panel-action.css). */
+const RING_ANIMATIONS = [
+  { className: 'action_panel__mp-timer-left-circle', names: ['rotate-timer-first', 'mpt-rotate-timer-first'] },
+  { className: 'action_panel__mp-timer-right-circle', names: ['rotate-timer-second', 'mpt-rotate-timer-second'] },
+  { className: 'action_panel__mp-timer-left-bk-circle', names: ['fade-in-bg', 'mpt-fade-in-bg'] }
+];
+
+function ringAnimationNames(el) {
+  return RING_ANIMATIONS.find((entry) => el.classList.contains(entry.className))?.names ?? null;
+}
+
+/**
+ * Identical clones of the game's ring keyframes. Flipping an element between
+ * its original and clone forces the animation restart that makes a new
+ * animationDelay take effect (see mptSyncRing).
+ */
+function injectRingKeyframes() {
+  const style = document.createElement('style');
+  style.textContent = `
+@keyframes mpt-rotate-timer-first { 0% { transform: rotate(0deg); } 50% { transform: rotate(-180deg); } 100% { transform: rotate(-180deg); } }
+@keyframes mpt-rotate-timer-second { 0% { transform: rotate(180deg); } 50% { transform: rotate(180deg); } 100% { transform: rotate(0deg); } }
+@keyframes mpt-fade-in-bg { 0% { opacity: 0; } 49% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 1; } }`;
+  document.head.appendChild(style);
+}
+
 // ====================== Component redefinition ========================
 
 /**
@@ -170,6 +195,7 @@ function defineMptPanelAction(attempts) {
     return;
   }
   const PanelAction = base.createInstance;
+  injectRingKeyframes();
 
   MPT_PanelAction = class MPT_PanelAction extends PanelAction {
     // --- competitive timer state (per panel instance) ---
@@ -177,9 +203,7 @@ function defineMptPanelAction(attempts) {
     mptLastTurn = -1;
     mptExpiredAt = -1;
     mptLastEnforceAt = -Infinity;
-    mptRingSetAt = Infinity;
     mptLastWarnTick = Infinity;
-    mptLastElapsed = 0;
     mptPauseListener = (data) => this.mptOnGamePauseChanged(data);
 
     onAttach() {
@@ -196,6 +220,7 @@ function defineMptPanelAction(attempts) {
       const ctx = this.mptContext(data);
       super.onTurnTimerUpdated(ctx ? ctx.data : data);
       if (ctx) {
+        this.mptSyncRing(ctx.ringElapsed);
         this.mptDecorateText(ctx.n);
         this.mptWarnSounds(ctx.n);
       }
@@ -216,17 +241,14 @@ function defineMptPanelAction(attempts) {
         this.mptExpiredAt = -1;
         this.mptLastEnforceAt = -Infinity;
         this.mptLastWarnTick = Infinity;
-        this.mptClearRingLatch(0);
+        // Neutralize the inherited grow-only ring latch: mptSyncRing positions
+        // the ring from the game clock on every event instead.
+        this.mpTimerMaxTime = this.mptTotal;
         log(`turn ${turn}: total=${this.mptTotal}s`);
       }
       if (this.mptTotal <= 0) return null;
       const total = this.mptTotal;
       const elapsed = data.elapsedTime ?? 0;
-      this.mptLastElapsed = elapsed;
-      if (this.mptRingDesynced(elapsed)) {
-        this.mptClearRingLatch(elapsed);
-        log(`ring resync at ${Math.round(elapsed)}s elapsed`);
-      }
       if (this.mptExpiredAt < 0 && total - elapsed <= 0) this.mptExpiredAt = elapsed;
       const n = this.mptExpiredAt >= 0 ? 0 : Math.max(0, Math.round(total - elapsed));
       // Engine-perceived clock: pinned at zero once expired; clamped while the
@@ -239,27 +261,38 @@ function defineMptPanelAction(attempts) {
         effectiveElapsed = Math.min(elapsed, total - CONFIG.engineFlashHide);
       }
       this.mptEnforceExpiry(elapsed);
-      return { data: { ...data, phaseTimeLimit: total, elapsedTime: effectiveElapsed }, n };
+      // The ring scrubs from the TRUE clock (with only the expiry pin), never
+      // from the muzzle-clamped value, or it would freeze in the orange tier.
+      const ringElapsed = this.mptExpiredAt >= 0 ? total : elapsed;
+      return { data: { ...data, phaseTimeLimit: total, elapsedTime: effectiveElapsed }, n, ringElapsed };
     }
 
     /**
-     * True when the ring no longer reflects our timer: a stale latch from the
-     * fallback 180, a ready-up delay reset, or a clock correction back past
-     * the point the ring was last synced. The ring re-sizes via the inherited
-     * startMPTimerAnimation, which we own through this.mpTimerMaxTime.
+     * Scrub the ring to the game clock on every timer event. Changing only
+     * animationDelay on a RUNNING animation does not reposition it - the
+     * delay offsets from the animation's ORIGINAL start time, so the ring ran
+     * at double speed. A new delay is honored from "now" only when the
+     * animation restarts, and a restart is guaranteed when animation-name
+     * changes: each scrub flips the element between the game's keyframes and
+     * an identical clone. Between events the ring free-runs smoothly on wall
+     * clock; each restart corrects the few milliseconds drifted since the
+     * last event. fill-mode holds the ring empty once the animation ends at
+     * expiry. (The inherited startMPTimerAnimation never fires for us:
+     * mpTimerMaxTime is kept equal to the total, so its grow-only guard
+     * stays false.)
      */
-    mptRingDesynced(elapsed) {
-      if (this.mpTimerMaxTime > this.mptTotal) return true;
-      if (elapsed + CONFIG.clockJitterSeconds < this.mptRingSetAt) return true;
-      const ring = this.timerAnimationElements?.[0];
-      if (!ring) return false;
-      if (ring.style.animationDuration !== `${this.mptTotal}s`) return true;
-      return elapsed > 1.5 && ring.style.animationDelay === '0s';
-    }
-
-    mptClearRingLatch(elapsed) {
-      this.mpTimerMaxTime = 0;
-      this.mptRingSetAt = elapsed;
+    mptSyncRing(elapsed) {
+      const total = this.mptTotal;
+      if (total <= 0) return;
+      const position = Math.min(Math.max(elapsed, 0), total);
+      for (const el of this.timerAnimationElements ?? []) {
+        const names = ringAnimationNames(el);
+        if (!names) continue;
+        el.style.animationDuration = `${total}s`;
+        el.style.animationDelay = `${-position}s`;
+        el.style.animationFillMode = 'forwards';
+        el.style.animationName = el.style.animationName === names[1] ? names[0] : names[1];
+      }
     }
 
     /**
@@ -311,9 +344,9 @@ function defineMptPanelAction(attempts) {
     }
 
     /**
-     * The ring is a wall-clock CSS animation, so it keeps depleting visually
+     * The ring animates on wall clock between scrubs, so it would keep moving
      * while the game is paused even though the phase clock stops. Freeze it
-     * during pause and force a resync on unpause.
+     * during pause; the first event after unpause scrubs it back into place.
      */
     mptOnGamePauseChanged(data) {
       const paused = !!data && Number(data.data) === 1;
@@ -321,8 +354,7 @@ function defineMptPanelAction(attempts) {
       if (rings) {
         for (const el of rings) el.style.animationPlayState = paused ? 'paused' : 'running';
       }
-      if (!paused && this.mptTotal > 0) this.mptClearRingLatch(this.mptLastElapsed);
-      log(paused ? 'game paused - ring frozen' : 'game resumed - ring resynced');
+      log(paused ? 'game paused - ring frozen' : 'game resumed');
     }
   };
 
