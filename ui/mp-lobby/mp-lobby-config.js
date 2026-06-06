@@ -19,29 +19,15 @@
  */
 
 /**
- * Multiplayer Toolkit - "Waiting for Players" tooltip configuration & constants.
- *
- * Centralizes every tunable value and identifier so the tooltip logic stays
- * data-free. Mirrors the data/logic separation used by ui/mp-pause and
- * ui/mp-timer.
+ * Multiplayer Toolkit - Lobby UI fixes configuration & constants.
  */
 
-/** Tunable timings / thresholds. */
+/** Tunable settings. */
 const CONFIG = {
-  refreshMs: 500,   // how often the pending-player list is refreshed
+  titleStyle: "text-negative-light", // engine text style for ability title lines
+  observerSlots: true,               // EXPERIMENTAL: host-only "Observer" slot action in the MP lobby
+  startCountdownSeconds: 5,          // all-ready lobby countdown before the game starts (stock: 10)
   debug: true
 };
 
-/** Engine identifiers the tooltip touches. */
-const ENGINE = {
-  bannerTextClass: "action-panel__button-txt-plate__text",
-  actionButtonClass: "action-panel__button-next-action",
-  waitingBannerLoc: "LOC_ACTION_PANEL_WAITING_FOR_PLAYERS"
-};
-
-/** Localization keys (see text/en_us/mpt-text.xml). */
-const LOC = {
-  waitingList: "LOC_MPT_WAITING_FOR_LIST"
-};
-
-export { CONFIG, ENGINE, LOC };
+export { CONFIG };

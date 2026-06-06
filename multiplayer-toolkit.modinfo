@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Mod id="multiplayer-toolkit" version="00503" xmlns="ModInfo">
+<Mod id="multiplayer-toolkit" version="00504" xmlns="ModInfo">
     <Properties>
         <Name>LOC_MOD_MPT_NAME</Name>
         <Description>LOC_MOD_MPT_DESCRIPTION</Description>
         <Authors>Zatygold</Authors>
         <Package>Mod</Package>
         <AffectsSavedGames>0</AffectsSavedGames>
-        <Version>0.5.3</Version>
-		<LastUpdated>2026-06-05</LastUpdated>
+        <Version>0.5.4</Version>
+		<LastUpdated>2026-06-06</LastUpdated>
         <ShowInBrowser>1</ShowInBrowser>
     </Properties>
 
@@ -46,6 +46,14 @@
                 <UpdateDatabase>
                     <Item>config/SetupParameters.sql</Item>
                 </UpdateDatabase>
+                <ImportFiles>
+                    <Item>icons/mpt_observer.png</Item>
+                </ImportFiles>
+                <UIScripts>
+                    <Item>ui/mp-lobby/mp-lobby-config.js</Item>
+                    <Item>ui/mp-lobby/mp-lobby-observer.js</Item>
+                    <Item>ui/mp-lobby/mp-lobby-tooltips.js</Item>
+                </UIScripts>
             </Actions>
         </ActionGroup>
 
@@ -74,6 +82,19 @@
             </Actions>
         </ActionGroup>
 
+<!--*********************** GAME: OBSERVER IN-GAME FEATURES *************************************-->
+
+        <ActionGroup id="mpt-observer-script" scope="game" criteria="always">
+            <Properties><LoadOrder>1000</LoadOrder></Properties>
+            <Actions>
+                <UIScripts>
+                    <Item>ui/mp-observer/mp-observer-config.js</Item>
+                    <Item>ui/mp-observer/mp-observer-ribbon.js</Item>
+                    <Item>ui/mp-observer/mp-observer-turns.js</Item>
+                </UIScripts>
+            </Actions>
+        </ActionGroup>
+
 <!--*********************** GAME: COMPETITIVE TIMER SCRIPT ***************************************-->
 
         <ActionGroup id="mpt-competitive-timer-script" scope="game" criteria="always">
@@ -82,18 +103,6 @@
                 <UIScripts>
                     <Item>ui/mp-timer/mp-timer-config.js</Item>
                     <Item>ui/mp-timer/mp-timer.js</Item>
-                </UIScripts>
-            </Actions>
-        </ActionGroup>
-
-<!--*********************** GAME: WAITING-FOR-PLAYERS TOOLTIP ************************************-->
-
-        <ActionGroup id="mpt-waiting-tooltip" scope="game" criteria="always">
-            <Properties><LoadOrder>1000</LoadOrder></Properties>
-            <Actions>
-                <UIScripts>
-                    <Item>ui/mp-waiting/mp-waiting-config.js</Item>
-                    <Item>ui/mp-waiting/mp-waiting-tooltip.js</Item>
                 </UIScripts>
             </Actions>
         </ActionGroup>

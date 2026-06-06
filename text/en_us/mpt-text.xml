@@ -14,6 +14,51 @@
     <Row Tag="LOC_MPT_RESUME_HOST">
       <Text>Resume (Host)</Text>
     </Row>
+    <Row Tag="LOC_MPT_TEAM_OBSERVER">
+      <Text>Observer</Text>
+    </Row>
+    <Row Tag="LOC_MPT_TEAM_OBSERVER_DESC">
+      <Text>Watch the game as a spectator instead of playing. Pick any team to play again.</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_YIELDS">
+      <Text>Yields</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_RESEARCH">
+      <Text>Research</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_PRODUCTION">
+      <Text>Production</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_SCORE">
+      <Text>Score</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_TOTAL">
+      <Text>Total</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_TOURISM">
+      <Text>Tourism</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_GDP">
+      <Text>GDP</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_DOMINION">
+      <Text>Dominion</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_INNOVATION">
+      <Text>Innovation</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_RESEARCH_TECH">
+      <Text>Researching</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_RESEARCH_CIVIC">
+      <Text>Current Civic</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_NONE">
+      <Text>—</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_NEXT_TURN">
+      <Text>Next Turn</Text>
+    </Row>
 
     <!-- MPT Timers -->
     <Replace Tag="LOC_GAME_TURNTIMER_DESC">  <!-- Override the base Turn Timer parameter description -->
@@ -26,9 +71,6 @@
     </Replace>
     <Row Tag="LOC_MPT_TURNTIMER_COMPETITIVE">
       <Text>Competitive</Text>
-    </Row>
-    <Row Tag="LOC_MPT_WAITING_FOR_LIST">
-      <Text>Waiting for:[N]{1_PlayerList}</Text>
     </Row>
     <Row Tag="LOC_MPT_TURNTIMER_COMPETITIVE_DESC">
       <Text>Turn time scales with the Cities and Units in play, the number of human Players, and the current Turn, tuned per Age.</Text>

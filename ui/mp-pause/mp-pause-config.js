@@ -37,6 +37,7 @@ const NATIVE_PAUSE_DIALOG_TITLE = "LOC_MP_PAUSE_POPUP_TITLE";
 
 /** Tunable timings / thresholds. */
 const CONFIG = {
+  enabled: true,               // master switch (set false to fully disable the pause feature)
   resumeCountdownSeconds: 5,   // length of the "UNPAUSING..." countdown
   pollMs: 250,                 // tally / condition evaluation interval
   convergenceDelayMs: 2000,    // wait for all clients to flag in before voting
