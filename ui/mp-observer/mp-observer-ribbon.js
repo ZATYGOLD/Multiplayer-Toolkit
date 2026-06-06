@@ -182,38 +182,91 @@ function productionItems(player) {
 
 // ============================ Score data ============================
 
-/** Per-victory-path scores + total for a player (the SCORE view's rows). */
+/**
+ * One score row laid out entirely inside the displayItems `img` (value left
+ * empty) so it stays within the narrow ribbon column. Two columns: a left
+ * column with the icon stacked over the name, and the score on the right.
+ */
+function scoreRow(iconHtml, name, score) {
+  const nameSpan = name
+    ? `<span style='font-size:0.62rem;line-height:0.8rem;color:#e7d9ac;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:4rem;'>${name}</span>`
+    : '';
+  const img =
+    `<div style='display:flex;flex-direction:row;align-items:center;justify-content:space-between;width:100%;padding:0.2rem 0;'>` +
+    `<div style='display:flex;flex-direction:column;align-items:center;min-width:0;'>${iconHtml}${nameSpan}</div>` +
+    `<span style='font-size:0.9rem;color:#e7d9ac;margin-left:0.3rem;flex-shrink:0;'>${score}</span>` +
+    `</div>`;
+  return {
+    type: 'victory',
+    label: name,
+    value: '',
+    img,
+    details: name,
+    rawValue: score,
+    warningThreshold: Infinity
+  };
+}
+
+// The current victory system (post-update): each class maps to a metric, read
+// via player.Victories.getPointsForVictoryType(hash). VICTORY_CLASS_SCORE is
+// the overall game Score (the tiebreaker total).
+const VICTORY_CLASS_LABEL = {
+  VICTORY_CLASS_CULTURE: 'LOC_MPT_OBSERVER_TOURISM',
+  VICTORY_CLASS_ECONOMIC: 'LOC_MPT_OBSERVER_GDP',
+  VICTORY_CLASS_MILITARY: 'LOC_MPT_OBSERVER_DOMINION',
+  VICTORY_CLASS_SCIENCE: 'LOC_MPT_OBSERVER_INNOVATION',
+  VICTORY_CLASS_SCORE: 'LOC_MPT_OBSERVER_SCORE'
+};
+// The game's dedicated victory emblems (sprite classes used by the Victories
+// screen). Rendered as a div background so the proper Tourism/GDP/Dominion/
+// Innovation icon shows rather than a generic yield icon.
+const VICTORY_CLASS_EMBLEM = {
+  VICTORY_CLASS_CULTURE: 'img-emblem-cultural',
+  VICTORY_CLASS_ECONOMIC: 'img-emblem-economic',
+  VICTORY_CLASS_MILITARY: 'img-emblem-military',
+  VICTORY_CLASS_SCIENCE: 'img-emblem-scientific'
+};
+const VICTORY_CLASS_ORDER = [
+  'VICTORY_CLASS_CULTURE', 'VICTORY_CLASS_ECONOMIC',
+  'VICTORY_CLASS_MILITARY', 'VICTORY_CLASS_SCIENCE', 'VICTORY_CLASS_SCORE'
+];
+
+function classIcon(cls) {
+  const emblem = VICTORY_CLASS_EMBLEM[cls];
+  return emblem
+    ? `<div class='${emblem}' style='width:1.6rem;height:1.6rem;background-size:contain;background-repeat:no-repeat;background-position:center;'></div>`
+    : '';
+}
+
+/**
+ * Victory-class scores for a player (Tourism / GDP / Dominion / Innovation) and
+ * the overall Score, read from player.Victories - the current victory system
+ * the in-game Victories screen uses. Points are summed across each class's
+ * victory definitions so the active (current-age) one supplies the value.
+ */
 function scoreItems(player) {
-  const items = [];
-  let total = 0;
+  const vic = player.Victories;
+  const byClass = {};
   try {
-    const lp = player.LegacyPaths;
-    const enabled = lp?.getEnabledLegacyPaths?.() ?? [];
-    for (const elp of enabled) {
-      const def = GameInfo.LegacyPaths.lookup(elp.legacyPath);
-      if (!def) continue;
-      const score = lp?.getScore?.(def.LegacyPathType) ?? 0;
-      total += score;
-      items.push({
-        type: 'victory',
-        label: Locale.compose(def.Name),
-        value: String(score),
-        img: `<img src='${Icon.getLegacyPathIcon(def)}'>`,
-        details: Locale.compose(def.Name),
-        rawValue: score,
-        warningThreshold: Infinity
-      });
+    if (vic?.getPointsForVictoryType) {
+      for (const def of GameInfo.Victories) {
+        const cls = def?.VictoryClassType;
+        if (!cls || !(cls in VICTORY_CLASS_LABEL)) continue;
+        let pts = 0;
+        try { pts = vic.getPointsForVictoryType(def.$hash) ?? 0; } catch (e) { pts = 0; }
+        byClass[cls] = Math.max(byClass[cls] ?? 0, pts);
+      }
     }
   } catch (e) { /* leave whatever we built */ }
-  items.push({
-    type: 'victory',
-    label: Locale.compose('LOC_MPT_OBSERVER_TOTAL'),
-    value: String(total),
-    img: '',
-    details: Locale.compose('LOC_MPT_OBSERVER_TOTAL'),
-    rawValue: total,
-    warningThreshold: Infinity
-  });
+  const items = [];
+  for (const cls of VICTORY_CLASS_ORDER) {
+    if (!(cls in byClass)) continue;
+    // Emblem classes show the icon alone; the SCORE row (no emblem) keeps text.
+    const hasEmblem = cls in VICTORY_CLASS_EMBLEM;
+    const name = hasEmblem ? '' : Locale.compose(VICTORY_CLASS_LABEL[cls]);
+    items.push(scoreRow(classIcon(cls), name, byClass[cls]));
+  }
+  if (items.length === 0) items.push(scoreRow('', Locale.compose('LOC_MPT_OBSERVER_NONE'), 0));
   return items;
 }
 

@@ -35,6 +35,18 @@
     <Row Tag="LOC_MPT_OBSERVER_TOTAL">
       <Text>Total</Text>
     </Row>
+    <Row Tag="LOC_MPT_OBSERVER_TOURISM">
+      <Text>Tourism</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_GDP">
+      <Text>GDP</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_DOMINION">
+      <Text>Dominion</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_INNOVATION">
+      <Text>Innovation</Text>
+    </Row>
     <Row Tag="LOC_MPT_OBSERVER_RESEARCH_TECH">
       <Text>Researching</Text>
     </Row>
