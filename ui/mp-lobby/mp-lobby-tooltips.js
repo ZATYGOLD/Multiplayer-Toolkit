@@ -38,6 +38,40 @@ function log(message) {
   if (CONFIG.debug) console.log(`[MPT lobby] ${message}`);
 }
 
+// Shorten the all-ready lobby countdown before the game starts. The model
+// reads this static fresh each time the countdown begins, so overriding it
+// takes effect on the next start.
+try {
+  if (CONFIG.startCountdownSeconds > 0) {
+    MPLobbyDataModel.ALL_READY_COUNTDOWN = CONFIG.startCountdownSeconds * 1000;
+    log(`lobby start countdown set to ${CONFIG.startCountdownSeconds}s`);
+  }
+} catch (e) { log(`could not set lobby countdown: ${e}`); }
+
+// The countdown ring's max is hard-coded to 10 in the lobby template, so a
+// 5-second countdown only fills it halfway. Patch the lobby panel's onAttach
+// to set each ring-meter's max-value to the new countdown length.
+function patchLobbyRing(attempts) {
+  if (CONFIG.startCountdownSeconds <= 0 || CONFIG.startCountdownSeconds === 10) return;
+  let def = null;
+  try { def = Controls.getDefinition('screen-mp-lobby'); } catch (e) { def = null; }
+  if (!def?.createInstance) {
+    if (attempts > 0) setTimeout(() => patchLobbyRing(attempts - 1), 200);
+    return;
+  }
+  const PanelMPLobby = def.createInstance;
+  const baseOnAttach = PanelMPLobby.prototype.onAttach;
+  PanelMPLobby.prototype.onAttach = function (...args) {
+    baseOnAttach.apply(this, args);
+    try {
+      const rings = this.Root?.querySelectorAll?.('.mp-staging__ring-meter') ?? [];
+      for (const ring of rings) ring.setAttribute('max-value', String(CONFIG.startCountdownSeconds));
+    } catch (e) { /* leave ring as-is */ }
+  };
+  log('lobby countdown ring max-value patched');
+}
+patchLobbyRing(50);
+
 /**
  * Inserts the styled ability title above the ability text. Idempotent: the
  * base model caches tooltip fragments, so a tooltip that already carries the

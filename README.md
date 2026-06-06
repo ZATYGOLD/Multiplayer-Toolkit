@@ -17,12 +17,14 @@ Four tools so far:
   from the **Team** dropdown of their own lobby row to spectate instead of
   play, marked by an eye badge; picking any team switches back. In-game an
   observer gets full-map vision and a **spectator dashboard**: the player
-  ribbons show every civ's yields, toggleable to each civ's current research
-  (tech + civic, with live progress). Built on the engine's own never-surfaced
+  ribbons show every civ's **Yields**, **Research** (tech + civic),
+  **Production** (per-city builds) or **Score** (victory metrics + overall
+  score), with live progress. Built on the engine's own never-surfaced
   observer slot system.
 - **Lobby UI fixes** — the civilization and leader tooltips in multiplayer
   game setup show each ability's **name** above its description (the base game
-  omits it). Patched at runtime, so it coexists with other lobby mods.
+  omits it); and the all-ready start countdown is shortened to 5 seconds.
+  Patched at runtime, so they coexist with other lobby mods.
 
 ---
 
@@ -218,11 +220,18 @@ own role, and roles lock once you ready up — a readied or remote observer stil
 shows the eye badge, read-only.
 
 In-game, an observer sees the **whole map** and a **spectator dashboard** built
-on the diplomacy ribbon: every major civ's portrait with a small **Yields /
-Research** toolbar (top-center). *Yields* shows each civ's gold, science,
-culture, happiness, diplomacy, settlements and trade; *Research* swaps every
-ribbon to that civ's current technology and civic — the real icon, name and a
-progress bar that tracks live. One view at a time.
+on the diplomacy ribbon: every major civ's portrait with the stats pinned open
+(no hovering) and a small toolbar (top-center) to switch what every ribbon
+shows, one view at a time:
+
+- **Yields** — gold, science, culture, happiness, diplomacy, settlements, trade.
+- **Research** — current technology and civic: the real icon, name and a live
+  progress bar.
+- **Production** — each city's current build: item icon, city name and a live
+  progress bar (towns are skipped — they have no production queue).
+- **Score** — the victory metrics from the current victory system (Tourism,
+  GDP, Dominion, Innovation) with each metric's emblem, plus the overall
+  **Score** (the game's tiebreaker total).
 
 ### Implementation notes (honest)
 
@@ -291,7 +300,7 @@ Multiplayer-Toolkit/
 │  └─ mp-lobby-tooltips.js            # civ/leader ability-title tooltip patch (logic)
 ├─ ui/mp-observer/                    # in-game observer dashboard (game scope)
 │  ├─ mp-observer-config.js           # constants & tunable settings (data)
-│  ├─ mp-observer-ribbon.js           # spectator ribbon: all players, Yields/Research toggle
+│  ├─ mp-observer-ribbon.js           # spectator ribbon: Yields/Research/Production/Score
 │  └─ mp-observer-turns.js            # observer turn-gating (off; engine-limited)
 ├─ ui/mp-timer/                       # competitive turn timer feature
 │  ├─ mp-timer-config.js              # constants & tunable settings (data)
@@ -311,9 +320,15 @@ for live-testing with FireTuner.
 
 - **New: in-game observer dashboard** — an observer now sees the whole map and
   a spectator view on the diplomacy ribbon (every major civ's portrait, which
-  the base ribbon leaves blank for a spectator). A **Yields / Research** toolbar
-  toggles all ribbons between each civ's yields and each civ's current tech +
-  civic with live progress bars.
+  the base ribbon leaves blank for a spectator), with stats pinned open (no
+  hovering). A top-center toolbar toggles all ribbons between four views:
+  **Yields**, **Research** (current tech + civic), **Production** (per-city
+  builds), and **Score** (the current victory metrics — Tourism, GDP, Dominion,
+  Innovation — plus the overall Score). Research and Production show live
+  progress bars.
+- **Lobby:** the all-ready start countdown is shortened to 5 seconds
+  (configurable via `startCountdownSeconds`), with the countdown ring patched
+  to fill correctly for the shorter time.
 - **Observer setup:** converting to observer now also clears the slot's
   civ/leader, not just the team.
 - **Observer limitations found (engine, not moddable):** the engine ignores an
