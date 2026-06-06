@@ -1,7 +1,7 @@
 # Multiplayer Toolkit
 
 A toolkit of multiplayer quality-of-life features for **Sid Meier's Civilization
-VII**, built on the game's own UI components. Current version: **0.5.3**.
+VII**, built on the game's own UI components. Current version: **0.5.4**.
 
 Four tools so far:
 
@@ -15,8 +15,11 @@ Four tools so far:
   migration and rejoin resyncs all pause the game automatically.
 - **Observer mode** *(experimental)* — every player can choose **Observer**
   from the **Team** dropdown of their own lobby row to spectate instead of
-  play, marked by an eye badge; picking any team switches back. Built on the
-  engine's own never-surfaced observer slot system.
+  play, marked by an eye badge; picking any team switches back. In-game an
+  observer gets full-map vision and a **spectator dashboard**: the player
+  ribbons show every civ's yields, toggleable to each civ's current research
+  (tech + civic, with live progress). Built on the engine's own never-surfaced
+  observer slot system.
 - **Lobby UI fixes** — the civilization and leader tooltips in multiplayer
   game setup show each ability's **name** above its description (the base game
   omits it). Patched at runtime, so it coexists with other lobby mods.
@@ -214,6 +217,13 @@ blank no-team entry) to switch back to playing. Each player controls only their
 own role, and roles lock once you ready up — a readied or remote observer still
 shows the eye badge, read-only.
 
+In-game, an observer sees the **whole map** and a **spectator dashboard** built
+on the diplomacy ribbon: every major civ's portrait with a small **Yields /
+Research** toolbar (top-center). *Yields* shows each civ's gold, science,
+culture, happiness, diplomacy, settlements and trade; *Research* swaps every
+ribbon to that civ's current technology and civic — the real icon, name and a
+progress bar that tracks live. One view at a time.
+
 ### Implementation notes (honest)
 
 - The engine ships a complete but never-surfaced observer subsystem
@@ -228,10 +238,28 @@ shows the eye badge, read-only.
 - Swapping into a pre-marked observer seat does **not** work — the engine
   moves slot positions without changing what you are — which is why the role
   is a self-service choice rather than a host-assigned seat.
-- **Untested frontier:** what the game does with a seated observer at launch
-  and in-game (camera, HUD, turn flow). The lobby half is solid; the in-game
-  half is the next milestone. `observerSlots` in `mp-lobby-config.js` turns
-  the whole feature off.
+- The in-game dashboard reads other players' data directly (yields, current
+  research node, progress) — all of it readable for any player in a networked
+  game — and repaints the diplo ribbon for the observer, who otherwise sees an
+  empty ribbon. Progress bars use plain `<img>` + width-based bars because the
+  UI renderer rejects `conic-gradient`.
+
+### Known engine limitations (cannot be fixed from a mod)
+
+- **No turn control or pausing for observers.** The engine does not honor an
+  observer's pause request and never gives a spectator an interactive
+  end-turn button (the action panel stays on "Please Wait…"). An
+  observer-stepped / observer-paused game is therefore not possible from a UI
+  mod; the `turnGating` switch in `mp-observer-config.js` is left **off**.
+- **Lone-observer stability.** A single human *observer* watching only AI
+  players crashes the game at the **Antiquity→Exploration age transition**
+  (~turn 50). This reproduces with every one of the mod's in-game scripts
+  disabled, so it is an engine issue with that specific configuration, not the
+  mod. It is **not yet confirmed** whether it occurs in a normal game with
+  other human players present — the intended use case — which is the next
+  thing to verify with a real multiplayer test.
+- Master switches: `observerSlots` in `mp-lobby-config.js` (lobby role) and
+  `enabled` in `mp-observer-config.js` (in-game dashboard).
 
 ---
 
@@ -257,10 +285,14 @@ Multiplayer-Toolkit/
 │  ├─ mp-pause.scss.js                # styles, shipped as a string
 │  ├─ mp-pause-overlay.js             # reusable "UNPAUSING..." countdown overlay
 │  └─ mp-pause-mgr.js                 # manager singleton / entry point
-├─ ui/mp-lobby/                       # lobby UI fixes & observer mode (shell scope)
+├─ ui/mp-lobby/                       # lobby UI fixes & observer role (shell scope)
 │  ├─ mp-lobby-config.js              # constants & tunable settings (data)
-│  ├─ mp-lobby-observer.js            # observer mode: team-dropdown role toggle (logic)
+│  ├─ mp-lobby-observer.js            # observer role: team-dropdown toggle + civ/leader clear
 │  └─ mp-lobby-tooltips.js            # civ/leader ability-title tooltip patch (logic)
+├─ ui/mp-observer/                    # in-game observer dashboard (game scope)
+│  ├─ mp-observer-config.js           # constants & tunable settings (data)
+│  ├─ mp-observer-ribbon.js           # spectator ribbon: all players, Yields/Research toggle
+│  └─ mp-observer-turns.js            # observer turn-gating (off; engine-limited)
 ├─ ui/mp-timer/                       # competitive turn timer feature
 │  ├─ mp-timer-config.js              # constants & tunable settings (data)
 │  └─ mp-timer.js                     # MPT_PanelAction subclass: tiers, ring sync, enforcement
@@ -275,14 +307,31 @@ for live-testing with FireTuner.
 
 ## Changelog
 
+### 0.5.4
+
+- **New: in-game observer dashboard** — an observer now sees the whole map and
+  a spectator view on the diplomacy ribbon (every major civ's portrait, which
+  the base ribbon leaves blank for a spectator). A **Yields / Research** toolbar
+  toggles all ribbons between each civ's yields and each civ's current tech +
+  civic with live progress bars.
+- **Observer setup:** converting to observer now also clears the slot's
+  civ/leader, not just the team.
+- **Observer limitations found (engine, not moddable):** the engine ignores an
+  observer's pause and never gives a spectator an interactive end-turn button,
+  so observer turn-control / pausing is not possible (the `turnGating` switch
+  ships off). A lone human observer watching only AI also crashes at the
+  Antiquity Turn 50 and above — this reproduces with all of the mod's
+  in-game scripts disabled, so it is an engine issue with that solo
+  configuration; whether it affects a normal game with other humans is still to
+  be confirmed.
+
 ### 0.5.3
 
-- **New: Observer mode (experimental)** — pick **Observer** from your own
-  row's Team dropdown to spectate instead of play; pick any team to switch
+- **New: Observer mode (lobby, experimental)** — pick **Observer** from your
+  own row's Team dropdown to spectate instead of play; pick any team to switch
   back. Eye badge in the team column, observer "leader", civ/leader/mementos
   locked while observing; roles lock on ready-up. Surfaces the engine's own
-  hidden observer slot system; the in-game experience after launch is still
-  being tested.
+  hidden observer slot system.
 - **Investigated, not shipped: more players in multiplayer** — the lobby's
   slot capacity can be raised from a mod, but the engine natively validates
   multiplayer player counts against the hosting platform at launch

@@ -670,6 +670,7 @@ class MultiplayerPauseManager {
     catch (e) { return false; }
   }
   async onReady() {
+    if (CONFIG.enabled === false) { this.log("Pause feature disabled via config."); return; }
     this.isMultiplayer = this.isMultiplayerGame();
     if (!this.isMultiplayer) { this.log("Single-player; Multiplayer Toolkit dormant."); return; }
     this.log("Multiplayer; initializing Multiplayer Toolkit.");

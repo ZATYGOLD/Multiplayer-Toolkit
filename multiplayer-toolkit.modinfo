@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Mod id="multiplayer-toolkit" version="00503" xmlns="ModInfo">
+<Mod id="multiplayer-toolkit" version="00504" xmlns="ModInfo">
     <Properties>
         <Name>LOC_MOD_MPT_NAME</Name>
         <Description>LOC_MOD_MPT_DESCRIPTION</Description>
         <Authors>Zatygold</Authors>
         <Package>Mod</Package>
         <AffectsSavedGames>0</AffectsSavedGames>
-        <Version>0.5.3</Version>
-		<LastUpdated>2026-06-05</LastUpdated>
+        <Version>0.5.4</Version>
+		<LastUpdated>2026-06-06</LastUpdated>
         <ShowInBrowser>1</ShowInBrowser>
     </Properties>
 
@@ -78,6 +78,19 @@
                     <Item>ui/mp-pause/mp-pause.scss.js</Item>
                     <Item>ui/mp-pause/mp-pause-overlay.js</Item>
                     <Item>ui/mp-pause/mp-pause-mgr.js</Item>
+                </UIScripts>
+            </Actions>
+        </ActionGroup>
+
+<!--*********************** GAME: OBSERVER IN-GAME FEATURES *************************************-->
+
+        <ActionGroup id="mpt-observer-script" scope="game" criteria="always">
+            <Properties><LoadOrder>1000</LoadOrder></Properties>
+            <Actions>
+                <UIScripts>
+                    <Item>ui/mp-observer/mp-observer-config.js</Item>
+                    <Item>ui/mp-observer/mp-observer-ribbon.js</Item>
+                    <Item>ui/mp-observer/mp-observer-turns.js</Item>
                 </UIScripts>
             </Actions>
         </ActionGroup>

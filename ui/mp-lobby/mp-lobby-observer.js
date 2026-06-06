@@ -149,6 +149,11 @@ function registerObserverMode() {
           const playerConfig = Configuration.editPlayer(playerID);
           playerConfig?.setSlotStatus(observerStatus);
           playerConfig?.setTeam?.(-1);
+          // Clear the civ/leader so the engine does not carry a phantom
+          // participant (with a civ that must transition Ages) for a slot that
+          // is only observing.
+          try { playerConfig?.setCivilizationTypeName?.('CIVILIZATION_NONE'); } catch (e) { /* ignore */ }
+          try { playerConfig?.setLeaderTypeName?.('LEADER_NONE'); } catch (e) { /* ignore */ }
           log(`slot ${playerID} -> observing`);
           MPLobbyModel.update();
           return;

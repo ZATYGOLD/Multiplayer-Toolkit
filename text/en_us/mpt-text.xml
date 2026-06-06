@@ -20,6 +20,24 @@
     <Row Tag="LOC_MPT_TEAM_OBSERVER_DESC">
       <Text>Watch the game as a spectator instead of playing. Pick any team to play again.</Text>
     </Row>
+    <Row Tag="LOC_MPT_OBSERVER_YIELDS">
+      <Text>Yields</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_RESEARCH">
+      <Text>Research</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_RESEARCH_TECH">
+      <Text>Researching</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_RESEARCH_CIVIC">
+      <Text>Current Civic</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_NONE">
+      <Text>—</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_NEXT_TURN">
+      <Text>Next Turn</Text>
+    </Row>
 
     <!-- MPT Timers -->
     <Replace Tag="LOC_GAME_TURNTIMER_DESC">  <!-- Override the base Turn Timer parameter description -->
