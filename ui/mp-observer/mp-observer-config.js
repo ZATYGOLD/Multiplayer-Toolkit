@@ -25,7 +25,9 @@
 /** View modes for the observer's player ribbons. */
 const OBSERVER_VIEW = {
   YIELDS: 'yields',
-  RESEARCH: 'research'
+  RESEARCH: 'research',
+  PRODUCTION: 'production',
+  SCORE: 'score'
 };
 
 /** Tunable settings. */

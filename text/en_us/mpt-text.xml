@@ -26,6 +26,15 @@
     <Row Tag="LOC_MPT_OBSERVER_RESEARCH">
       <Text>Research</Text>
     </Row>
+    <Row Tag="LOC_MPT_OBSERVER_PRODUCTION">
+      <Text>Production</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_SCORE">
+      <Text>Score</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_TOTAL">
+      <Text>Total</Text>
+    </Row>
     <Row Tag="LOC_MPT_OBSERVER_RESEARCH_TECH">
       <Text>Researching</Text>
     </Row>

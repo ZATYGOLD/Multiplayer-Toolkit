@@ -99,35 +99,31 @@ function activeResearch(playerID, treeType, tree, isTech) {
 }
 
 /**
- * Research progress as an HTML string for the ribbon's displayItems `img`
- * slot: the tech/civic icon (a plain <img>, which the UI renderer supports),
- * the node name beneath it, then a width-based progress bar - stacked. The
- * turns count stays in the row's value field (right side). Generous padding
- * spaces the tech and civic blocks apart. Avoids conic-gradient / CSS the
+ * A stacked progress meter as an HTML string for the ribbon's displayItems
+ * `img` slot: an icon (a plain <img>, which the UI renderer supports), a label
+ * beneath it, then a width-based progress bar. Shared by the Research and
+ * Production views. `pct` is 0..100. Avoids conic-gradient / CSS the
  * Coherent/Gameface renderer rejects.
  */
-function researchMeterHTML(research, barColor) {
-  if (!research) return '';
-  const pct = Math.round((research.progress ?? 0) * 100);
-  const icon = research.icon
-    ? `<img src='${research.icon}' style='width:1.9rem;height:1.9rem;'>`
-    : '';
-  const name = research.name
-    ? `<div style='font-size:0.72rem;line-height:0.95rem;color:#e7d9ac;text-align:center;margin-top:0.2rem;max-width:5.5rem;'>${research.name}</div>`
+function meterHTML(iconUrl, label, pct, barColor) {
+  const p = Math.max(0, Math.min(100, Math.round(pct ?? 0)));
+  const icon = iconUrl ? `<img src='${iconUrl}' style='width:1.9rem;height:1.9rem;'>` : '';
+  const name = label
+    ? `<div style='font-size:0.72rem;line-height:0.95rem;color:#e7d9ac;text-align:center;margin-top:0.2rem;max-width:5.5rem;'>${label}</div>`
     : '';
   return (
     `<div style='display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0.55rem 0.5rem;'>` +
     icon +
     name +
     `<div style='width:2.4rem;height:0.22rem;border-radius:0.11rem;background-color:rgba(255,255,255,0.22);margin-top:0.25rem;'>` +
-    `<div style='height:100%;border-radius:0.11rem;background-color:${barColor};width:${pct}%;'></div>` +
+    `<div style='height:100%;border-radius:0.11rem;background-color:${barColor};width:${p}%;'></div>` +
     `</div>` +
     `</div>`
   );
 }
 
 /** A single research row in the ribbon's displayItems shape (meter only). */
-function researchRow(type, labelLoc, research, ringColor) {
+function researchRow(type, labelLoc, research, barColor) {
   const none = Locale.compose('LOC_MPT_OBSERVER_NONE');
   const details = research
     ? (research.turns > 0 ? `${research.name} (${research.turns})` : research.name)
@@ -136,11 +132,89 @@ function researchRow(type, labelLoc, research, ringColor) {
     type,
     label: research ? research.name : Locale.compose(labelLoc),
     value: '',
-    img: researchMeterHTML(research, ringColor),
+    img: research ? meterHTML(research.icon, research.name, (research.progress ?? 0) * 100, barColor) : '',
     details,
     rawValue: research?.turns ?? 0,
     warningThreshold: Infinity
   };
+}
+
+// ============================ Production data ============================
+
+/** Localized name of a production item from its type hash, or null. */
+function productionName(hash) {
+  try {
+    for (const table of [GameInfo.Units, GameInfo.Constructibles, GameInfo.Buildings, GameInfo.Projects]) {
+      const def = table?.lookup?.(hash);
+      if (def?.Name) return Locale.compose(def.Name);
+    }
+  } catch (e) { /* none */ }
+  return null;
+}
+
+/** Per-city production meters for a player (icon = item, label = city name). */
+function productionItems(player) {
+  const items = [];
+  try {
+    const cities = player.Cities?.getCities?.() ?? [];
+    for (const city of cities) {
+      if (!city || city.isTown) continue;   // towns have no production queue
+      const cityName = city.name ? Locale.compose(city.name) : Locale.compose('LOC_MPT_OBSERVER_NONE');
+      const bq = city.BuildQueue;
+      const hash = bq?.currentProductionTypeHash;
+      const producing = bq && hash != null && hash !== -1;
+      const icon = producing ? Icon.getProductionIconFromHash(hash) : '';
+      const pct = producing ? (bq.getPercentComplete?.(hash) ?? 0) : 0;
+      const itemName = producing ? productionName(hash) : null;
+      items.push({
+        type: 'production',
+        label: itemName ? `${cityName} - ${itemName}` : cityName,
+        value: '',
+        img: meterHTML(icon, cityName, pct, '#7fc77f'),
+        details: itemName ?? cityName,
+        rawValue: pct,
+        warningThreshold: Infinity
+      });
+    }
+  } catch (e) { /* leave whatever we built */ }
+  return items;
+}
+
+// ============================ Score data ============================
+
+/** Per-victory-path scores + total for a player (the SCORE view's rows). */
+function scoreItems(player) {
+  const items = [];
+  let total = 0;
+  try {
+    const lp = player.LegacyPaths;
+    const enabled = lp?.getEnabledLegacyPaths?.() ?? [];
+    for (const elp of enabled) {
+      const def = GameInfo.LegacyPaths.lookup(elp.legacyPath);
+      if (!def) continue;
+      const score = lp?.getScore?.(def.LegacyPathType) ?? 0;
+      total += score;
+      items.push({
+        type: 'victory',
+        label: Locale.compose(def.Name),
+        value: String(score),
+        img: `<img src='${Icon.getLegacyPathIcon(def)}'>`,
+        details: Locale.compose(def.Name),
+        rawValue: score,
+        warningThreshold: Infinity
+      });
+    }
+  } catch (e) { /* leave whatever we built */ }
+  items.push({
+    type: 'victory',
+    label: Locale.compose('LOC_MPT_OBSERVER_TOTAL'),
+    value: String(total),
+    img: '',
+    details: Locale.compose('LOC_MPT_OBSERVER_TOTAL'),
+    rawValue: total,
+    warningThreshold: Infinity
+  });
+  return items;
 }
 
 /** True while an Age transition is processing (trees are in flux - skip reads). */
@@ -232,6 +306,8 @@ function ensureToolbar() {
       'display: flex; flex-direction: row; align-items: center; z-index: 50;';
     toolbar.appendChild(makeButton(OBSERVER_VIEW.YIELDS, 'LOC_MPT_OBSERVER_YIELDS'));
     toolbar.appendChild(makeButton(OBSERVER_VIEW.RESEARCH, 'LOC_MPT_OBSERVER_RESEARCH'));
+    toolbar.appendChild(makeButton(OBSERVER_VIEW.PRODUCTION, 'LOC_MPT_OBSERVER_PRODUCTION'));
+    toolbar.appendChild(makeButton(OBSERVER_VIEW.SCORE, 'LOC_MPT_OBSERVER_SCORE'));
     document.body.appendChild(toolbar);
     refreshToolbarState();
     log('observer toolbar created');
@@ -248,15 +324,35 @@ function installObserverRibbon() {
   }
 
   // Chokepoint: both the full and incremental refreshes build a player's stat
-  // rows here. In RESEARCH mode an observer gets tech + civic instead of
-  // yields, consistently across every refresh path (no flicker).
+  // rows here. For an observer, the selected view swaps yields for research /
+  // production / score, consistently across every refresh path (no flicker).
   const baseYields = DiploRibbonData.createPlayerYieldsData.bind(DiploRibbonData);
   DiploRibbonData.createPlayerYieldsData = function (playerLibrary, isLocal) {
-    if (viewMode === OBSERVER_VIEW.RESEARCH && isObserverContext() && playerLibrary) {
-      try { return researchItems(playerLibrary); } catch (e) { /* fall through */ }
+    if (isObserverContext() && playerLibrary) {
+      try {
+        if (viewMode === OBSERVER_VIEW.RESEARCH) return researchItems(playerLibrary);
+        if (viewMode === OBSERVER_VIEW.PRODUCTION) return productionItems(playerLibrary);
+        if (viewMode === OBSERVER_VIEW.SCORE) return scoreItems(playerLibrary);
+      } catch (e) { /* fall through to base yields */ }
     }
     return baseYields(playerLibrary, isLocal);
   };
+
+  // Pin every player's stats on-screen for an observer (no hover needed). The
+  // panel hides stats behind hover unless areRibbonYieldsStuckOnScreen is true;
+  // force it for observers without touching the user's own toggle state.
+  try {
+    const proto = Object.getPrototypeOf(DiploRibbonData);
+    const baseStuck = Object.getOwnPropertyDescriptor(proto, 'areRibbonYieldsStuckOnScreen')?.get;
+    Object.defineProperty(DiploRibbonData, 'areRibbonYieldsStuckOnScreen', {
+      configurable: true,
+      get() {
+        if (isObserverContext()) return true;
+        return baseStuck ? baseStuck.call(this)
+          : (this._alwaysShowYields === 1 || this._userDiploRibbonsToggled === 1);
+      }
+    });
+  } catch (e) { log(`could not pin ribbon stats: ${e}`); }
 
   // For an observer, populate the ribbon from every living major player
   // instead of bailing on the missing local player.
@@ -280,8 +376,10 @@ function installObserverRibbon() {
       ensureToolbar();
       // The meters (icon/name/bar) live in the displayItems `img`, which the
       // ribbon's incremental refresh does NOT touch - only a full rebuild
-      // repaints them. Force one each update so research stays current.
-      if (viewMode === OBSERVER_VIEW.RESEARCH) rebuildRibbonThrottled();
+      // repaints them. Force one each update so research/production stay current.
+      if (viewMode === OBSERVER_VIEW.RESEARCH || viewMode === OBSERVER_VIEW.PRODUCTION) {
+        rebuildRibbonThrottled();
+      }
     } catch (e) {
       log(`observer rebuild failed (${e}); falling back to base`);
       baseUpdateAll();
