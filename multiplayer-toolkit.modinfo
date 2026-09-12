@@ -94,6 +94,7 @@
                     <Item>ui/mp-observer/mp-observer-config.js</Item>
                     <Item>ui/mp-observer/mp-observer-ribbon.js</Item>
                     <Item>ui/mp-observer/mp-observer-turns.js</Item>
+                    <Item>ui/mp-observer/mp-observer-view.js</Item>
                 </UIScripts>
             </Actions>
         </ActionGroup>
