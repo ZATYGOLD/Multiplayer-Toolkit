@@ -318,7 +318,18 @@ for live-testing with FireTuner.
 
 ### 0.5.5
 
-- _TBD — details to follow._
+- **New: rebindable pause keybind** — pause is bound to **P** by default and can
+  be reassigned in Options → Keyboard Mapping.
+- **Competitive timer fixes** — no longer skips your capital-founding turn or
+  force-ends every round.
+- **The timer can't be stalled** — opening a settlement panel no longer pauses
+  or resets it, and it keeps beeping while panels are open. Only a pause stops
+  the clock.
+- **Strict expiry** — when time runs out the turn ends even with pending choices
+  (research, civic, city growth, narrative), which are skipped.
+- **Timer starts on turn 2**, leaving turn 1 free to found your capital and pick
+  research.
+- **Retuned Competitive timing** per age for shorter turns.
 
 ### 0.5.4
 
