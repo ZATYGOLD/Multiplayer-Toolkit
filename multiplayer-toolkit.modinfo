@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Mod id="multiplayer-toolkit" version="00505" xmlns="ModInfo">
+<Mod id="multiplayer-toolkit" version="00506" xmlns="ModInfo">
     <Properties>
         <Name>LOC_MOD_MPT_NAME</Name>
         <Description>LOC_MOD_MPT_DESCRIPTION</Description>
         <Authors>Zatygold</Authors>
         <Package>Mod</Package>
         <AffectsSavedGames>0</AffectsSavedGames>
-        <Version>0.5.5</Version>
+        <Version>0.5.6</Version>
 		<LastUpdated>2026-09-12</LastUpdated>
         <ShowInBrowser>1</ShowInBrowser>
     </Properties>

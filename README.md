@@ -1,7 +1,7 @@
 # Multiplayer Toolkit
 
 A toolkit of multiplayer quality-of-life features for **Sid Meier's Civilization
-VII**, built on the game's own UI components. Current version: **0.5.5**.
+VII**, built on the game's own UI components. Current version: **0.5.6**.
 
 Four tools so far:
 
@@ -315,6 +315,15 @@ for live-testing with FireTuner.
 ---
 
 ## Changelog
+
+### 0.5.6
+
+- **New (experimental): observer "view as player"** — while observing, right-click
+  a leader on the ribbon to see the game from that player's perspective (their
+  revealed map and fog of war); right-click the same leader again for the full
+  map. The camera jumps to that player's capital. Toggle with `viewAsEnabled`.
+  Confirmed to switch the view in a live observer session; fog-of-war behavior
+  still needs verifying with real human players.
 
 ### 0.5.5
 
