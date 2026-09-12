@@ -49,6 +49,12 @@ function isObserverContext() {
   } catch (e) { return false; }
 }
 
+/** Full map is always allowed; otherwise only a valid, living player. */
+function isViewable(id) {
+  if (id === PlayerIds.OBSERVER_ID) return true;
+  try { return Players.isValid(id) && Players.isAlive(id); } catch (e) { return false; }
+}
+
 /** Human-readable label for the log. */
 function label(id) {
   if (id === PlayerIds.OBSERVER_ID) return 'Full Map';
@@ -98,13 +104,16 @@ function onEngineInput(ev) {
     const id = playerIdFromEvent(ev);
     if (id == null || id === PlayerIds.NO_PLAYER) return;   // not a leader element - let it pass
     // Toggle: right-clicking the player you're already viewing returns to the full map.
-    viewAs(id === currentObservedId ? PlayerIds.OBSERVER_ID : id);
+    const target = id === currentObservedId ? PlayerIds.OBSERVER_ID : id;
+    if (!isViewable(target)) return;                        // never hand a dead/invalid id to the engine
+    viewAs(target);
     ev.stopPropagation();
     ev.preventDefault();
   } catch (e) { /* ignore */ }
 }
 
 engine.whenReady.then(() => {
+  if (CONFIG.viewAsEnabled === false) { log('view-as disabled via config'); return; }
   // Delegated + capturing so it works regardless of ribbon rebuilds; gated
   // per-event, so it stays dormant for a seated player.
   window.addEventListener('engine-input', onEngineInput, true);
