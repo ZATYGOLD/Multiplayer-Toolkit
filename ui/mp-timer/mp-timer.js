@@ -35,6 +35,16 @@
  * - and overrides only the timer path. The engine then constructs OUR panel:
  * no listener juggling, no render fighting, one render pipeline.
  *
+ * Clock: the countdown runs on WALL TIME, not the engine's elapsedTime field.
+ * The engine freezes/rewinds elapsedTime for this custom type when certain
+ * screens open (e.g. a settlement's production panel), which would stop and
+ * then reset the countdown - letting a player extend a turn indefinitely by
+ * opening and closing a panel. Anchoring on wall time (frozen only for a real
+ * multiplayer pause) makes the clock immune to that. The state lives at MODULE
+ * scope (see CLOCK) so it also survives the panel being torn down and rebuilt,
+ * and an independent enforcement tick ends the turn on time even while no timer
+ * events are firing (panel open). Timer events remain the render trigger.
+ *
  * Tiers: the engine hardcodes its red flash + per-second beeps below 20s, so
  * while remaining is above flashStart we clamp what it perceives to keep it
  * calm, then paint the tiers ourselves:
@@ -46,8 +56,15 @@ import { TIMER_TYPE, CONFIG, ENGINE } from './mp-timer-config.js';
 const COMPETITIVE_HASH = Database.makeHash(TIMER_TYPE);
 const DEFINE_RETRY_MS = 200;
 const DEFINE_RETRIES = 50;
+// Timer events (TurnTimerUpdated) stop firing while some screens are open (e.g.
+// a settlement's details/production). When they have been silent this long, the
+// wall-clock enforcement sweep takes over the beeps so the audible cue never
+// stops even though the on-screen number is frozen behind the open panel.
+const STALE_EVENT_MS = 1200;
 
 let MPT_PanelAction = null;
+let mptEnforcementStarted = false;
+let mptLastEventMs = 0;   // last time a competitive TurnTimerUpdated was handled
 
 function log(message) {
   if (CONFIG.debug) console.log(`[MPT timer] ${message}`);
@@ -134,6 +151,170 @@ function computeSeconds() {
   return Math.max(step, Math.round(raw / step) * step);
 }
 
+// ======================= Wall-clock turn timer ========================
+
+/**
+ * The authoritative countdown, kept at module scope so it survives the
+ * panel-action being rebuilt. Elapsed time is measured on the wall clock and
+ * frozen only for a real multiplayer pause - never affected by the engine's
+ * elapsedTime field, which this timer no longer trusts.
+ */
+const CLOCK = {
+  turn: -1,
+  total: 0,
+  startMs: 0,
+  pausedAccumMs: 0,
+  pausedSinceMs: 0,
+  lastEnforceMs: -Infinity,
+  lastWarnTick: Infinity,
+  staleBeepSecond: Infinity,
+
+  /** Anchor a fresh countdown when the turn number changes; returns the total. */
+  syncTurn() {
+    const t = currentTurn();
+    if (t !== this.turn) {
+      this.turn = t;
+      this.total = computeSeconds();
+      this.startMs = Date.now();
+      this.pausedAccumMs = 0;
+      this.pausedSinceMs = 0;
+      this.lastEnforceMs = -Infinity;
+      this.lastWarnTick = Infinity;
+      this.staleBeepSecond = Infinity;
+      log(`turn ${t}: total=${this.total}s`);
+    }
+    return this.total;
+  },
+
+  /** Seconds elapsed this turn, excluding time spent paused (never negative). */
+  elapsed() {
+    const now = Date.now();
+    const pausedNow = this.pausedSinceMs ? (now - this.pausedSinceMs) : 0;
+    return Math.max(0, (now - this.startMs - this.pausedAccumMs - pausedNow) / 1000);
+  },
+
+  expired() { return this.total > 0 && this.elapsed() >= this.total; },
+
+  setPaused(paused) {
+    if (paused) {
+      if (!this.pausedSinceMs) this.pausedSinceMs = Date.now();
+    } else if (this.pausedSinceMs) {
+      this.pausedAccumMs += Date.now() - this.pausedSinceMs;
+      this.pausedSinceMs = 0;
+    }
+  }
+};
+
+/**
+ * True when the timer is allowed to force-end the local turn. The only remaining
+ * guard is that the player has a city: never advance a player who has not yet
+ * founded their capital (turn 1 is already off via firstTimedTurn, but this
+ * covers any edge where they still have none). Everything the End Turn button
+ * treats as a blocker - units awaiting orders and pending-choice notifications
+ * (research, civic, city growth, narrative) - is instead cleared at expiry, the
+ * same way the engine's own timer force-end abandons them.
+ */
+function mptCanForceEnd() {
+  try {
+    const player = Players.get(GameContext.localPlayerID);
+    if (player && (player.Cities?.getCities()?.length ?? 0) === 0) return false;
+  } catch (e) { /* fall through */ }
+  return true;
+}
+
+/**
+ * Dismiss EVERY pending notification that blocks turn advancement - choose
+ * research/civic, city growth, narrative events, and anything else. The engine
+ * refuses sendTurnComplete while these exist; dismissing abandons the choice
+ * for this turn, which is exactly what running out of time means (and what the
+ * native timer force-end does). The competitive timer is strict: in multiplayer
+ * nothing but a pause may stall the turn, so this does not spare "not normally
+ * user-dismissible" blockers - it clears whatever the API will clear.
+ */
+function mptDismissTurnBlockers() {
+  let ids = null;
+  try { ids = Game.Notifications.getIdsForPlayer(GameContext.localPlayerID); } catch (e) { return; }
+  for (const n of ids ?? []) {
+    try {
+      if (Game.Notifications.getBlocksTurnAdvancement(n)) Game.Notifications.dismiss(n);
+    } catch (e) { /* skip this one */ }
+  }
+}
+
+/**
+ * Skip every unit still awaiting orders. The engine refuses sendTurnComplete
+ * while a "units need orders" block is active, so at expiry we clear it the way
+ * a turn-timer expiry does: leave the units where they are (SKIP_TURN). Each
+ * unique ready unit is skipped once per call; the block clears asynchronously,
+ * so the sweep repeats over subsequent ticks until sendTurnComplete is honored.
+ */
+function mptSkipReadyUnits() {
+  const seen = new Set();
+  for (let i = 0; i < 40; i++) {
+    let id = null;
+    try { id = UI.Player.getFirstReadyUnit(); } catch (e) { break; }
+    if (!id) break;
+    try { if (ComponentID && ComponentID.isInvalid && ComponentID.isInvalid(id)) break; } catch (e) {}
+    const key = `${id.owner ?? ''}:${id.id ?? id}`;
+    if (seen.has(key)) break;   // looped back to an already-skipped unit - stop
+    seen.add(key);
+    try { Game.UnitOperations.sendRequest(id, UnitOperationTypes.SKIP_TURN, {}); } catch (e) {}
+    try { UI.Player.selectNextReadyUnit(); } catch (e) {}
+  }
+}
+
+/**
+ * Wall-clock beeps for when timer events have stalled (a panel is open). Orange
+ * cadence above the flash threshold, then one beep per second through the red
+ * tier - mirroring the engine's own sounds so the cue is seamless. Deduped per
+ * whole second; silent once expired (the native timer stops beeping there too).
+ */
+function mptBeepFromClock() {
+  if (CLOCK.total <= 0) return;
+  const remaining = CLOCK.total - CLOCK.elapsed();
+  const n = Math.max(0, Math.round(remaining));
+  if (n <= 0 || n === CLOCK.staleBeepSecond) return;
+  let beep = false;
+  if (n <= CONFIG.flashStart) beep = true;                                            // red: every second
+  else if (n <= CONFIG.orangeStart && n % CONFIG.warnEverySeconds === 0) beep = true; // orange cadence
+  if (!beep) return;
+  CLOCK.staleBeepSecond = n;
+  try { UI.sendAudioEvent(ENGINE.audioUrgency); } catch (e) { /* no audio */ }
+}
+
+/**
+ * Independent enforcement sweep. Runs on wall time regardless of whether timer
+ * events are firing, so the countdown beeps and the turn ends on time even
+ * while a settlement panel is open. Clears the units-need-orders block, then
+ * ends the local turn; it keeps trying (units clear asynchronously) and will
+ * re-end if the player unreadies at zero.
+ */
+function mptEnforceTick() {
+  if (!isCompetitiveSelected() || !localPlayerTurnActive()) return;
+  if (currentTurn() < CONFIG.firstTimedTurn) return;   // grace: no timer on the opening turn(s)
+  CLOCK.syncTurn();
+  // Keep the audible countdown alive while timer events are stalled.
+  if (Date.now() - mptLastEventMs > STALE_EVENT_MS) mptBeepFromClock();
+  if (!CLOCK.expired() || !mptCanForceEnd()) return;
+  try { if (GameContext.hasSentTurnComplete && GameContext.hasSentTurnComplete()) return; } catch (e) {}
+  mptSkipReadyUnits();       // clear "units need orders"
+  mptDismissTurnBlockers();  // clear pending-choice blockers (research/civic/growth/narrative)
+  log(`time expired - ending local turn (turn ${CLOCK.turn})`);
+  try { GameContext.sendTurnComplete(); } catch (e) { /* ignore */ }
+}
+
+/** Start the enforcement sweep and pause accounting once (idempotent). */
+function startMptEnforcement() {
+  if (mptEnforcementStarted) return;
+  mptEnforcementStarted = true;
+  engine.on('GamePauseStateChanged',
+    (data) => CLOCK.setPaused(!!data && Number(data.data) === 1));
+  setInterval(mptEnforceTick, CONFIG.guardianMs);
+  log('enforcement sweep started (wall clock)');
+}
+
+// ============================ Render helpers ==========================
+
 /** Engine-styled number, falling back to plain text when stylize fails. */
 function setStyledNumber(el, styleClass, n) {
   try { el.innerHTML = Locale.stylize(`[STYLE:${styleClass}]${n}[/STYLE]`); }
@@ -196,15 +377,10 @@ function defineMptPanelAction(attempts) {
   }
   const PanelAction = base.createInstance;
   injectRingKeyframes();
+  startMptEnforcement();   // wall-clock enforcement runs even while the panel is rebuilt
 
   MPT_PanelAction = class MPT_PanelAction extends PanelAction {
-    // --- competitive timer state (per panel instance) ---
-    mptTotal = 0;
-    mptLastTurn = -1;
-    mptExpiredAt = -1;
-    mptLastEnforceAt = -Infinity;
-    mptLastWarnTick = Infinity;
-    mptTurnStartElapsed = 0;
+    // --- ring freeze on pause (display-only; the clock itself is CLOCK) ---
     mptPauseListener = (data) => this.mptOnGamePauseChanged(data);
 
     onAttach() {
@@ -218,6 +394,13 @@ function defineMptPanelAction(attempts) {
 
     /** Single override point: feed the base renderer our clock. */
     onTurnTimerUpdated(data) {
+      if (isCompetitiveSelected()) mptLastEventMs = Date.now();   // events are flowing
+      // Grace turn(s): keep the competitive timer off entirely - hide it by
+      // handing the base renderer a zero limit (its own "no timer" path).
+      if (isCompetitiveSelected() && currentTurn() < CONFIG.firstTimedTurn) {
+        super.onTurnTimerUpdated({ ...data, phaseTimeLimit: 0 });
+        return;
+      }
       const ctx = this.mptContext(data);
       super.onTurnTimerUpdated(ctx ? ctx.data : data);
       if (ctx) {
@@ -228,51 +411,30 @@ function defineMptPanelAction(attempts) {
     }
 
     /**
-     * Substituted event data + display seconds for the competitive timer,
-     * handling new turns, ring resyncs, expiry pinning and enforcement.
+     * Substituted event data + display seconds from the wall-clock CLOCK.
      * Null when the event should pass through to the base panel untouched.
      */
     mptContext(data) {
       const limit = data?.phaseTimeLimit ?? 0;
       if (limit <= 0 || limit > CONFIG.maxProxyLimit || !isCompetitiveSelected()) return null;
-      const turn = currentTurn();
-      const rawElapsed = data.elapsedTime ?? 0;
-      if (turn !== this.mptLastTurn) {
-        this.mptLastTurn = turn;
-        this.mptTotal = computeSeconds();
-        this.mptExpiredAt = -1;
-        this.mptLastEnforceAt = -Infinity;
-        this.mptLastWarnTick = Infinity;
-        // Baseline the phase clock at the start of THIS turn. Built-in timers
-        // reset elapsedTime to 0 each turn (baseline 0, a no-op); the custom
-        // Competitive type may not, in which case the raw clock would already
-        // read past the total every turn after the first and force-end instantly.
-        this.mptTurnStartElapsed = rawElapsed;
-        // Neutralize the inherited grow-only ring latch: mptSyncRing positions
-        // the ring from the game clock on every event instead.
-        this.mpTimerMaxTime = this.mptTotal;
-        log(`turn ${turn}: total=${this.mptTotal}s`);
-      }
-      if (this.mptTotal <= 0) return null;
-      const total = this.mptTotal;
-      // Seconds elapsed since this turn began (never negative).
-      let elapsed = rawElapsed - this.mptTurnStartElapsed;
-      if (elapsed < 0) { this.mptTurnStartElapsed = rawElapsed; elapsed = 0; }
-      if (this.mptExpiredAt < 0 && total - elapsed <= 0) this.mptExpiredAt = elapsed;
-      const n = this.mptExpiredAt >= 0 ? 0 : Math.max(0, Math.round(total - elapsed));
+      CLOCK.syncTurn();
+      const total = CLOCK.total;
+      if (total <= 0) return null;
+      const elapsed = CLOCK.elapsed();
+      const expired = elapsed >= total;
+      const n = expired ? 0 : Math.max(0, Math.round(total - elapsed));
       // Engine-perceived clock: pinned at zero once expired; clamped while the
       // remaining time is above flashStart so the inherited sub-20s flash and
       // beeps stay quiet until our red tier actually begins.
       let effectiveElapsed = elapsed;
-      if (this.mptExpiredAt >= 0) {
+      if (expired) {
         effectiveElapsed = Math.max(elapsed, total);
       } else if (n > CONFIG.flashStart && total >= CONFIG.engineFlashHide + 1) {
         effectiveElapsed = Math.min(elapsed, total - CONFIG.engineFlashHide);
       }
-      this.mptEnforceExpiry(elapsed);
       // The ring scrubs from the TRUE clock (with only the expiry pin), never
       // from the muzzle-clamped value, or it would freeze in the orange tier.
-      const ringElapsed = this.mptExpiredAt >= 0 ? total : elapsed;
+      const ringElapsed = expired ? total : elapsed;
       return { data: { ...data, phaseTimeLimit: total, elapsedTime: effectiveElapsed }, n, ringElapsed };
     }
 
@@ -291,8 +453,9 @@ function defineMptPanelAction(attempts) {
      * stays false.)
      */
     mptSyncRing(elapsed) {
-      const total = this.mptTotal;
+      const total = CLOCK.total;
       if (total <= 0) return;
+      this.mpTimerMaxTime = total;   // neutralize the inherited grow-only ring latch
       const position = Math.min(Math.max(elapsed, 0), total);
       for (const el of this.timerAnimationElements ?? []) {
         const names = ringAnimationNames(el);
@@ -314,7 +477,7 @@ function defineMptPanelAction(attempts) {
       const el = this.turnTimerElement ?? document.getElementById(ENGINE.timerTextId);
       if (!el) return;
       const active = localPlayerTurnActive();
-      const beforeExpiry = this.mptExpiredAt < 0;
+      const beforeExpiry = !CLOCK.expired();
       if (active && beforeExpiry && n <= CONFIG.orangeStart && n > CONFIG.flashStart) {
         if (el.style.color !== CONFIG.orangeColor) el.style.color = CONFIG.orangeColor;
         if (el.textContent !== String(n) || el.firstElementChild) el.textContent = String(n);
@@ -336,40 +499,12 @@ function defineMptPanelAction(attempts) {
      * beeps at flashStart and below, so stopping above it avoids a double hit.
      */
     mptWarnSounds(n) {
-      if (this.mptExpiredAt >= 0 || !localPlayerTurnActive()) return;
+      if (CLOCK.expired() || !localPlayerTurnActive()) return;
       if (n > CONFIG.orangeStart || n <= CONFIG.flashStart || n % CONFIG.warnEverySeconds !== 0) return;
-      if (n >= this.mptLastWarnTick) return;
-      this.mptLastWarnTick = n;
+      if (n >= CLOCK.lastWarnTick) return;
+      CLOCK.lastWarnTick = n;
       try { UI.sendAudioEvent(ENGINE.audioUrgency); } catch (e) { /* no audio */ }
       log(`urgency beep at ${n}s`);
-    }
-
-    /**
-     * True when the timer is allowed to force-end the local turn. It must NOT
-     * skip mandatory actions the game itself blocks turn-end on - above all
-     * founding the capital on turn 1 - or the player is advanced past their
-     * turn without ever acting. The soft "units need orders" block (UNITS) is
-     * deliberately allowed through: pushing slow players is the timer's job.
-     */
-    mptCanForceEnd() {
-      try {
-        const player = Players.get(GameContext.localPlayerID);
-        if (player && (player.Cities?.getCities()?.length ?? 0) === 0) return false;
-      } catch (e) { /* fall through */ }
-      try {
-        const block = Game.Notifications.getEndTurnBlockingType(GameContext.localPlayerID);
-        if (block !== EndTurnBlockingTypes.NONE && block !== EndTurnBlockingTypes.UNITS) return false;
-      } catch (e) { /* allow */ }
-      return true;
-    }
-
-    /** Ends the local turn once expired; repeats if the player unreadies at zero. */
-    mptEnforceExpiry(elapsed) {
-      if (this.mptExpiredAt < 0 || elapsed - this.mptLastEnforceAt < CONFIG.enforceRetrySeconds || !localPlayerTurnActive()) return;
-      if (!this.mptCanForceEnd()) return;
-      this.mptLastEnforceAt = elapsed;
-      log(`time expired at ${Math.round(elapsed)}s - ending local turn`);
-      try { GameContext.sendTurnComplete(); } catch (e) { /* ignore */ }
     }
 
     /**

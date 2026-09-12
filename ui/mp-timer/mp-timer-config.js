@@ -30,6 +30,7 @@ const TIMER_TYPE = "MPT_TURNTIMER_COMPETITIVE";
 
 /** Tunable timings / thresholds. */
 const CONFIG = {
+  firstTimedTurn: 2,        // the timer stays off until this turn (turn 1 = found capital, pick research)
   roundToNearest: 1,        // round the computed total to the nearest multiple (1 = whole seconds)
   orangeStart: 30,          // orange tier begins at this many seconds remaining
   flashStart: 15,           // red flash + per-second beeps begin here
