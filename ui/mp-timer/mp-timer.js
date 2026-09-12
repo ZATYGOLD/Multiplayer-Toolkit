@@ -204,6 +204,7 @@ function defineMptPanelAction(attempts) {
     mptExpiredAt = -1;
     mptLastEnforceAt = -Infinity;
     mptLastWarnTick = Infinity;
+    mptTurnStartElapsed = 0;
     mptPauseListener = (data) => this.mptOnGamePauseChanged(data);
 
     onAttach() {
@@ -235,12 +236,18 @@ function defineMptPanelAction(attempts) {
       const limit = data?.phaseTimeLimit ?? 0;
       if (limit <= 0 || limit > CONFIG.maxProxyLimit || !isCompetitiveSelected()) return null;
       const turn = currentTurn();
+      const rawElapsed = data.elapsedTime ?? 0;
       if (turn !== this.mptLastTurn) {
         this.mptLastTurn = turn;
         this.mptTotal = computeSeconds();
         this.mptExpiredAt = -1;
         this.mptLastEnforceAt = -Infinity;
         this.mptLastWarnTick = Infinity;
+        // Baseline the phase clock at the start of THIS turn. Built-in timers
+        // reset elapsedTime to 0 each turn (baseline 0, a no-op); the custom
+        // Competitive type may not, in which case the raw clock would already
+        // read past the total every turn after the first and force-end instantly.
+        this.mptTurnStartElapsed = rawElapsed;
         // Neutralize the inherited grow-only ring latch: mptSyncRing positions
         // the ring from the game clock on every event instead.
         this.mpTimerMaxTime = this.mptTotal;
@@ -248,7 +255,9 @@ function defineMptPanelAction(attempts) {
       }
       if (this.mptTotal <= 0) return null;
       const total = this.mptTotal;
-      const elapsed = data.elapsedTime ?? 0;
+      // Seconds elapsed since this turn began (never negative).
+      let elapsed = rawElapsed - this.mptTurnStartElapsed;
+      if (elapsed < 0) { this.mptTurnStartElapsed = rawElapsed; elapsed = 0; }
       if (this.mptExpiredAt < 0 && total - elapsed <= 0) this.mptExpiredAt = elapsed;
       const n = this.mptExpiredAt >= 0 ? 0 : Math.max(0, Math.round(total - elapsed));
       // Engine-perceived clock: pinned at zero once expired; clamped while the
@@ -335,9 +344,29 @@ function defineMptPanelAction(attempts) {
       log(`urgency beep at ${n}s`);
     }
 
+    /**
+     * True when the timer is allowed to force-end the local turn. It must NOT
+     * skip mandatory actions the game itself blocks turn-end on - above all
+     * founding the capital on turn 1 - or the player is advanced past their
+     * turn without ever acting. The soft "units need orders" block (UNITS) is
+     * deliberately allowed through: pushing slow players is the timer's job.
+     */
+    mptCanForceEnd() {
+      try {
+        const player = Players.get(GameContext.localPlayerID);
+        if (player && (player.Cities?.getCities()?.length ?? 0) === 0) return false;
+      } catch (e) { /* fall through */ }
+      try {
+        const block = Game.Notifications.getEndTurnBlockingType(GameContext.localPlayerID);
+        if (block !== EndTurnBlockingTypes.NONE && block !== EndTurnBlockingTypes.UNITS) return false;
+      } catch (e) { /* allow */ }
+      return true;
+    }
+
     /** Ends the local turn once expired; repeats if the player unreadies at zero. */
     mptEnforceExpiry(elapsed) {
       if (this.mptExpiredAt < 0 || elapsed - this.mptLastEnforceAt < CONFIG.enforceRetrySeconds || !localPlayerTurnActive()) return;
+      if (!this.mptCanForceEnd()) return;
       this.mptLastEnforceAt = elapsed;
       log(`time expired at ${Math.round(elapsed)}s - ending local turn`);
       try { GameContext.sendTurnComplete(); } catch (e) { /* ignore */ }

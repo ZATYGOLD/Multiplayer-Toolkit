@@ -1,7 +1,7 @@
 # Multiplayer Toolkit
 
 A toolkit of multiplayer quality-of-life features for **Sid Meier's Civilization
-VII**, built on the game's own UI components. Current version: **0.5.4**.
+VII**, built on the game's own UI components. Current version: **0.5.5**.
 
 Four tools so far:
 
@@ -315,6 +315,10 @@ for live-testing with FireTuner.
 ---
 
 ## Changelog
+
+### 0.5.5
+
+- _TBD — details to follow._
 
 ### 0.5.4
 

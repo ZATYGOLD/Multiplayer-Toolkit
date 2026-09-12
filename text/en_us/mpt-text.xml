@@ -14,6 +14,12 @@
     <Row Tag="LOC_MPT_RESUME_HOST">
       <Text>Resume (Host)</Text>
     </Row>
+    <Row Tag="LOC_MPT_PAUSE_KEYBIND">
+      <Text>Pause Game (Multiplayer)</Text>
+    </Row>
+    <Row Tag="LOC_MPT_PAUSE_KEYBIND_TT">
+      <Text>Pauses the multiplayer game, or toggles your readiness while it is paused. Added by Multiplayer Toolkit.</Text>
+    </Row>
     <Row Tag="LOC_MPT_TEAM_OBSERVER">
       <Text>Observer</Text>
     </Row>

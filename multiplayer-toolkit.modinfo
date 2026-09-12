@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Mod id="multiplayer-toolkit" version="00504" xmlns="ModInfo">
+<Mod id="multiplayer-toolkit" version="00505" xmlns="ModInfo">
     <Properties>
         <Name>LOC_MOD_MPT_NAME</Name>
         <Description>LOC_MOD_MPT_DESCRIPTION</Description>
         <Authors>Zatygold</Authors>
         <Package>Mod</Package>
         <AffectsSavedGames>0</AffectsSavedGames>
-        <Version>0.5.4</Version>
-		<LastUpdated>2026-06-06</LastUpdated>
+        <Version>0.5.5</Version>
+		<LastUpdated>2026-09-12</LastUpdated>
         <ShowInBrowser>1</ShowInBrowser>
     </Properties>
 
@@ -45,6 +45,7 @@
                 </UpdateText>
                 <UpdateDatabase>
                     <Item>config/SetupParameters.sql</Item>
+                    <Item>config/mpt-input.sql</Item>
                 </UpdateDatabase>
                 <ImportFiles>
                     <Item>icons/mpt_observer.png</Item>
@@ -53,6 +54,7 @@
                     <Item>ui/mp-lobby/mp-lobby-config.js</Item>
                     <Item>ui/mp-lobby/mp-lobby-observer.js</Item>
                     <Item>ui/mp-lobby/mp-lobby-tooltips.js</Item>
+                    <Item>ui/mp-keybind/mp-keybind.js</Item>
                 </UIScripts>
             </Actions>
         </ActionGroup>
@@ -78,6 +80,7 @@
                     <Item>ui/mp-pause/mp-pause.scss.js</Item>
                     <Item>ui/mp-pause/mp-pause-overlay.js</Item>
                     <Item>ui/mp-pause/mp-pause-mgr.js</Item>
+                    <Item>ui/mp-keybind/mp-keybind.js</Item>
                 </UIScripts>
             </Actions>
         </ActionGroup>

@@ -46,7 +46,8 @@ const CONFIG = {
   voteDelayMs: 20000,          // a vote resume is only allowed after this long
   hostOverrideDelayMs: 45000,  // after this long, any readiness resumes (anti-AFK)
   finalizeBackstopMs: 4000,    // fallback idle if the unpause event is missed
-  connectionWatchMs: 500       // how often to poll player connections for drops
+  connectionWatchMs: 500,      // how often to poll player connections for drops
+  pauseHotkey: "p"             // key that pauses / toggles readiness ("" disables)
 };
 
 /**
