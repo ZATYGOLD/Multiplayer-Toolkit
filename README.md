@@ -1,7 +1,7 @@
 # Multiplayer Toolkit
 
 A toolkit of multiplayer quality-of-life features for **Sid Meier's Civilization
-VII**, built on the game's own UI components. Current version: **0.5.6**.
+VII**, built on the game's own UI components. Current version: **0.5.7**.
 
 Four tools so far:
 
@@ -315,6 +315,24 @@ for live-testing with FireTuner.
 ---
 
 ## Changelog
+
+### 0.5.7
+
+- **Observer: Escape / pause menu works** — observers can open the pause menu
+  again (pause, resume, quit) instead of being stuck with alt+F4.
+- **Observer: leader ribbons show in multiplayer** — fixed observer detection so
+  the per-player ribbon (Yields / Research / Production / Score) populates for
+  real MP observers, not just solo tests.
+- **Observer: city centers in full-map view** — city banners are forced visible
+  while spectating the full map (experimental).
+- **Observer: reliable "view as player"** — right-click a leader to see their
+  revealed map and fog of war; right-click again, or another leader, to switch
+  or return to the full map. Each leader shows a "Player View - Right Click"
+  tooltip. (Previously you could get stuck in one player's view.)
+- **Known limit:** a multiplayer observer still occupies a player slot — the
+  engine provides no slot-free spectator for multiplayer.
+- **Competitive timer retuned** — one shared formula across all ages, tuned so
+  estimated turn lengths hit the intended per-age targets.
 
 ### 0.5.6
 

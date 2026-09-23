@@ -46,8 +46,20 @@ function log(message) {
   if (CONFIG.debug) console.log(`[MPT observer] ${message}`);
 }
 
-/** True when the local viewing context is a spectator, not a seated player. */
+/**
+ * True when THIS client is an observer. Detected by its own slot first, so it
+ * holds regardless of what the current view points at: a real multiplayer
+ * observer's localObserverID is often NO_PLAYER (not OBSERVER_ID), and it also
+ * changes to a real player id while "viewing as" someone. Slot detection keeps
+ * the observer ribbon populated through all of that. (Solo tests happened to
+ * report OBSERVER_ID, which masked this - hence the ribbon showing there but
+ * not in real multiplayer.)
+ */
 function isObserverContext() {
+  try {
+    const pc = Configuration.getPlayer(GameContext.localPlayerID);
+    if (pc && pc.isObserver) return true;
+  } catch (e) { /* fall through */ }
   try {
     const id = GameContext.localObserverID;
     if (id === PlayerIds.OBSERVER_ID) return true;
@@ -442,4 +454,29 @@ function installObserverRibbon() {
   log('observer diplo-ribbon population installed');
 }
 
-if (CONFIG.enabled) installObserverRibbon();
+/**
+ * Force the ribbon to populate for an observer without waiting on a sparse game
+ * event. The model's very first updateAll runs at construction - before our
+ * override is installed - so for an observer it bails and leaves the ribbon
+ * empty until some later event happens to fire. Seed it ourselves once things
+ * are ready, retrying until the panel exists (HUD bring-up can be late for a
+ * cleared-civ observer).
+ */
+function seedObserverRibbon(attempts) {
+  if (!isObserverContext()) return;
+  try {
+    DiploRibbonData.updateAll();
+    rebuildRibbon();
+    ensureToolbar();
+  } catch (e) { log(`seed failed: ${e}`); }
+  const havePanel = !!document.querySelector('panel-diplo-ribbon');
+  if (attempts > 0 && !havePanel) {
+    setTimeout(() => seedObserverRibbon(attempts - 1), 500);
+  }
+}
+
+if (CONFIG.enabled) {
+  installObserverRibbon();
+  try { engine.whenReady.then(() => seedObserverRibbon(30)); }
+  catch (e) { setTimeout(() => seedObserverRibbon(30), 500); }
+}

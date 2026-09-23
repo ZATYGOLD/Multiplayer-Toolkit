@@ -22,31 +22,34 @@
  * Multiplayer Toolkit - observer "view as player" (0.5.6, experimental).
  *
  * Right-click a leader on the observer ribbon to see the game from that
- * player's perspective - their revealed map and fog of war - using the engine's
+ * player's perspective - their revealed map and fog of war - via the engine's
  * Autoplay.setObserveAsPlayer(). Right-click the same leader again to return to
- * the full map (OBSERVER_ID, the normal observer god-view). The camera also
- * jumps to that player's capital so the switch is obvious.
+ * the full map (OBSERVER_ID god-view). The camera jumps to that player's capital,
+ * and each leader shows a "Player View - Right Click" tooltip.
  *
- * Right-click arrives as an "engine-input" event named "mousebutton-right"; each
- * leader element on the base diplo-ribbon carries a data-player-id attribute, so
- * a single delegated capture-listener maps the click to a player and survives
- * the ribbon rebuilding. Everything is gated to an observer context, so a seated
- * player's view is never changed.
+ * Gating is by the CLIENT's own slot (are *we* the observer?), not the current
+ * view: once you adopt a player's view, GameContext.localObserverID points at
+ * that player, so a view-based check would wrongly go dormant and trap you in
+ * that player's eyes. Slot-based gating lets right-click keep switching players
+ * and toggling back to the full map. A seated player is never affected.
  */
 import { CONFIG } from './mp-observer-config.js';
+
+const LEADER_HITBOX = '.diplo-ribbon__portrait-hitbox';
+const TIP_TEXT = 'Player View - Right Click';
+const TIP_FLAG = 'data-mpt-viewtip';
 
 let currentObservedId = PlayerIds.OBSERVER_ID;
 
 function log(m) { if (CONFIG.debug) { try { console.log('[MPT observer-view] ' + m); } catch (e) {} } }
 
-/** True when the local viewing context is a spectator, not a seated player. */
-function isObserverContext() {
+/** True when THIS client's own slot is an observer (stable across view changes). */
+function isObserverClient() {
   try {
-    const id = GameContext.localObserverID;
-    if (id === PlayerIds.OBSERVER_ID) return true;
-    if (id === PlayerIds.NO_PLAYER) return false;
-    return !Players.get(id);
-  } catch (e) { return false; }
+    const pc = Configuration.getPlayer(GameContext.localPlayerID);
+    if (pc && pc.isObserver) return true;
+  } catch (e) { /* fall through */ }
+  try { return GameContext.localObserverID === PlayerIds.OBSERVER_ID; } catch (e) { return false; }
 }
 
 /** Full map is always allowed; otherwise only a valid, living player. */
@@ -98,7 +101,7 @@ function playerIdFromEvent(ev) {
 
 function onEngineInput(ev) {
   try {
-    if (!isObserverContext()) return;
+    if (!isObserverClient()) return;
     const d = ev.detail;
     if (!d || d.name !== 'mousebutton-right' || d.status !== InputActionStatuses.FINISH) return;
     const id = playerIdFromEvent(ev);
@@ -112,12 +115,44 @@ function onEngineInput(ev) {
   } catch (e) { /* ignore */ }
 }
 
+/** Add the "Player View - Right Click" hint to each leader tooltip (once per element). */
+function decorateTooltips() {
+  if (!isObserverClient()) return;
+  let els;
+  try { els = document.querySelectorAll(LEADER_HITBOX); } catch (e) { return; }
+  for (const el of els) {
+    if (el.getAttribute(TIP_FLAG) === '1') continue;
+    const cur = el.getAttribute('data-tooltip-content') || '';
+    el.setAttribute('data-tooltip-content', cur ? (cur + ' — ' + TIP_TEXT) : TIP_TEXT);
+    el.setAttribute(TIP_FLAG, '1');
+  }
+}
+
+/**
+ * Normalize the observer baseline to the proper full-map id (OBSERVER_ID). A
+ * real multiplayer observer can sit at NO_PLAYER, where several base panels bail
+ * (e.g. the ribbon model's createPlayerData returns an empty entry for
+ * NO_PLAYER but works for OBSERVER_ID). Establishing OBSERVER_ID gives the HUD a
+ * valid full-map identity to build against, without adopting any one player.
+ */
+function normalizeGodView() {
+  if (!isObserverClient()) return;
+  try {
+    if (GameContext.localObserverID !== PlayerIds.OBSERVER_ID) {
+      Autoplay.setObserveAsPlayer(PlayerIds.OBSERVER_ID);
+      currentObservedId = PlayerIds.OBSERVER_ID;
+      log('normalized observer baseline to full-map (OBSERVER_ID)');
+    }
+  } catch (e) { log('normalize failed: ' + e); }
+}
+
 engine.whenReady.then(() => {
   if (CONFIG.viewAsEnabled === false) { log('view-as disabled via config'); return; }
-  // Delegated + capturing so it works regardless of ribbon rebuilds; gated
-  // per-event, so it stays dormant for a seated player.
+  normalizeGodView();
+  // Delegated + capturing so it works regardless of ribbon rebuilds.
   window.addEventListener('engine-input', onEngineInput, true);
-  log(isObserverContext()
+  setInterval(decorateTooltips, 1000);   // re-apply after ribbon rebuilds
+  log(isObserverClient()
     ? 'active: right-click a leader to view their map; right-click again for full map'
     : 'not an observer - view-as idle');
 });
