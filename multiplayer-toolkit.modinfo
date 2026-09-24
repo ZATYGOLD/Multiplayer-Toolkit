@@ -79,6 +79,7 @@
                     <Item>ui/mp-pause/mp-pause-config.js</Item>
                     <Item>ui/mp-pause/mp-pause.scss.js</Item>
                     <Item>ui/mp-pause/mp-pause-overlay.js</Item>
+                    <Item>ui/mp-pause/mp-pause-net.js</Item>
                     <Item>ui/mp-pause/mp-pause-mgr.js</Item>
                     <Item>ui/mp-keybind/mp-keybind.js</Item>
                 </UIScripts>

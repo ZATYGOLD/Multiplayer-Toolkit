@@ -38,6 +38,7 @@ const NATIVE_PAUSE_DIALOG_TITLE = "LOC_MP_PAUSE_POPUP_TITLE";
 /** Tunable timings / thresholds. */
 const CONFIG = {
   enabled: true,               // master switch (set false to fully disable the pause feature)
+  hostAuthoritativeResume: true, // host's Resume button unpauses for EVERYONE (chat-RPC); false = host only readies itself
   resumeCountdownSeconds: 5,   // length of the "UNPAUSING..." countdown
   pollMs: 250,                 // tally / condition evaluation interval
   convergenceDelayMs: 2000,    // wait for all clients to flag in before evaluating readiness
@@ -64,6 +65,7 @@ const LOC = {
   ready: "LOC_MPT_READY",
   cancelReady: "LOC_MPT_CANCEL_READY",
   resumeHost: "LOC_MPT_RESUME_HOST",
+  resumeAll: "LOC_MPT_RESUME_ALL",        // host-authoritative: resume for every connected player
   dropResume: "LOC_MPT_DROP_RESUME",      // host-only: kick disconnected players to break a pause deadlock
   viewMap: "LOC_ADVANCED_START_VIEW_MAP"  // reuse the base game's existing string
 };

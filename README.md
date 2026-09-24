@@ -318,16 +318,21 @@ for live-testing with FireTuner.
 
 ### 0.5.8
 
-- **Pause: simplified to consensus** — removed the voting/auto-resume tiers. Any
-  player can pause, and the game unpauses as soon as every **connected** player
-  readies. Disconnected players are excluded from the ready tally.
-- **Pause: fixed the disconnect stall** — a player who dropped while the game was
+- **Pause: reworked resume** — removed the voting/auto-resume tiers. Any player
+  can pause. The game unpauses either when every **connected** player readies
+  (consensus), or instantly when the host presses **"Resume (All Players)"**,
+  which unpauses for everyone at once. Disconnected players are excluded from the
+  ready tally. (`hostAuthoritativeResume` toggles the host button.)
+- **Pause / Drop: fixed the disconnect stall** — a player who dropped while
   paused left a pause-flag nobody else could clear, so the game could never
   unpause even with everyone ready. The host now gets a **"Drop Disconnected &
-  Resume"** button (shown only while a player is disconnected) that removes the
-  dropped player and lets the game resume.
+  Resume"** button (shown only while a player is disconnected) that kicks the
+  dropped player *and* resumes all remaining connected players in one press.
+- Under the hood: added a chat-based cross-client command channel (hidden from
+  the chat window) that lets the host drive a synchronized resume on every
+  client - the technique behind host-authoritative resume.
 - Note: with the auto-resume timers gone, a *connected* player who never readies
-  will hold the pause indefinitely (pure consensus).
+  holds the pause until the host resumes (pure consensus otherwise).
 
 ### 0.5.7
 

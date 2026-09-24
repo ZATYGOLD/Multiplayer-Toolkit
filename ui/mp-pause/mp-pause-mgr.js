@@ -45,6 +45,7 @@
 import { FILTER_SOURCE, PAUSE_MENU_MODE, NATIVE_PAUSE_DIALOG_TITLE, CONFIG, PROGRESS_ACTIONS, LOC, coreCandidates } from './mp-pause-config.js';
 import styles from './mp-pause.scss.js';
 import PauseCountdownOverlay from './mp-pause-overlay.js';
+import MPTNet from './mp-pause-net.js';
 
 const STATE = { IDLE: "idle", PAUSED: "paused", COUNTDOWN: "countdown" };
 
@@ -270,8 +271,12 @@ class MultiplayerPauseManager {
       hint.id = HOST_HINT_ID;
       hint.innerHTML = this.hostHintHTML();
 
-      const readyCaption = this.amHost() ? LOC.resumeHost : (this.iHoldFlag ? LOC.ready : LOC.cancelReady);
-      const readyBtn = this.makeButton(READY_BUTTON_ID, readyCaption, (ev) => this.onReadyClick(ev));
+      const isHost = this.amHost();
+      const hostResumeAll = isHost && CONFIG.hostAuthoritativeResume;
+      const readyCaption = hostResumeAll ? LOC.resumeAll
+        : (isHost ? LOC.resumeHost : (this.iHoldFlag ? LOC.ready : LOC.cancelReady));
+      const readyBtn = this.makeButton(READY_BUTTON_ID, readyCaption,
+        (ev) => hostResumeAll ? this.onHostResumeAllClick(ev) : this.onReadyClick(ev));
       const viewBtn = this.makeButton(VIEW_MAP_BUTTON_ID, LOC.viewMap, (ev) => this.onViewMapClick(ev));
 
       // Top of the menu, in order: hint, Resume button, then View Map below it.
@@ -429,6 +434,26 @@ class MultiplayerPauseManager {
     this.toggleEnginePause();
     this.refreshStatus();
   }
+
+  /**
+   * Host-authoritative resume (chat-RPC): the host presses one button and every
+   * connected client releases its want-pause flag together, so the game resumes
+   * without each player having to ready up. The host applies it locally and
+   * broadcasts RESUME; other clients honor it in onRemoteResume (host-only).
+   */
+  onHostResumeAllClick(ev) {
+    ev?.stopPropagation?.();
+    if (this.state !== STATE.PAUSED) return;
+    this.onRemoteResume();
+    MPTNet.send("RESUME");
+    this.log("Host broadcast resume to all connected players.");
+  }
+  /** A trusted RESUME arrived (or we issued one): clear our own flag. */
+  onRemoteResume() {
+    if (this.state !== STATE.PAUSED && this.state !== STATE.COUNTDOWN) return;
+    if (this.iHoldFlag) { this.iHoldFlag = false; this.toggleEnginePause(); }
+    this.refreshStatus();
+  }
   onViewMapClick(ev) {
     ev?.stopPropagation?.();
     if (this.state !== STATE.PAUSED) return;
@@ -469,7 +494,10 @@ class MultiplayerPauseManager {
       } catch (e) { this.warn("directKickPlayer failed for " + id + ": " + e); }
     }
     this.log("Host dropped " + kicked + " disconnected player(s) to break the pause deadlock.");
-    if (this.iHoldFlag) { this.iHoldFlag = false; this.toggleEnginePause(); }   // host readies
+    // Clear every remaining connected player's flag too, so the game resumes the
+    // moment the kicked slots free up (kick alone only clears the dropped flags).
+    this.onRemoteResume();
+    MPTNet.send("RESUME");
     this.refreshStatus();
   }
 
@@ -777,6 +805,9 @@ class MultiplayerPauseManager {
     engine.on("RemotePlayerTurnBegin", this.playerTurnActivatedListener);
     if (CONFIG.pauseHotkey) window.addEventListener("keydown", this.hotkeyListener, true);
     window.addEventListener("engine-input", this.engineInputListener, true);
+    // Host-authoritative resume: honor a RESUME command only when it came from
+    // the host, then clear our own flag so the game unpauses in sync.
+    MPTNet.on("RESUME", (d) => { if (MPTNet.isFromHost(d.from)) this.onRemoteResume(); });
     this.startConnectionWatch();
     if (this.numWantPause() > 0) this.onGamePauseStateChanged({ data: 1 });
     else this.enterIdle();
