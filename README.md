@@ -1,7 +1,7 @@
 # Multiplayer Toolkit
 
 A toolkit of multiplayer quality-of-life features for **Sid Meier's Civilization
-VII**, built on the game's own UI components. Current version: **0.5.7**.
+VII**, built on the game's own UI components. Current version: **0.5.8**.
 
 Four tools so far:
 
@@ -315,6 +315,19 @@ for live-testing with FireTuner.
 ---
 
 ## Changelog
+
+### 0.5.8
+
+- **Pause: simplified to consensus** — removed the voting/auto-resume tiers. Any
+  player can pause, and the game unpauses as soon as every **connected** player
+  readies. Disconnected players are excluded from the ready tally.
+- **Pause: fixed the disconnect stall** — a player who dropped while the game was
+  paused left a pause-flag nobody else could clear, so the game could never
+  unpause even with everyone ready. The host now gets a **"Drop Disconnected &
+  Resume"** button (shown only while a player is disconnected) that removes the
+  dropped player and lets the game resume.
+- Note: with the auto-resume timers gone, a *connected* player who never readies
+  will hold the pause indefinitely (pure consensus).
 
 ### 0.5.7
 

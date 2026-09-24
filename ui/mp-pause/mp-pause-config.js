@@ -40,11 +40,7 @@ const CONFIG = {
   enabled: true,               // master switch (set false to fully disable the pause feature)
   resumeCountdownSeconds: 5,   // length of the "UNPAUSING..." countdown
   pollMs: 250,                 // tally / condition evaluation interval
-  convergenceDelayMs: 2000,    // wait for all clients to flag in before voting
-  votingEnabled: false,        // 60% vote-resume tier (disabled for now; revisit)
-  voteThreshold: 0.60,         // fraction ready that triggers a vote resume
-  voteDelayMs: 20000,          // a vote resume is only allowed after this long
-  hostOverrideDelayMs: 45000,  // after this long, any readiness resumes (anti-AFK)
+  convergenceDelayMs: 2000,    // wait for all clients to flag in before evaluating readiness
   finalizeBackstopMs: 4000,    // fallback idle if the unpause event is missed
   connectionWatchMs: 500,      // how often to poll player connections for drops
   pauseHotkey: "p"             // key that pauses / toggles readiness ("" disables)
@@ -68,6 +64,7 @@ const LOC = {
   ready: "LOC_MPT_READY",
   cancelReady: "LOC_MPT_CANCEL_READY",
   resumeHost: "LOC_MPT_RESUME_HOST",
+  dropResume: "LOC_MPT_DROP_RESUME",      // host-only: kick disconnected players to break a pause deadlock
   viewMap: "LOC_ADVANCED_START_VIEW_MAP"  // reuse the base game's existing string
 };
 

@@ -52,6 +52,7 @@ const STYLE_ELEMENT_ID = "mpt-styles";
 const READY_BUTTON_ID = "mpt-ready-button";
 const VIEW_MAP_BUTTON_ID = "mpt-viewmap-button";
 const PAUSE_BUTTON_ID = "mpt-pause-button";
+const DROP_RESUME_BUTTON_ID = "mpt-drop-resume-button";
 const HOST_HINT_ID = "mpt-host-hint";
 const FOOTER_READY_ID = "mpt-footer-ready";
 const PAUSE_MENU_CONTAINER = "#pause-menu-button-container";
@@ -115,18 +116,26 @@ class MultiplayerPauseManager {
     try { Network.toggleMultiplayerPause(); return true; }
     catch (e) { this.warn("toggleMultiplayerPause failed: " + e); return false; }
   }
+  /**
+   * Count of CONNECTED human major players. Disconnected players are excluded so
+   * "everyone is ready" means every player still present - a dropped player can
+   * never be part of the consensus and must not hold the tally short.
+   */
   humanPlayerCount() {
     let n = 0;
     try {
       const ids = Players.getAliveMajorIds();
       for (let i = 0; i < ids.length; i++) {
         const p = Players.get(ids[i]);
-        if (p && p.isHuman) n++;
+        if (!p || !p.isHuman) continue;
+        let connected = true;
+        try { connected = Network.isPlayerConnected(ids[i]); } catch (e) { connected = true; }
+        if (connected) n++;
       }
     } catch (e) { /* fall through */ }
     return n;
   }
-  totalPlayers() { return Math.max(this.humanPlayerCount(), this.maxCount, 1); }
+  totalPlayers() { return Math.max(this.humanPlayerCount(), 1); }
   readyCount() { return Math.max(0, this.totalPlayers() - this.numWantPause()); }
   converged() { return (Date.now() - this.pauseStart) >= CONFIG.convergenceDelayMs; }
 
@@ -271,6 +280,15 @@ class MultiplayerPauseManager {
       container.insertBefore(readyBtn, first);
       container.insertBefore(viewBtn, first);
 
+      // Host-only recovery: when a player has dropped while paused, their stuck
+      // want-pause flag can't be cleared by anyone else, so the game can't reach
+      // zero and resume. Offer the host a button to kick the disconnected
+      // player(s), which clears the flag and lets the resume complete.
+      if (this.amHost() && this.canHostKick() && this.disconnectedIds().length > 0) {
+        const dropBtn = this.makeButton(DROP_RESUME_BUTTON_ID, LOC.dropResume, (ev) => this.onDropDisconnectedClick(ev));
+        container.insertBefore(dropBtn, first);
+      }
+
       this.injectFooterReady();
     } else {
       // Not paused: keep the native Resume and put Pause Game below it.
@@ -294,8 +312,7 @@ class MultiplayerPauseManager {
   }
   applyFooterClass(el) {
     const n = this.totalPlayers();
-    const threshold = CONFIG.votingEnabled ? CONFIG.voteThreshold : 1;   // no voting: green only at consensus
-    const enough = this.converged() && n > 0 && (this.readyCount() / n) >= threshold;
+    const enough = this.converged() && n > 0 && this.readyCount() >= n;   // green only when ALL connected are ready
     el.classList.toggle("mpt-enough", enough);
     el.classList.toggle("mpt-not-enough", !enough);
   }
@@ -418,6 +435,44 @@ class MultiplayerPauseManager {
     this.closePauseMenu();              // return to the world; Esc re-opens the menu
   }
 
+  // ===================== Disconnect deadlock recovery (host) ==================
+  /** Currently-disconnected watched human ids. */
+  disconnectedIds() {
+    const out = [];
+    const ids = this.watchedHumans.length ? this.watchedHumans : this.humanParticipantIds();
+    for (const id of ids) {
+      let connected = true;
+      try { connected = Network.isPlayerConnected(id); } catch (e) { connected = true; }
+      if (!connected) out.push(id);
+    }
+    return out;
+  }
+  /** True when this client is allowed to direct-kick (i.e. is the host with the privilege). */
+  canHostKick() {
+    try { return !!Network.canPlayerEverDirectKick(GameContext.localPlayerID); } catch (e) { return false; }
+  }
+  /**
+   * Host presses "Drop Disconnected & Resume": kick each dropped player to clear
+   * their stuck want-pause flag, then release our own flag. Once every remaining
+   * (connected) player is ready, the want-pause count reaches zero and the game
+   * resumes - breaking the deadlock a mid-pause disconnect would otherwise cause.
+   */
+  onDropDisconnectedClick(ev) {
+    ev?.stopPropagation?.();
+    if (this.state !== STATE.PAUSED) return;
+    let kicked = 0;
+    for (const id of this.disconnectedIds()) {
+      try {
+        let allowed = true;
+        try { allowed = Network.canDirectKickPlayerNow(id); } catch (e) { allowed = true; }
+        if (allowed) { Network.directKickPlayer(id); kicked++; }
+      } catch (e) { this.warn("directKickPlayer failed for " + id + ": " + e); }
+    }
+    this.log("Host dropped " + kicked + " disconnected player(s) to break the pause deadlock.");
+    if (this.iHoldFlag) { this.iHoldFlag = false; this.toggleEnginePause(); }   // host readies
+    this.refreshStatus();
+  }
+
   // ======================= Synchronized state machine ========================
   onGamePauseStateChanged(data) {
     if (!this.isMultiplayer) return;
@@ -483,22 +538,21 @@ class MultiplayerPauseManager {
     this.syncProductionChooser();
 
     // The pause menu is a reactive (SolidJS) screen; if a re-render dropped our
-    // injected buttons while it is open, put them back.
-    if (this.pauseMenuIsOpen() && !document.querySelector("#" + VIEW_MAP_BUTTON_ID)) {
-      const c = document.querySelector(PAUSE_MENU_CONTAINER);
-      if (c) this.injectMenuButtons(c);
+    // injected buttons while it is open, put them back. Also re-inject when the
+    // "Drop Disconnected & Resume" button needs to appear/disappear (a player
+    // dropped or reconnected while the menu was already open).
+    if (this.pauseMenuIsOpen()) {
+      const needDrop = this.amHost() && this.canHostKick() && this.disconnectedIds().length > 0;
+      const haveDrop = !!document.getElementById(DROP_RESUME_BUTTON_ID);
+      if (!document.querySelector("#" + VIEW_MAP_BUTTON_ID) || needDrop !== haveDrop) {
+        const c = document.querySelector(PAUSE_MENU_CONTAINER);
+        if (c) this.injectMenuButtons(c);
+      }
     }
     this.refreshStatus();
-
-    // Auto-resume evaluation (only matters while WE still hold a flag).
-    if (!this.iHoldFlag) return;
-    const t = Date.now() - this.pauseStart;
-    if (t < CONFIG.convergenceDelayMs) return;
-    const n = this.totalPlayers();
-    const ratio = n > 0 ? this.readyCount() / n : 0;
-    const voteResume = CONFIG.votingEnabled && (t >= CONFIG.voteDelayMs) && (ratio >= CONFIG.voteThreshold);
-    const overrideResume = (t >= CONFIG.hostOverrideDelayMs) && (this.readyCount() >= 1);
-    if (voteResume || overrideResume) { this.iHoldFlag = false; this.toggleEnginePause(); }
+    // Resume is pure consensus now: the engine unpauses on its own the moment
+    // every want-pause flag clears (each connected player readies). No voting,
+    // no auto-resume timers.
   }
   beginCountdown() {
     if (this.state === STATE.COUNTDOWN) return;
