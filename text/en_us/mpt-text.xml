@@ -44,6 +44,18 @@
     <Row Tag="LOC_MPT_OBSERVER_SCORE">
       <Text>Score</Text>
     </Row>
+    <Row Tag="LOC_MPT_OBSERVER_NEXT_TURN">
+      <Text>Next Turn</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_ADVANCING">
+      <Text>Advancing...</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_AUTO_ON">
+      <Text>Auto Turns: On</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_AUTO_OFF">
+      <Text>Auto Turns: Off</Text>
+    </Row>
     <Row Tag="LOC_MPT_OBSERVER_TOTAL">
       <Text>Total</Text>
     </Row>
@@ -67,9 +79,6 @@
     </Row>
     <Row Tag="LOC_MPT_OBSERVER_NONE">
       <Text>—</Text>
-    </Row>
-    <Row Tag="LOC_MPT_OBSERVER_NEXT_TURN">
-      <Text>Next Turn</Text>
     </Row>
 
     <!-- MPT Timers -->

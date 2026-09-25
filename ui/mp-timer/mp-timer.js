@@ -195,6 +195,13 @@ const CLOCK = {
 
   expired() { return this.total > 0 && this.elapsed() >= this.total; },
 
+  /** Restart this turn's countdown from full (used while the capital is unfounded). */
+  restart() {
+    this.startMs = Date.now();
+    this.pausedAccumMs = 0;
+    if (this.pausedSinceMs) this.pausedSinceMs = this.startMs;
+  },
+
   setPaused(paused) {
     if (paused) {
       if (!this.pausedSinceMs) this.pausedSinceMs = Date.now();
@@ -204,6 +211,29 @@ const CLOCK = {
     }
   }
 };
+
+/**
+ * Grace for the opening turn(s) of a session, measured from the first turn
+ * this session actually sees rather than an absolute turn number. A new game
+ * starting at turn 1 behaves exactly as before; a game that begins at a later
+ * turn (a loaded save, a later-age start, or a patch that renumbers turns) still
+ * gets its untimed setup turn instead of being timed from the very first turn.
+ */
+let firstTurnSeen = -1;
+function inGrace() {
+  const t = currentTurn();
+  if (t < 1) return true;                  // turn not readable yet: treat as grace
+  if (firstTurnSeen < 1) firstTurnSeen = t;
+  return t < firstTurnSeen + Math.max(0, CONFIG.firstTimedTurn - 1);
+}
+
+/** True once the local player has founded at least one settlement. */
+function localHasCity() {
+  try {
+    const player = Players.get(GameContext.localPlayerID);
+    return !!player && (player.Cities?.getCities()?.length ?? 0) > 0;
+  } catch (e) { return true; }   // unknown: don't hold the clock
+}
 
 /**
  * True when the timer is allowed to force-end the local turn. The only remaining
@@ -241,14 +271,40 @@ function mptDismissTurnBlockers() {
   }
 }
 
+/** True only while the engine is refusing end-turn because units need orders. */
+function unitsBlockEndTurn() {
+  try {
+    return Game.Notifications.getEndTurnBlockingType(GameContext.localPlayerID) === EndTurnBlockingTypes.UNITS;
+  } catch (e) { return false; }
+}
+
 /**
- * Skip every unit still awaiting orders. The engine refuses sendTurnComplete
- * while a "units need orders" block is active, so at expiry we clear it the way
- * a turn-timer expiry does: leave the units where they are (SKIP_TURN). Each
- * unique ready unit is skipped once per call; the block clears asynchronously,
- * so the sweep repeats over subsequent ticks until sendTurnComplete is honored.
+ * True for a unit that is genuinely idle and waiting on the player. Units that
+ * are carrying out an order - auto-explore, a multi-turn move, or any other
+ * queued operation - or are sleeping/healing must be left alone: a SKIP_TURN
+ * would overwrite their standing order and stop them for the turn.
+ */
+function unitAwaitsOrders(id) {
+  let unit = null;
+  try { unit = Units.get(id); } catch (e) { return false; }
+  if (!unit) return false;
+  try {
+    const a = unit.activity;
+    if (a === UnitActivityTypes.OPERATION || a === UnitActivityTypes.SLEEP || a === UnitActivityTypes.HEAL) return false;
+  } catch (e) { /* activity unreadable: fall through to the path check */ }
+  try { if (Units.getQueuedOperationDestination(id)) return false; } catch (e) { /* no queued path */ }
+  return true;
+}
+
+/**
+ * Only when the engine is actually refusing to end the turn because units need
+ * orders: skip the units that are truly idle, leaving them where they are (what
+ * a turn-timer expiry does). Automated and path-following units are never
+ * touched, so explorers keep exploring and long moves keep going. The block
+ * clears asynchronously, so the sweep repeats over subsequent ticks.
  */
 function mptSkipReadyUnits() {
+  if (!unitsBlockEndTurn()) return;
   const seen = new Set();
   for (let i = 0; i < 40; i++) {
     let id = null;
@@ -256,9 +312,11 @@ function mptSkipReadyUnits() {
     if (!id) break;
     try { if (ComponentID && ComponentID.isInvalid && ComponentID.isInvalid(id)) break; } catch (e) {}
     const key = `${id.owner ?? ''}:${id.id ?? id}`;
-    if (seen.has(key)) break;   // looped back to an already-skipped unit - stop
+    if (seen.has(key)) break;   // looped back to an already-visited unit - stop
     seen.add(key);
-    try { Game.UnitOperations.sendRequest(id, UnitOperationTypes.SKIP_TURN, {}); } catch (e) {}
+    if (unitAwaitsOrders(id)) {
+      try { Game.UnitOperations.sendRequest(id, UnitOperationTypes.SKIP_TURN, {}); } catch (e) {}
+    }
     try { UI.Player.selectNextReadyUnit(); } catch (e) {}
   }
 }
@@ -289,17 +347,35 @@ function mptBeepFromClock() {
  * ends the local turn; it keeps trying (units clear asynchronously) and will
  * re-end if the player unreadies at zero.
  */
+/** Living human major players (a "competitive" force-end only makes sense with 2+). */
+function livingHumanCount() {
+  let n = 0;
+  try {
+    for (const entry of Players.getAlive()) {
+      const p = (entry && entry.isMajor !== undefined) ? entry : Players.get(entry);
+      if (p && p.isMajor && p.isHuman) n++;
+    }
+  } catch (e) { /* keep count */ }
+  return n;
+}
+
 function mptEnforceTick() {
   if (!isCompetitiveSelected() || !localPlayerTurnActive()) return;
-  if (currentTurn() < CONFIG.firstTimedTurn) return;   // grace: no timer on the opening turn(s)
+  if (inGrace()) return;                                          // untimed opening turn(s)
+  if (livingHumanCount() < CONFIG.minPlayersToEnforce) return;    // optional: never auto-end solo games
   CLOCK.syncTurn();
+  // No settlement yet: keep the countdown at full so founding a capital late
+  // never lands on an already-expired clock and ends the turn instantly.
+  if (!localHasCity()) { CLOCK.restart(); return; }
   // Keep the audible countdown alive while timer events are stalled.
   if (Date.now() - mptLastEventMs > STALE_EVENT_MS) mptBeepFromClock();
   if (!CLOCK.expired() || !mptCanForceEnd()) return;
   try { if (GameContext.hasSentTurnComplete && GameContext.hasSentTurnComplete()) return; } catch (e) {}
-  mptSkipReadyUnits();       // clear "units need orders"
+  mptSkipReadyUnits();       // only if units genuinely block; automated/queued units untouched
   mptDismissTurnBlockers();  // clear pending-choice blockers (research/civic/growth/narrative)
   log(`time expired - ending local turn (turn ${CLOCK.turn})`);
+  // Mirror the native End Turn button exactly (panel-action sendEndTurn).
+  try { UI.Player.deselectAllUnits(); } catch (e) { /* ignore */ }
   try { GameContext.sendTurnComplete(); } catch (e) { /* ignore */ }
 }
 
@@ -397,7 +473,7 @@ function defineMptPanelAction(attempts) {
       if (isCompetitiveSelected()) mptLastEventMs = Date.now();   // events are flowing
       // Grace turn(s): keep the competitive timer off entirely - hide it by
       // handing the base renderer a zero limit (its own "no timer" path).
-      if (isCompetitiveSelected() && currentTurn() < CONFIG.firstTimedTurn) {
+      if (isCompetitiveSelected() && inGrace()) {
         super.onTurnTimerUpdated({ ...data, phaseTimeLimit: 0 });
         return;
       }
@@ -418,6 +494,7 @@ function defineMptPanelAction(attempts) {
       const limit = data?.phaseTimeLimit ?? 0;
       if (limit <= 0 || limit > CONFIG.maxProxyLimit || !isCompetitiveSelected()) return null;
       CLOCK.syncTurn();
+      if (!localHasCity()) CLOCK.restart();   // show a full clock until the capital exists
       const total = CLOCK.total;
       if (total <= 0) return null;
       const elapsed = CLOCK.elapsed();

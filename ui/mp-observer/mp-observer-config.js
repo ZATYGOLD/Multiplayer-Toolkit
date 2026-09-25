@@ -34,8 +34,9 @@ const OBSERVER_VIEW = {
 const CONFIG = {
   enabled: true,                  // master switch for the observer player ribbons
   defaultView: OBSERVER_VIEW.YIELDS,
-  turnGating: false,              // observer turn control - engine ignores observer pause, so non-functional
+  turnControl: true,              // lone observer (no humans playing): hold each turn until "Next Turn" (Autoplay-based, experimental)
   viewAsEnabled: true,            // right-click a leader to view their fog-of-war map (experimental)
+  escapeMenuEnabled: false,       // observer Esc -> pause menu. OFF: forcing the pause menu crashes for a cleared-civ observer
   debug: true
 };
 

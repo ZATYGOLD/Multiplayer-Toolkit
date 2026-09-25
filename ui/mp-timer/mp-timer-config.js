@@ -30,7 +30,8 @@ const TIMER_TYPE = "MPT_TURNTIMER_COMPETITIVE";
 
 /** Tunable timings / thresholds. */
 const CONFIG = {
-  firstTimedTurn: 2,        // the timer stays off until this turn (turn 1 = found capital, pick research)
+  firstTimedTurn: 2,        // grace: the first (firstTimedTurn - 1) turn(s) of each session are untimed (found capital, pick research)
+  minPlayersToEnforce: 1,   // only force-end turns with at least this many living humans (raise to 2 to never auto-end solo games)
   roundToNearest: 1,        // round the computed total to the nearest multiple (1 = whole seconds)
   orangeStart: 30,          // orange tier begins at this many seconds remaining
   flashStart: 15,           // red flash + per-second beeps begin here

@@ -66,6 +66,10 @@ function onInput(ev) {
 }
 
 engine.whenReady.then(() => {
+  // Forcing INTERFACEMODE_PAUSE_MENU crashes the game for a cleared-civ observer,
+  // so this is OFF by default (better a non-working Esc than a crash). Re-enable
+  // only once a crash-free path to the menu is found.
+  if (CONFIG.escapeMenuEnabled !== true) { log('observer Esc menu disabled via config'); return; }
   // Capturing so we run before (absent) native handling; gated per-event.
   window.addEventListener('engine-input', onInput, true);
   log(isObserverClient() ? 'Escape -> pause menu enabled for observer' : 'not an observer - menu handler idle');

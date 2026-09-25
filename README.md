@@ -1,7 +1,7 @@
 # Multiplayer Toolkit
 
 A toolkit of multiplayer quality-of-life features for **Sid Meier's Civilization
-VII**, built on the game's own UI components. Current version: **0.5.8**.
+VII**, built on the game's own UI components. Current version: **0.5.9**.
 
 Four tools so far:
 
@@ -315,6 +315,28 @@ for live-testing with FireTuner.
 ---
 
 ## Changelog
+
+### 0.5.9
+
+- **Fix: observer no longer crashes on Esc** — the experimental observer
+  "Esc opens the pause menu" shortcut forced an interface mode that crashes for a
+  cleared-civ observer, so it is now off by default (`escapeMenuEnabled`).
+- **Fix: Competitive timer ending turns from the start** — the untimed opening
+  turn is now counted from the first turn the session sees (not a fixed turn
+  number), and the clock stays full until you have founded a settlement, so a
+  late capital no longer lands on an already-expired timer. The timer still ends
+  your turn when it reaches 0, including in solo host games
+  (`minPlayersToEnforce` can be raised to 2 to disable that for solo).
+- **Fix: timer-ended turns no longer cancel unit orders** — when the timer ran
+  out it skipped every "ready" unit, which could overwrite auto-explore and
+  multi-turn move orders. It now only skips genuinely idle units, and only when
+  the game is actually refusing to end the turn because of them. Automated,
+  path-following, sleeping and healing units are left alone, and the force-end
+  now mirrors the native End Turn button.
+- **New (experimental): observer turn control** — when the only human is an
+  observer, the game now holds at each turn until you press **Next Turn**, or
+  you can switch **Auto Turns** on to let it run. The buttons sit on the observer
+  toolbar. Toggle with `turnControl`.
 
 ### 0.5.8
 
