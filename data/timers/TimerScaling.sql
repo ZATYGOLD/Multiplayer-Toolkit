@@ -4,8 +4,9 @@
 --*******************************************************
 --*************** ADDITIONAL TIMER SCALING **************
 --*******************************************************
--- Schema and default values; each Age may override below files.
---   + PerHuman * (living human players)
+-- Schema and default values; data/timers/<age>/CompetitiveTimer.sql tunes them
+-- per Age (loaded only for that Age).
+--   + PerHuman * (living human players, Observers excluded)
 --   + PerTurn  * (current turn number)
 -- Decimal values (e.g. 1.25) are supported.
 CREATE TABLE IF NOT EXISTS MPT_TimerScaling 

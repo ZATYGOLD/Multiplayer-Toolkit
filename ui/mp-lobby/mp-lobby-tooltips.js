@@ -19,58 +19,42 @@
  */
 
 /**
- * Multiplayer Toolkit - Lobby tooltip fixes (shell scope).
+ * Multiplayer Toolkit - Lobby tooltips and start countdown (shell scope).
  *
- * The multiplayer game-setup civilization and leader tooltips show each
- * ability's TEXT but omit its NAME. This wraps the lobby model's two tooltip
- * builders and inserts the ability title line above the ability text.
- *
- * Same fix as the "Multiplayer UI Fix" Workshop mod, but as a runtime patch
- * instead of a full replacement of model-mp-staging-new.js - so it survives
- * game patches and coexists with other lobby mods.
+ * The game-setup civilization and leader tooltips show each ability's text
+ * but omit its name; the lobby model's two tooltip builders are wrapped to
+ * insert the ability title above the text (a runtime patch rather than a
+ * replacement of model-mp-staging-new.js, so it survives game patches). The
+ * all-ready start countdown is shortened, and its ring rescaled to match.
  */
 import { MPLobbyDataModel } from 'fs://game/core/ui/shell/mp-staging/model-mp-staging-new.js';
 import { GetCivilizationData } from 'fs://game/core/ui/shell/create-panels/age-civ-select-model.js';
 import { getLeaderData } from 'fs://game/core/ui/shell/create-panels/leader-select-model.js';
+import { createLogger, whenDefined, wrapMethod } from '../mpt-shared/mpt-util.js';
 import { CONFIG } from './mp-lobby-config.js';
 
-function log(message) {
-  if (CONFIG.debug) console.log(`[MPT lobby] ${message}`);
+const log = createLogger('lobby');
+const LOBBY_TAG = 'screen-mp-lobby';
+const STOCK_COUNTDOWN_SECONDS = 10;   // the lobby template's hard-coded ring maximum
+
+// ============================ Start countdown ============================
+
+/** The model reads this static each time the countdown begins. */
+function shortenCountdown() {
+  MPLobbyDataModel.ALL_READY_COUNTDOWN = CONFIG.startCountdownSeconds * 1000;
+  if (CONFIG.startCountdownSeconds === STOCK_COUNTDOWN_SECONDS) return;
+  whenDefined(LOBBY_TAG, (definition) => {
+    wrapMethod(definition.createInstance.prototype, 'onAttach', function (base, ...args) {
+      const result = base(...args);
+      try {
+        for (const ring of this.Root?.querySelectorAll?.('.mp-staging__ring-meter') ?? []) ring.setAttribute('max-value', String(CONFIG.startCountdownSeconds));
+      } catch (e) { /* leave the ring as is */ }
+      return result;
+    });
+  }, { log });
 }
 
-// Shorten the all-ready lobby countdown before the game starts. The model
-// reads this static fresh each time the countdown begins, so overriding it
-// takes effect on the next start.
-try {
-  if (CONFIG.startCountdownSeconds > 0) {
-    MPLobbyDataModel.ALL_READY_COUNTDOWN = CONFIG.startCountdownSeconds * 1000;
-    log(`lobby start countdown set to ${CONFIG.startCountdownSeconds}s`);
-  }
-} catch (e) { log(`could not set lobby countdown: ${e}`); }
-
-// The countdown ring's max is hard-coded to 10 in the lobby template, so a
-// 5-second countdown only fills it halfway. Patch the lobby panel's onAttach
-// to set each ring-meter's max-value to the new countdown length.
-function patchLobbyRing(attempts) {
-  if (CONFIG.startCountdownSeconds <= 0 || CONFIG.startCountdownSeconds === 10) return;
-  let def = null;
-  try { def = Controls.getDefinition('screen-mp-lobby'); } catch (e) { def = null; }
-  if (!def?.createInstance) {
-    if (attempts > 0) setTimeout(() => patchLobbyRing(attempts - 1), 200);
-    return;
-  }
-  const PanelMPLobby = def.createInstance;
-  const baseOnAttach = PanelMPLobby.prototype.onAttach;
-  PanelMPLobby.prototype.onAttach = function (...args) {
-    baseOnAttach.apply(this, args);
-    try {
-      const rings = this.Root?.querySelectorAll?.('.mp-staging__ring-meter') ?? [];
-      for (const ring of rings) ring.setAttribute('max-value', String(CONFIG.startCountdownSeconds));
-    } catch (e) { /* leave ring as-is */ }
-  };
-  log('lobby countdown ring max-value patched');
-}
-patchLobbyRing(50);
+// ============================ Ability titles ============================
 
 /**
  * Inserts the styled ability title above the ability text. Idempotent: the
@@ -85,18 +69,19 @@ function withAbilityTitle(tooltip, abilityTitle, abilityText) {
   return tooltip.replace(text, `[STYLE:${CONFIG.titleStyle}][B]${title}[/B][/S][N]${text}`);
 }
 
-const baseCivTooltip = MPLobbyDataModel.prototype.getCivilizationTooltip;
-MPLobbyDataModel.prototype.getCivilizationTooltip = function (civilizationType, playerID) {
-  const tooltip = baseCivTooltip.call(this, civilizationType, playerID);
-  const civData = GetCivilizationData(false).find((data) => data.civID == civilizationType);
-  return withAbilityTitle(tooltip, civData?.abilityTitle, civData?.abilityText);
-};
+function patchTooltips() {
+  const proto = MPLobbyDataModel.prototype;
+  wrapMethod(proto, 'getCivilizationTooltip', (base, civilizationType, ...rest) => {
+    const civData = GetCivilizationData(false).find((data) => data.civID == civilizationType);
+    return withAbilityTitle(base(civilizationType, ...rest), civData?.abilityTitle, civData?.abilityText);
+  });
+  wrapMethod(proto, 'getLeaderTooltip', (base, leaderType, ...rest) => {
+    const leaderData = getLeaderData(false).find((data) => data.leaderID == leaderType);
+    return withAbilityTitle(base(leaderType, ...rest), leaderData?.abilityTitle, leaderData?.abilityText);
+  });
+}
 
-const baseLeaderTooltip = MPLobbyDataModel.prototype.getLeaderTooltip;
-MPLobbyDataModel.prototype.getLeaderTooltip = function (leaderType) {
-  const tooltip = baseLeaderTooltip.call(this, leaderType);
-  const leaderData = getLeaderData(false).find((data) => data.leaderID == leaderType);
-  return withAbilityTitle(tooltip, leaderData?.abilityTitle, leaderData?.abilityText);
-};
-
-log('lobby civ/leader tooltips now include ability titles');
+try {
+  if (CONFIG.startCountdownSeconds > 0) shortenCountdown();
+  patchTooltips();
+} catch (e) { log(`lobby patches failed: ${e}`); }

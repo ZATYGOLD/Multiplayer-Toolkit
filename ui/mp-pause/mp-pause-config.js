@@ -19,11 +19,7 @@
  */
 
 /**
- * Multiplayer Toolkit - configuration & constants.
- *
- * Centralizes every tunable value and identifier so the manager, overlay and
- * styles stay consistent. Mirrors the data/logic separation used across the
- * base game's UI modules.
+ * Multiplayer Toolkit - Pause configuration & constants.
  */
 
 /** Source tag used when registering/removing engine input filters. */
@@ -38,15 +34,14 @@ const NATIVE_PAUSE_DIALOG_TITLE = "LOC_MP_PAUSE_POPUP_TITLE";
 /** Tunable timings / thresholds. */
 const CONFIG = {
   enabled: true,               // master switch (set false to fully disable the pause feature)
+  hostAuthoritativeResume: true, // host's Resume button unpauses for EVERYONE (chat-RPC); false = host only readies itself
   resumeCountdownSeconds: 5,   // length of the "UNPAUSING..." countdown
   pollMs: 250,                 // tally / condition evaluation interval
-  convergenceDelayMs: 2000,    // wait for all clients to flag in before voting
-  votingEnabled: false,        // 60% vote-resume tier (disabled for now; revisit)
-  voteThreshold: 0.60,         // fraction ready that triggers a vote resume
-  voteDelayMs: 20000,          // a vote resume is only allowed after this long
-  hostOverrideDelayMs: 45000,  // after this long, any readiness resumes (anti-AFK)
+  convergenceDelayMs: 2000,    // wait for all clients to flag in before evaluating readiness
   finalizeBackstopMs: 4000,    // fallback idle if the unpause event is missed
-  connectionWatchMs: 500       // how often to poll player connections for drops
+  connectionWatchMs: 500,      // how often to poll player connections for drops
+  hotkeyDebounceMs: 250,       // one press through the keybind and the raw key acts once
+  pauseHotkey: "p"             // raw-key fallback for the rebindable Pause keybind ("" = keybind only)
 };
 
 /**
@@ -61,13 +56,25 @@ const PROGRESS_ACTIONS = [
   "trigger-accept-dip", "quick-load"
 ];
 
-/** Localization keys for the injected buttons (see text/en_us/mp-pause-text.xml). */
+/** Localization keys (text/en_us/mpt-text.xml; View Map reuses the base game's string). */
 const LOC = {
   pauseGame: "LOC_MPT_PAUSE_GAME",
   ready: "LOC_MPT_READY",
   cancelReady: "LOC_MPT_CANCEL_READY",
   resumeHost: "LOC_MPT_RESUME_HOST",
-  viewMap: "LOC_ADVANCED_START_VIEW_MAP"  // reuse the base game's existing string
+  resumeAll: "LOC_MPT_RESUME_ALL",        // host-authoritative: resume for every connected player
+  dropResume: "LOC_MPT_DROP_RESUME",      // host-only: kick disconnected players to break a pause deadlock
+  viewMap: "LOC_ADVANCED_START_VIEW_MAP",
+  readyTally: "LOC_MPT_PAUSE_READY_TALLY",
+  hintHost: "LOC_MPT_PAUSE_HINT_HOST",
+  hintReady: "LOC_MPT_PAUSE_HINT_READY",
+  hintWaiting: "LOC_MPT_PAUSE_HINT_WAITING",
+  aPlayer: "LOC_MPT_PAUSE_A_PLAYER",
+  playerDisconnected: "LOC_MPT_PAUSE_PLAYER_DISCONNECTED",
+  playerIsDisconnected: "LOC_MPT_PAUSE_PLAYER_IS_DISCONNECTED",
+  playerReconnecting: "LOC_MPT_PAUSE_PLAYER_RECONNECTING",
+  hostChanged: "LOC_MPT_PAUSE_HOST_CHANGED",
+  unpausing: "LOC_MPT_PAUSE_UNPAUSING"
 };
 
 /** Candidate import paths for a core singleton (mod is not co-located w/ core). */

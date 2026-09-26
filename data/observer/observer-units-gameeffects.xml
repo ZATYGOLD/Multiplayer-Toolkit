@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Multiplayer Toolkit - Observer's Eye unit ability modifiers (GameEffects, see observer-units.xml). -->
+<GameEffects xmlns="GameEffects">
+  <!-- Same effect as the Squadron "Spotting" promotion, without its range and enemy limits: every unit's plot stays visible. -->
+  <Modifier id="MPT_OBSERVER_MOD_SEE_ALL_UNITS" collection="COLLECTION_ALL_UNITS" effect="EFFECT_REVEAL_UNIT_PLOT_FOR_PLAYER" permanent="true"/>
+  <!-- Same effects as the Chasqui (terrain) and Hulche (vegetation) sight abilities. -->
+  <Modifier id="MPT_OBSERVER_EYE_SEE_THROUGH_TERRAIN" collection="COLLECTION_OWNER" effect="EFFECT_ADJUST_UNIT_SEE_THROUGH_TERRAIN" permanent="true">
+    <Argument name="CanSee">true</Argument>
+  </Modifier>
+  <Modifier id="MPT_OBSERVER_EYE_SEE_THROUGH_FEATURES" collection="COLLECTION_OWNER" effect="EFFECT_ADJUST_UNIT_SEE_THROUGH_FEATURES" permanent="true">
+    <Argument name="CanSee">true</Argument>
+  </Modifier>
+  <!-- Same effects as the Exploration Age deep-ocean techs: open ocean is valid, not an obstacle, and causes no damage. -->
+  <Modifier id="MPT_OBSERVER_EYE_OCEAN_VALID" collection="COLLECTION_OWNER" effect="EFFECT_ADJUST_UNIT_VALID_TERRAIN" permanent="true">
+    <Argument name="TerrainType">TERRAIN_OCEAN</Argument>
+    <Argument name="Valid">true</Argument>
+  </Modifier>
+  <Modifier id="MPT_OBSERVER_EYE_OCEAN_NO_OBSTACLE" collection="COLLECTION_OWNER" effect="EFFECT_UNIT_ADJUST_IGNORE_MOVEMENT_OBSTACLE" permanent="true">
+    <Argument name="Obstacle">TERRAIN_OCEAN</Argument>
+  </Modifier>
+  <Modifier id="MPT_OBSERVER_EYE_OCEAN_NO_DAMAGE" collection="COLLECTION_OWNER" effect="EFFECT_ADJUST_UNIT_WATER_DAMAGE_PROTECTION" permanent="true">
+    <Argument name="WaterDamage">100</Argument>
+  </Modifier>
+  <!-- Marine ice is impassable; the movement-obstacle effect (used for ocean above) is tried for it too. -->
+  <Modifier id="MPT_OBSERVER_EYE_ICE_NO_OBSTACLE" collection="COLLECTION_OWNER" effect="EFFECT_UNIT_ADJUST_IGNORE_MOVEMENT_OBSTACLE" permanent="true">
+    <Argument name="Obstacle">FEATURE_ICE</Argument>
+  </Modifier>
+</GameEffects>

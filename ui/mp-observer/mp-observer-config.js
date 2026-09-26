@@ -19,10 +19,10 @@
  */
 
 /**
- * Multiplayer Toolkit - In-game observer features configuration & constants.
+ * Multiplayer Toolkit - Observer configuration & constants (in-game scope).
  */
 
-/** View modes for the observer's player ribbons. */
+/** What every leader card on the Observer's ribbon shows. */
 const OBSERVER_VIEW = {
   YIELDS: 'yields',
   RESEARCH: 'research',
@@ -32,10 +32,19 @@ const OBSERVER_VIEW = {
 
 /** Tunable settings. */
 const CONFIG = {
-  enabled: true,                  // master switch for the observer player ribbons
+  enabled: true,                        // master switch for the Observer's in-game features
+  debug: true,                          // extra UI.log diagnostics (e.g. the Eye's vision each turn)
   defaultView: OBSERVER_VIEW.YIELDS,
-  turnGating: false,              // observer turn control - engine ignores observer pause, so non-functional
-  debug: true
+  meterRefreshMs: 600,                  // minimum gap between Research / Production meter repaints
+  ribbonSeedAttempts: 30,               // tries to populate the ribbon once the HUD exists
+  ribbonSeedIntervalMs: 500,
+  combatPreviewLift: 'translateY(-4.5rem)'   // keeps the combat preview above the unit panel
 };
 
-export { CONFIG, OBSERVER_VIEW };
+/** Card highlight colours: celebrations, then one colour per war pair. */
+const HIGHLIGHT = {
+  celebration: '#f5c542',
+  wars: ['#e04848', '#4aa3ff', '#5cd65c', '#b36bff', '#ff8c1a', '#3de0d0', '#ff5fb0', '#f0f0f0']
+};
+
+export { CONFIG, HIGHLIGHT, OBSERVER_VIEW };

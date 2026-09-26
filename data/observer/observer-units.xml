@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Multiplayer Toolkit - Observer's Eye unit (gameplay database, every Age).
+
+  The Observer's only unit and its vision: a player sees units only on plots
+  in its sight (revealing the map is not enough), so the Eye
+    - sees the whole map: sight 128 through terrain and vegetation (the
+      Chasqui / Hulche effects), and hidden units;
+    - keeps every unit's plot visible (the Squadron "Spotting" effect without
+      its range and enemy limits);
+    - cannot found, be damaged or be captured, and is stealthed, so other
+      players never see it. It has no art of its own (the game shows a
+      generic ship), and keeps 1 move: 0 moves crashes new-game setup with a
+      divide by zero. The Observer client keeps it asleep and hidden.
+  The game never places the Observer's starting unit, and an Age transition
+  resets every unit, so maps/mpt-observer-eye.js creates the Eye (called by
+  the new-game map script and the Age-transition script) on open water next
+  to the Ocean / Marine / Ice tile nearest the bottom-center of the map, then
+  moves it onto the ice (impassable, but the engine accepts the move). Open ocean is
+  valid for it in every Age through the Exploration deep-ocean tech effects.
+  UnitReplaces keeps the Observer from ever receiving a real Founder.
+-->
+<Database>
+  <Types>
+    <Row Type="UNIT_MPT_OBSERVER_EYE" Kind="KIND_UNIT"/>
+    <Row Type="ABILITY_MPT_OBSERVER_EYE" Kind="KIND_ABILITY"/>
+  </Types>
+
+  <Tags>
+    <Row Tag="UNIT_CLASS_MPT_OBSERVER_EYE" Category="UNIT_CLASS"/>
+  </Tags>
+
+  <Units>
+    <Row UnitType="UNIT_MPT_OBSERVER_EYE" Name="LOC_UNIT_MPT_OBSERVER_EYE_NAME" Description="LOC_UNIT_MPT_OBSERVER_EYE_DESCRIPTION" BaseSightRange="128" BaseMoves="1" UnitMovementClass="UNIT_MOVEMENT_CLASS_NAVAL" Domain="DOMAIN_SEA" CoreClass="CORE_CLASS_SUPPORT" FormationClass="FORMATION_CLASS_NAVAL" ZoneOfControl="false" FoundCity="false" CanTrain="false" CanPurchase="false" CanTriggerDiscovery="false" CanBeDamaged="false" TraitType="TRAIT_MPT_OBSERVER"/>
+  </Units>
+
+  <Unit_Stats>
+    <Row UnitType="UNIT_MPT_OBSERVER_EYE"/>
+  </Unit_Stats>
+
+  <TypeTags>
+    <Row Type="UNIT_MPT_OBSERVER_EYE" Tag="UNIT_CLASS_NON_COMBAT"/>
+    <Row Type="UNIT_MPT_OBSERVER_EYE" Tag="UNIT_CLASS_STEALTH"/>
+    <Row Type="UNIT_MPT_OBSERVER_EYE" Tag="UNIT_CLASS_SEE_HIDDEN"/>
+    <Row Type="UNIT_MPT_OBSERVER_EYE" Tag="UNIT_CLASS_MPT_OBSERVER_EYE"/>
+  </TypeTags>
+
+  <UnitAbilities>
+    <Row UnitAbilityType="ABILITY_MPT_OBSERVER_EYE" Name="LOC_UNIT_MPT_OBSERVER_EYE_NAME" Description="LOC_UNIT_MPT_OBSERVER_EYE_DESCRIPTION"/>
+  </UnitAbilities>
+
+  <UnitClass_Abilities>
+    <Row UnitAbilityType="ABILITY_MPT_OBSERVER_EYE" UnitClassType="UNIT_CLASS_MPT_OBSERVER_EYE"/>
+  </UnitClass_Abilities>
+
+  <!-- Modifiers are defined in observer-units-gameeffects.xml. -->
+  <UnitAbilityModifiers>
+    <Row UnitAbilityType="ABILITY_MPT_OBSERVER_EYE" ModifierId="MPT_OBSERVER_EYE_SEE_THROUGH_TERRAIN"/>
+    <Row UnitAbilityType="ABILITY_MPT_OBSERVER_EYE" ModifierId="MPT_OBSERVER_EYE_SEE_THROUGH_FEATURES"/>
+    <Row UnitAbilityType="ABILITY_MPT_OBSERVER_EYE" ModifierId="MPT_OBSERVER_MOD_SEE_ALL_UNITS"/>
+    <Row UnitAbilityType="ABILITY_MPT_OBSERVER_EYE" ModifierId="MPT_OBSERVER_EYE_OCEAN_VALID"/>
+    <Row UnitAbilityType="ABILITY_MPT_OBSERVER_EYE" ModifierId="MPT_OBSERVER_EYE_OCEAN_NO_OBSTACLE"/>
+    <Row UnitAbilityType="ABILITY_MPT_OBSERVER_EYE" ModifierId="MPT_OBSERVER_EYE_OCEAN_NO_DAMAGE"/>
+    <Row UnitAbilityType="ABILITY_MPT_OBSERVER_EYE" ModifierId="MPT_OBSERVER_EYE_ICE_NO_OBSTACLE"/>
+  </UnitAbilityModifiers>
+
+  <UnitReplaces>
+    <Row CivUniqueUnitType="UNIT_MPT_OBSERVER_EYE" ReplacesUnitType="UNIT_FOUNDER"/>
+  </UnitReplaces>
+</Database>
