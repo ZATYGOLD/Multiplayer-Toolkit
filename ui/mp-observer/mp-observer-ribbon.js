@@ -685,7 +685,11 @@ function patchCityCenterClicks() {
   };
 }
 
-/** Left or right click on a leader portrait: camera to their capital, no diplomacy screen. */
+/**
+ * Leader portraits: left click moves the camera to that leader's capital,
+ * right click opens their leader panel. The Observer's own portrait moves the
+ * camera to the Observer's Eye either way.
+ */
 function onEngineInput(ev) {
   try {
     const d = ev.detail;
@@ -705,7 +709,9 @@ function onEngineInput(ev) {
     if (!onLeader || id == null || Number.isNaN(id)) return;
     ev.stopPropagation();
     ev.preventDefault();
-    if (d.status === InputActionStatuses.FINISH) lookAtPlayer(id);
+    if (d.status !== InputActionStatuses.FINISH) return;
+    if (d.name === 'mousebutton-right' && !isObserverPlayer(id)) window.dispatchEvent(new RaiseDiplomacyEvent(id));
+    else lookAtPlayer(id);
   } catch (e) { /* ignore */ }
 }
 

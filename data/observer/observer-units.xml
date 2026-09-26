@@ -17,11 +17,12 @@
       real players never see it. It has no 3D model. It keeps 1 move (a unit
       with 0 moves crashes new-game setup with a divide by zero); the Observer
       client puts it to sleep so it never asks for orders.
-    - is a naval unit that may enter open ocean in every Age (the Exploration
-      deep-ocean tech effects), placed on the ocean tile bordering marine ice
-      nearest the bottom-center of the map (ice itself is impassable: a unit
-      created on it is left off the map). The Observer client shows its flag
-      at half opacity and never selects it.
+    - sits on the Ocean / Marine / Ice tile nearest the bottom-center of the
+      map, out of every player's reach. Ice is impassable, so it is created on
+      the neighbouring open water (valid in every Age through the Exploration
+      deep-ocean tech effects) and then moved onto the ice, which the engine
+      accepts. The Observer client never selects it, so it never moves; its
+      flag is hidden.
       The game never places the Observer's starting unit, so the map script
       (maps/assign-starting-plots.js) creates the Eye with Units.create when
       it sets the Observer's start plot. The UnitReplaces row stays so the
@@ -68,6 +69,7 @@
     <Row UnitAbilityType="ABILITY_MPT_OBSERVER_EYE" ModifierId="MPT_OBSERVER_EYE_OCEAN_VALID"/>
     <Row UnitAbilityType="ABILITY_MPT_OBSERVER_EYE" ModifierId="MPT_OBSERVER_EYE_OCEAN_NO_OBSTACLE"/>
     <Row UnitAbilityType="ABILITY_MPT_OBSERVER_EYE" ModifierId="MPT_OBSERVER_EYE_OCEAN_NO_DAMAGE"/>
+    <Row UnitAbilityType="ABILITY_MPT_OBSERVER_EYE" ModifierId="MPT_OBSERVER_EYE_ICE_NO_OBSTACLE"/>
   </UnitAbilityModifiers>
 
   <UnitReplaces>

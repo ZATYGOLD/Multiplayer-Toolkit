@@ -30,7 +30,7 @@
  *     is closed, as the dialog's own buttons do;
  *   - first meetings are answered with the neutral greeting (the game waits
  *     on that answer before the turn can end);
- *   - crisis, age-progress and "player met" notifications are dismissed.
+ *   - crisis, age-progress, "player met" and agenda notifications are dismissed.
  * Other players are untouched.
  */
 import { DisplayQueueManager } from 'fs://game/core/ui/context-manager/display-queue-manager.js';
@@ -40,7 +40,7 @@ import { DiplomacyDialogManagerImpl } from 'fs://game/base-standard/ui/diplomacy
 import { createLogger, isObserverSeat } from './mp-observer-core.js';
 
 const log = createLogger('observer-prompts');
-const SILENCED_NOTIFICATIONS = /^NOTIFICATION_(CRISIS|AGE_(EARLY|LATE|VERY_LATE)_PROGRESS|AGE_PROGRESSION_|AGE_EXTENDED|PLAYER_MET)/;
+const SILENCED_NOTIFICATIONS = /^NOTIFICATION_(CRISIS|AGE_(EARLY|LATE|VERY_LATE)_PROGRESS|AGE_PROGRESSION_|AGE_EXTENDED|PLAYER_MET|DIPLOMATIC_ACTION_AGENDA)/;
 const STORY_NOTIFICATIONS = /STORY_DIRECTION$/;
 const STORY_RETRY_MS = 1500;
 const SWEEP_DELAY_MS = 500;

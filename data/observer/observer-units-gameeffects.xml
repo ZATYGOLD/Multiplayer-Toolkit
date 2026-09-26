@@ -21,4 +21,8 @@
   <Modifier id="MPT_OBSERVER_EYE_OCEAN_NO_DAMAGE" collection="COLLECTION_OWNER" effect="EFFECT_ADJUST_UNIT_WATER_DAMAGE_PROTECTION" permanent="true">
     <Argument name="WaterDamage">100</Argument>
   </Modifier>
+  <!-- Marine ice is impassable; the movement-obstacle effect (used for ocean above) is tried for it too. -->
+  <Modifier id="MPT_OBSERVER_EYE_ICE_NO_OBSTACLE" collection="COLLECTION_OWNER" effect="EFFECT_UNIT_ADJUST_IGNORE_MOVEMENT_OBSTACLE" permanent="true">
+    <Argument name="Obstacle">FEATURE_ICE</Argument>
+  </Modifier>
 </GameEffects>

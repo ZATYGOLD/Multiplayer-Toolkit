@@ -214,7 +214,7 @@ leader to play again; "Observer" is also an entry in the Team dropdown). In-game
 **End Turn** (or let the turn timer do it), you can pause, chat and open every
 screen. In place of a Founder you get the **Observer's Eye**: a hidden,
 sleeping naval unit whose sight covers the whole map, so every unit shows live.
-Its flag shows at half opacity and it cannot be clicked or selected; click (left or
+Its flag is hidden and it cannot be selected; click (left or
 right) your own portrait on the ribbon to jump to it. You never own a settlement. At an
 Age transition pick **Observer** again (it is the only civilization the
 Observer leader unlocks).
@@ -226,8 +226,8 @@ round icon buttons (the game's own mini-map lens button with its yield
 glyphs) that switch every other card between **Yields / Research /
 Production / Score**. Observers are never listed on the Victories screens or
 the age rankings, on any client, and the Observer sees every leader's real
-name there instead of "An unmet Player". Click any leader's portrait to jump the camera to their
-capital, and click a settlement banner or city-center tile to open that
+name there instead of "An unmet Player". Left-click any leader's portrait to jump the camera to
+their capital, right-click it to open their leader panel, and click a settlement banner or city-center tile to open that
 leader's diplomacy panel (shown without the ribbon), whose war section lists
 every war that leader is in and whose relationships leave out the Observer.
 Portraits turn angry for leaders at war and happy for leaders in a
@@ -237,16 +237,21 @@ per war, with a coloured pip under the portrait for each war a leader is in). Ev
 sight, military and civilian, so war moves, scouts, merchants, settlers,
 missionaries and commanders can be followed live. Click any unit (tile or
 flag; click the tile again to cycle a stack) to select it with the game's own
-selection, so the base unit panel and combat preview show it. Move ranges and
+selection, so the base unit panel shows it; with a combat unit selected,
+hover another player's unit for the game's own combat preview window. The
+game only simulates combat for the local player's own units (even a leader's
+unit against an independent it is at war with gets no answer), so the window
+shows an estimate from base strengths and health, with an "Estimate" note
+above the outcome; the window sits higher so the unit panel does not cover it. Move ranges and
 paths are not drawn for other players' units, and no order is ever sent for
 them.
 The Religion button lists every leader's pantheon. The advisor screens,
 narrative events (crises included), diplomacy dialogs (first meetings
 included; first meetings get the neutral greeting automatically), the
 end-of-age countdown popup and crisis / age-progress / "player
-met" notifications never interrupt the Observer. The Observer starts on the
-ocean tile bordering marine ice nearest the bottom-center of the map, out of
-the players' way.
+met" / agenda notifications never interrupt the Observer. The Observer's Eye
+sits on the Ocean / Marine / Ice tile nearest the bottom-center of the map,
+out of every player's reach.
 
 ### Implementation notes (honest)
 
@@ -258,12 +263,12 @@ the players' way.
   package (so no free army or ship), and reused "unknown" portrait/symbol art.
 - Start positions come from the game's `maps/assign-starting-plots.js`; the
   mod ships a copy that wraps `StartPositioner.setStartPosition` so Observer
-  players start on the ocean tile bordering marine ice nearest the
-  bottom-center of the map (else open water bordering ice, else open water,
-  else the script's plot). The Eye may enter ocean in every Age (the
-  Exploration deep-ocean tech effects). Ice itself is impassable: a unit
-  created on it is left off the map (-9999,-9999), with no vision, so an
-  off-map Eye is moved onto its tile (`Units.setLocation`). Like the other base-file override, re-check it after game updates.
+  players start on the Ocean / Marine / Ice tile nearest the bottom-center of
+  the map. Ice is impassable: a unit created on it is left off the map
+  (-9999,-9999), with no vision. So the Eye is created on the neighbouring
+  open water (valid in every Age through the Exploration deep-ocean tech
+  effects) and moved onto the ice with `Units.setLocation`, which the engine
+  accepts; it stays on the water if the move fails. Like the other base-file override, re-check it after game updates.
 - Starting units are per Age, not per civ, so the Founder cannot be skipped
   in data. The Observer civs replace it (`UnitReplaces`) with the Observer's
   Eye, a naval unit. The game never places the Observer's starting unit, so
@@ -339,7 +344,7 @@ Multiplayer-Toolkit/
 │  ├─ mp-observer-ribbon.js           # all leaders on the ribbon, fixed card size, moods, war colours, clicks
 │  ├─ mp-observer-victory.js          # observers excluded from the age rankings / score data
 │  ├─ mp-observer-diplomacy.js        # met-everyone; leader panel: that leader's wars, no Observer relationships
-│  ├─ mp-observer-units.js            # selects other players' units natively (guarded), faded Eye flag
+│  ├─ mp-observer-units.js            # selects other players' units natively (guarded), combat estimate, hidden Eye flag
 │  └─ mp-observer-prompts.js          # no narrative / diplomacy / crisis / age-countdown prompts
 ├─ ui-next/screens/victories/victories-screen-model.js  # base-game override: no observers on the Victories screens, real names for the Observer (marked MPT:)
 ├─ ui/mp-timer/                       # competitive turn timer feature

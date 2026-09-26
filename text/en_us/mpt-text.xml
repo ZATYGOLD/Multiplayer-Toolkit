@@ -37,6 +37,9 @@
     <Row Tag="LOC_MPT_OBSERVER_NO_WARS">
       <Text>Not at war.</Text>
     </Row>
+    <Row Tag="LOC_MPT_OBSERVER_COMBAT_ESTIMATE">
+      <Text>Estimate: base strengths only</Text>
+    </Row>
     <Row Tag="LOC_MPT_OBSERVER_TECHS_CIVICS">
       <Text>Techs &amp; Civics</Text>
     </Row>
