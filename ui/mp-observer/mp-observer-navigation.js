@@ -23,8 +23,8 @@
  *
  * For the Observer seat:
  *   - leader portraits on the ribbon: left click moves the camera to that
- *     leader's capital, right click opens their leader panel; the Observer's
- *     own portrait moves the camera to the Observer's Eye;
+ *     leader's capital, right click also opens their leader panel; the
+ *     Observer's own portrait moves the camera to the Observer's Eye;
  *   - a settlement banner or city-center tile opens its owner's leader panel
  *     (the base game refuses unmet leaders, and the Observer meets no one).
  */
@@ -58,7 +58,7 @@ function ownerOfBanner(banner) {
 
 /** The ribbon portrait (and its player id) under an event target, or null. */
 function portraitTarget(target) {
-  const ribbon = findAncestor(target, (el) => el.localName === 'panel-diplo-ribbon');
+  const ribbon = findAncestor(target, (el) => String(el.localName).toLowerCase() === 'panel-diplo-ribbon');
   if (!ribbon || !findAncestor(target, (el) => el.classList?.contains('diplo-ribbon__portrait') || el.classList?.contains('diplo-ribbon__portrait-hitbox'))) return null;
   const id = parseInt(findAncestor(target, (el) => el.getAttribute('data-player-id') != null)?.getAttribute('data-player-id'), 10);
   return Number.isNaN(id) ? null : id;
@@ -75,9 +75,9 @@ function onEngineInput(ev) {
     ev.stopPropagation();
     ev.preventDefault();
     if (d.status !== InputActionStatuses.FINISH) return;
-    if (bannerOwner != null) openLeaderPanel(bannerOwner);
-    else if (d.name === 'mousebutton-right' && !isObserverPlayer(portraitId)) openLeaderPanel(portraitId);
-    else lookAtPlayer(portraitId);
+    if (bannerOwner != null) { openLeaderPanel(bannerOwner); return; }
+    lookAtPlayer(portraitId);
+    if (d.name === 'mousebutton-right' && !isObserverPlayer(portraitId)) openLeaderPanel(portraitId);
   } catch (e) { log(`click failed: ${e}`); }
 }
 

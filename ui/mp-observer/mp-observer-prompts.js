@@ -29,7 +29,9 @@
  *     end until they are);
  *   - diplomacy dialogs addressed to the Observer never open; their session
  *     is closed, as the dialog's own buttons do;
- *   - the end-of-age countdown popup never opens;
+ *   - the end-of-age countdown popup never opens, and each Age's start step
+ *     (dedications, capital) is completed with nothing chosen - the Observer
+ *     has no settlement and no legacies;
  *   - crisis, age-progress, "player met" and agenda notifications are dismissed.
  */
 import { DisplayQueueManager } from 'fs://game/core/ui/context-manager/display-queue-manager.js';
@@ -81,9 +83,9 @@ function answerPendingStory() {
     if (!storyId || storyId === lastAnsweredStory) return;
     const answered = storyChoices(stories, storyId).find((key) =>
       tryOperation(PlayerOperationTypes.CHOOSE_NARRATIVE_STORY_DIRECTION, { TargetType: key, Target: storyId, Action: PlayerOperationParameters.Activate }));
-    if (!answered) { log(`story ${storyId}: no available choice`); return; }
+    if (!answered) { log(`story ${JSON.stringify(storyId)}: no available choice`); return; }
     lastAnsweredStory = storyId;
-    debug(`story ${storyId} answered with ${answered}`);
+    debug(`story ${JSON.stringify(storyId)} answered with ${answered}`);
     setTimeout(answerPendingStory, STORY_RETRY_MS);   // the next pending story, if any
   } catch (e) { log(`story answer failed: ${e}`); }
 }
@@ -104,6 +106,15 @@ function answerFirstMeets() {
   }
 }
 
+// ============================ Age start ============================
+
+/** Complete the Age-start step (dedications / advanced start) with nothing chosen. */
+function completeAgeStart() {
+  try {
+    if (tryOperation(PlayerOperationTypes.ADVANCED_START_MARK_COMPLETED, {})) debug('age start completed');
+  } catch (e) { log(`age start completion failed: ${e}`); }
+}
+
 // ============================ Notifications ============================
 
 function notificationType(id) {
@@ -114,6 +125,7 @@ function notificationType(id) {
 /** Answer what the game waits on and dismiss silenced notifications. */
 function sweep() {
   if (!isObserverSeat()) return;
+  completeAgeStart();
   answerFirstMeets();
   for (const id of Game.Notifications.getIdsForPlayer(GameContext.localPlayerID) ?? []) {
     try {

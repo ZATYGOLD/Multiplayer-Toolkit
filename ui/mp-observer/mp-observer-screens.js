@@ -23,7 +23,9 @@
  *
  * Every screen opens through ContextManager.push (popups first pass through
  * the PopupSequencer queue). For the Observer seat:
- *   - blocked: the advisor screens (there is no empire to advise);
+ *   - blocked: the advisor screens (there is no empire to advise) and the
+ *     Age-start dedication / advanced-start screens (mp-observer-prompts.js
+ *     completes that step for the Observer);
  *   - redirected: religion screens open every leader's pantheon
  *     (mp-observer-overview.js).
  */
@@ -33,7 +35,7 @@ import { wrapMethod } from '../mpt-shared/mpt-util.js';
 import { isObserverSeat } from './mp-observer-core.js';
 import { OVERVIEW_PANEL_TAG, setOverviewSource } from './mp-observer-overview.js';
 
-const BLOCKED = new Set(['screen-advisor-council', 'advisor-council-popup']);
+const BLOCKED = new Set(['screen-advisor-council', 'advisor-council-popup', 'screen-dedication-selection', 'screen-advanced-start']);
 const REDIRECTS = {
   'screen-pantheon-chooser': 'pantheons',
   'panel-pantheon-complete': 'pantheons',

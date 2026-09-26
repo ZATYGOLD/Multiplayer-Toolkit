@@ -12,10 +12,11 @@
       players never see it. It has no art of its own (the game shows a
       generic ship), and keeps 1 move: 0 moves crashes new-game setup with a
       divide by zero. The Observer client keeps it asleep and hidden.
-  The game never places the Observer's starting unit, so the map script
-  (maps/assign-starting-plots.js) creates the Eye on open water next to the
-  Ocean / Marine / Ice tile nearest the bottom-center of the map, then moves
-  it onto the ice (impassable, but the engine accepts the move). Open ocean is
+  The game never places the Observer's starting unit, and an Age transition
+  resets every unit, so maps/mpt-observer-eye.js creates the Eye (called by
+  the new-game map script and the Age-transition script) on open water next
+  to the Ocean / Marine / Ice tile nearest the bottom-center of the map, then
+  moves it onto the ice (impassable, but the engine accepts the move). Open ocean is
   valid for it in every Age through the Exploration deep-ocean tech effects.
   UnitReplaces keeps the Observer from ever receiving a real Founder.
 -->

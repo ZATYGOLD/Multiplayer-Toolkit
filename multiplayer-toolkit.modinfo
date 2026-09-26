@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Mod id="multiplayer-toolkit" version="00509" xmlns="ModInfo">
+<Mod id="multiplayer-toolkit" version="00600" xmlns="ModInfo">
     <Properties>
         <Name>LOC_MOD_MPT_NAME</Name>
         <Description>LOC_MOD_MPT_DESCRIPTION</Description>
         <Authors>Zatygold</Authors>
         <Package>Mod</Package>
         <AffectsSavedGames>0</AffectsSavedGames>
-        <Version>0.5.9</Version>
-        <LastUpdated>2026-09-25</LastUpdated>
+        <Version>0.6.00</Version>
+        <LastUpdated>2026-09-27</LastUpdated>
         <ShowInBrowser>1</ShowInBrowser>
     </Properties>
 
@@ -115,6 +115,8 @@
             <Actions>
                 <ImportFiles>
                     <Item>maps/assign-starting-plots.js</Item>
+                    <Item>maps/mpt-observer-eye.js</Item>
+                    <Item>scripts/age-transition-post-load.js</Item>
                     <Item>ui-next/screens/victories/victories-screen-model.js</Item>
                 </ImportFiles>
                 <UpdateDatabase>

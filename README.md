@@ -1,7 +1,7 @@
 # Multiplayer Toolkit
 
 A toolkit of multiplayer quality-of-life features for **Sid Meier's Civilization
-VII**, built on the game's own UI components. Current version: **0.5.9**.
+VII**, built on the game's own UI components. Current version: **0.6.00**.
 
 Four tools so far:
 
@@ -229,7 +229,7 @@ glyphs) that switch every other card between **Yields / Research /
 Production / Score**. Observers are never listed on the Victories screens or
 the age rankings, on any client, and the Observer sees every leader's real
 name there instead of "An unmet Player". Left-click any leader's portrait to jump the camera to
-their capital, right-click it to open their leader panel, and click a settlement banner or city-center tile to open that
+their capital; right-click also opens their leader panel; click a settlement banner or city-center tile to open that
 leader's diplomacy panel (shown without the ribbon), whose war section lists
 every war that leader is in and whose relationships leave out the Observer.
 Portraits turn angry for leaders at war and happy for leaders in a
@@ -251,7 +251,9 @@ The Religion button lists every leader's pantheon. The advisor screens,
 narrative events (crises included), diplomacy dialogs (first meetings
 included; first meetings get the neutral greeting automatically), the
 end-of-age countdown popup and crisis / age-progress / "player
-met" / agenda notifications never interrupt the Observer. The Observer's Eye
+met" / agenda notifications never interrupt the Observer. At each new Age the
+Observer skips dedications and capital choice (it has no settlement) and gets
+a new Eye. The Observer's Eye
 sits on the Ocean / Marine / Ice tile nearest the bottom-center of the map,
 out of every player's reach.
 
@@ -328,6 +330,8 @@ Multiplayer-Toolkit/
 │  └─ <age>/CompetitiveTimer.sql      # per-Age tuning
 ├─ icons/                             # eye badge + hex/circle leader portraits
 ├─ maps/assign-starting-plots.js      # base-game override: Observer start + Eye creation (marked MPT:)
+├─ maps/mpt-observer-eye.js           # Observer's Eye placement, shared by the two gameplay-script overrides
+├─ scripts/age-transition-post-load.js  # base-game override: a new Eye each Age (marked MPT:)
 ├─ ui-next/screens/victories/victories-screen-model.js  # base-game override: no Observers on the Victories screens (marked MPT:)
 ├─ text/en_us/
 │  ├─ mod-info-text.xml               # mod name / description
@@ -375,6 +379,24 @@ shared logger; features with a `debug` setting log more when it is on.
 
 ## Changelog
 
+### 0.6.00
+
+- **Cleanup:** shared helpers (`ui/mpt-shared/mpt-util.js`) for logging,
+  method wrapping and deferred patching across every feature; the Observer's
+  ribbon split into model / rows / look / buttons / navigation modules; all
+  logs reach `UI.log`; pause-menu texts are localized and player names are
+  shown as plain text; Observers no longer count as human players for the
+  Competitive timer or for disconnect pauses; pause/resume chat commands no
+  longer play the chat sound or mark chat unread once chat has been opened.
+- **Fix: Observer Age transitions.** The Observer's Eye is recreated each Age
+  (units are reset), and the dedication / capital step is completed for the
+  Observer instead of prompting.
+- **Fix: ribbon portrait clicks** (left: capital; right: capital and leader
+  panel) no longer fall through to the base ribbon.
+- **Fix: picking the Observer in single-player setup crashed the game.** The
+  Observer is now hidden from single-player setup (a remembered pick resets to
+  Random); it stays available in the multiplayer lobby.
+
 ### 0.5.9
 
 - **New (experimental): Observer leader & civilization** — a full restart of
@@ -388,16 +410,6 @@ shared logger; features with a `debug` setting log more when it is on.
   gold for celebrations and colour-match leaders at war with each other.
   Crisis, narrative and end-of-age prompts no longer interrupt the Observer,
   and the leader panel shows no ribbon.
-- **Cleanup:** shared helpers (`ui/mpt-shared/mpt-util.js`) for logging,
-  method wrapping and deferred patching across every feature; the Observer's
-  ribbon split into model / rows / look / buttons / navigation modules; all
-  logs reach `UI.log`; pause-menu texts are localized and player names are
-  shown as plain text; Observers no longer count as human players for the
-  Competitive timer or for disconnect pauses; pause/resume chat commands no
-  longer play the chat sound or mark chat unread once chat has been opened.
-- **Fix: picking the Observer in single-player setup crashed the game.** The
-  Observer is now hidden from single-player setup (a remembered pick resets to
-  Random); it stays available in the multiplayer lobby.
 - **Removed: the old Observer slot role and in-game dashboard.** Findings kept
   for the record: an observer slot has no player in-game, the September 16
   game update made `advice-manager.js` throw at load for the seatless observer

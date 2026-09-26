@@ -1,114 +1,36 @@
 import { g_MinLandmassSizeForIslandBias, g_DesiredBufferBetweenMajorStarts, g_RequiredBufferBetweenMajorStarts } from './map-globals.js';
 import { getSectorRegion, shuffle, isOceanAccess } from './map-utilities.js';
 import { profileScope } from '../scripts/profiling.js';
+import { createObserverEye, isObserverPlayerId, observerPlots } from './mpt-observer-eye.js';   // MPT
 
 /*
  * Multiplayer Toolkit - base-game override.
  * Copied verbatim from the game's base-standard/maps/assign-starting-plots.js
- * (build dated 2026-09-16); the ONLY change is the "MPT:" block below, which
- * wraps StartPositioner.setStartPosition. Re-apply after game updates.
+ * (build dated 2026-09-16); the ONLY changes are the "MPT:" import and block
+ * below, which wrap StartPositioner.setStartPosition. Re-apply after game updates.
  *
  * MPT: Observer players (leader LEADER_MPT_OBSERVER) never start on land with
- * the other majors. Whatever plot the map script chose for them is swapped
- * for the Ocean / Marine / Ice tile nearest the bottom-center of the map that
- * borders open water (out of every player's reach); each observer gets its
- * own tile. The game never places the Observer's starting unit, so the
- * Observer's Eye is created here: on the neighbouring open water (the engine
- * refuses to create a unit on impassable ice and leaves it off the map), then
- * moved onto the ice tile, which the engine accepts. If the move fails the
- * Eye stays on the water; without ice the Eye starts on the nearest open
- * water; if all else fails, on the script's own plot.
+ * the other majors: their start plot becomes the marine ice tile chosen by
+ * ./mpt-observer-eye.js, and the Observer's Eye is created there.
  */
 (function mptObserverStartPositions() {
-  const OBSERVER_LEADER = 'LEADER_MPT_OBSERVER';
-  const EYE_UNIT = 'UNIT_MPT_OBSERVER_EYE';
   const usedPlots = new Set();
-
   const log = (m) => console.log('[MPT observer-start] ' + m);
-
-  const isObserver = (playerId) => {
-    try {
-      const p = Players.get(playerId);
-      return !!p && GameInfo.Leaders.lookup(p.leaderType)?.LeaderType === OBSERVER_LEADER;
-    } catch (e) { return false; }
-  };
-
-  const terrainType = (x, y) => { try { return GameInfo.Terrains.lookup(GameplayMap.getTerrainType(x, y))?.TerrainType ?? ''; } catch (e) { return ''; } };
-  const featureType = (x, y) => { try { return GameInfo.Features.lookup(GameplayMap.getFeatureType(x, y))?.FeatureType ?? ''; } catch (e) { return ''; } };
-  const isWater = (x, y) => { try { return GameplayMap.isWater(x, y); } catch (e) { return false; } };
-  const isIce = (p) => featureType(p.x, p.y) === 'FEATURE_ICE';
-  const isOceanIce = (p) => isWater(p.x, p.y) && terrainType(p.x, p.y) === 'TERRAIN_OCEAN' && isIce(p);
-  const isOpenWater = (p) => isWater(p.x, p.y) && !isIce(p);
-
-  /** Neighbouring plots of p that match the test. */
-  const neighbors = (p, test) => {
-    const found = [];
-    try {
-      for (let dir = 0; dir < DirectionTypes.NUM_DIRECTION_TYPES; dir++) {
-        const adj = GameplayMap.getAdjacentPlotLocation({ x: p.x, y: p.y }, dir);
-        if (adj && adj.x >= 0 && test(adj)) found.push({ x: adj.x, y: adj.y });
-      }
-    } catch (e) { /* none */ }
-    return found;
-  };
-
-  /** Every free plot, nearest the bottom-center of the map first (row 0 is the bottom). */
-  const plotsFromBottomCenter = () => {
-    const w = GameplayMap.getGridWidth(), h = GameplayMap.getGridHeight();
-    const cx = Math.floor(w / 2);
-    const plots = [];
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-      const index = y * w + x;
-      if (!usedPlots.has(index)) plots.push({ x, y, index, d: Math.abs(x - cx) + y });
-    }
-    return plots.sort((a, b) => a.d - b.d);
-  };
-
-  /** start: the observer's plot (the Eye's final tile); water: where the Eye is created. */
-  const observerPlots = (playerId) => {
-    const plots = plotsFromBottomCenter();
-    const ice = plots.find((p) => isOceanIce(p) && neighbors(p, isOpenWater).length > 0);
-    const start = ice ?? plots.find(isOpenWater);
-    if (!start) { log(`player ${playerId}: no water; keeping the script's plot`); return null; }
-    usedPlots.add(start.index);
-    const water = ice ? neighbors(ice, isOpenWater)[0] : start;
-    log(`player ${playerId}: bottom-center -> (${start.x},${start.y}) ${terrainType(start.x, start.y)} ${featureType(start.x, start.y)}`);
-    return { start, water };
-  };
-
-  const onPlot = (unitId, p) => { const loc = Units.get(unitId)?.location; return !!loc && loc.x === p.x && loc.y === p.y; };
-
-  /** Create the Observer's Eye on the water, then move it onto the start plot (the ice). */
-  const createEye = (playerId, { start, water }) => {
-    const type = GameInfo.Units.lookup(EYE_UNIT)?.$hash ?? Database.makeHash(EYE_UNIT);
-    let result = Units.create(playerId, { Type: type, Location: { x: water.x, y: water.y }, Validate: true });
-    if (!result?.Success) result = Units.create(playerId, { Type: type, Location: { x: water.x, y: water.y }, Validate: false });
-    if (!result?.Success || !result.ID) { log(`player ${playerId}: eye could not be created`); return; }
-    if (!onPlot(result.ID, water)) Units.setLocation(result.ID, { x: water.x, y: water.y });
-    if (start.x !== water.x || start.y !== water.y) {
-      Units.setLocation(result.ID, { x: start.x, y: start.y });
-      if (!onPlot(result.ID, start)) Units.setLocation(result.ID, { x: water.x, y: water.y });
-    }
-    const loc = Units.get(result.ID)?.location;
-    log(`player ${playerId}: eye at (${loc?.x},${loc?.y})`);
-  };
-
   try {
     const base = StartPositioner.setStartPosition.bind(StartPositioner);
     StartPositioner.setStartPosition = (plotIndex, playerId) => {
-      if (!isObserver(playerId)) return base(plotIndex, playerId);
+      if (!isObserverPlayerId(playerId)) return base(plotIndex, playerId);
       let plots = null;
-      try { plots = observerPlots(playerId); }
+      try { plots = observerPlots(usedPlots); }
       catch (e) { log(`observer start failed for ${playerId}: ${e}`); }
       const result = base(plots ? plots.start.index : plotIndex, playerId);
       try {
         const w = GameplayMap.getGridWidth();
         const script = { x: plotIndex % w, y: Math.floor(plotIndex / w) };
-        createEye(playerId, plots ?? { start: script, water: script });
+        createObserverEye(playerId, plots ?? { start: script, water: script });
       } catch (e) { log(`eye creation failed for ${playerId}: ${e}`); }
       return result;
     };
-    log('observer bottom-center starts installed');
   } catch (e) { log('could not wrap StartPositioner: ' + e); }
 })();
 
