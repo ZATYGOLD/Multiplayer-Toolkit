@@ -30,7 +30,11 @@
  *   - While observing, the civilization and team dropdowns are locked and the
  *     team column shows the eye badge. The leader dropdown stays open so the
  *     player can switch back.
- * Wraps the lobby model's dropdown builders and callbacks; no base file edits.
+ *   - The Observer is multiplayer-only: single-player game setup never lists
+ *     it (it has no leader or banner 3D art, and picking it there crashed the
+ *     game), and a remembered Observer pick is reset to Random.
+ * Wraps the lobby model's dropdown builders and callbacks and the setup's
+ * player-parameter lookup; no base file edits.
  */
 import MPLobbyModel, { MPLobbyDataModel } from 'fs://game/core/ui/shell/mp-staging/model-mp-staging-new.js';
 import { MPStagingTeamDropdown } from 'fs://game/core/ui/shell/mp-staging/mp-staging-team-dropdown.js';
@@ -176,6 +180,33 @@ function syncSelection(playerID, param, value) {
   }
 }
 
+// ============================ Single-player setup ============================
+
+const SETUP_PARAMS = new Set([PARAM_LEADER, PARAM_CIV]);
+const isObserverValue = (value) => value === OBSERVER_LEADER || isObserverCiv(value);
+
+function isMultiplayerSetup() {
+  try { return !!Configuration.getGame().isAnyMultiplayer; } catch (e) { return true; }   // unknown: leave the lists alone
+}
+
+/** A copy of the leader / civilization parameter without the Observer entries; a selected Observer is reset to Random. */
+function withoutObserver(playerID, param, paramName) {
+  const values = param?.domain?.possibleValues;
+  if (!Array.isArray(values)) return param;
+  if (isObserverValue(param.value?.value?.toString())) {
+    setTimeout(() => setParam(playerID, paramName, 'RANDOM'), 0);
+  }
+  return { ...param, domain: { ...param.domain, possibleValues: values.filter((v) => !isObserverValue(v.value?.toString())) } };
+}
+
+function hideFromSinglePlayer() {
+  wrapMethod(GameSetup, 'findPlayerParameter', (base, playerID, paramName, ...rest) => {
+    const param = base(playerID, paramName, ...rest);
+    if (!param || !SETUP_PARAMS.has(paramName) || isMultiplayerSetup()) return param;
+    try { return withoutObserver(playerID, param, paramName); } catch (e) { return param; }
+  });
+}
+
 // ============================ Installation ============================
 
 function install() {
@@ -243,6 +274,7 @@ function install() {
     } catch (e) { /* keep base visuals */ }
   });
 
+  hideFromSinglePlayer();
   log(`observer role installed (start-age civ: ${observerCivForStartAge()})`);
 }
 

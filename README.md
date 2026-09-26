@@ -295,10 +295,14 @@ out of every player's reach.
 
 ### Known limits
 
-- The Observer leader has no 3D model. If the Eye's sight makes the game
-  "meet" leaders, their first-meeting greeting may appear once each.
-- The Observer's Eye has no 3D model; only its flag shows, and only to the
-  Observer.
+- Multiplayer only: single-player game setup never lists the Observer (it has
+  no leader or banner 3D art, and picking it there crashed the game).
+- The Observer's Eye has no art of its own: the game shows a generic ship on
+  its ice tile, visible only to the Observer (its flag is hidden).
+- The combat preview between other players' units is an estimate (base
+  strengths and health only).
+- A "Random" leader or civilization can in principle resolve to the Observer,
+  since it sits in the standard leader and civilization lists.
 - Requires the same mod on every client (it changes gameplay data).
 
 ---
@@ -391,6 +395,9 @@ shared logger; features with a `debug` setting log more when it is on.
   shown as plain text; Observers no longer count as human players for the
   Competitive timer or for disconnect pauses; pause/resume chat commands no
   longer play the chat sound or mark chat unread once chat has been opened.
+- **Fix: picking the Observer in single-player setup crashed the game.** The
+  Observer is now hidden from single-player setup (a remembered pick resets to
+  Random); it stays available in the multiplayer lobby.
 - **Removed: the old Observer slot role and in-game dashboard.** Findings kept
   for the record: an observer slot has no player in-game, the September 16
   game update made `advice-manager.js` throw at load for the seatless observer
