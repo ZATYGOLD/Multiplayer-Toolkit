@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Multiplayer Toolkit - Observer leader (gameplay database, loaded in every Age).
+
+  LEADER_MPT_OBSERVER is a real major leader with no abilities. A player who
+  picks it exists in-game like any other player (valid player id, full HUD,
+  pause, turn control), but never founds a city: the observer civilizations
+  replace the Founder with the Observer's Eye (observer-units.xml).
+
+  Default defeat: a player with no cities and no founder is normally
+  eliminated. The observer leader is exempted by adding an inverse
+  leader-match requirement to DEFAULT_DEFEAT_REQUIREMENTS (TEST_ALL).
+  Map vision comes from the Observer's Eye unit (observer-units.xml).
+-->
+<Database>
+  <Types>
+    <Row Type="LEADER_MPT_OBSERVER" Kind="KIND_LEADER"/>
+    <Row Type="TRAIT_MPT_OBSERVER_LEADER" Kind="KIND_TRAIT"/>
+  </Types>
+
+  <Leaders>
+    <Row LeaderType="LEADER_MPT_OBSERVER" Name="LOC_LEADER_MPT_OBSERVER_NAME" IsMajorLeader="true" InheritFrom="LEADER_DEFAULT"/>
+  </Leaders>
+
+  <Traits>
+    <Row TraitType="TRAIT_MPT_OBSERVER_LEADER" InternalOnly="true" Name="LOC_TRAIT_MPT_OBSERVER_LEADER_NAME" Description="LOC_TRAIT_MPT_OBSERVER_LEADER_DESCRIPTION"/>
+  </Traits>
+
+  <LeaderTraits>
+    <Row LeaderType="LEADER_MPT_OBSERVER" TraitType="TRAIT_MPT_OBSERVER_LEADER"/>
+  </LeaderTraits>
+
+  <TypeQuotes>
+    <Row Type="LEADER_MPT_OBSERVER" Quote="LOC_LEADER_MPT_OBSERVER_QUOTE"/>
+  </TypeQuotes>
+
+  <!-- Never eliminated for having no cities or founder. -->
+  <Requirements>
+    <Row RequirementId="REQ_MPT_PLAYER_IS_NOT_OBSERVER" RequirementType="REQUIREMENT_PLAYER_LEADER_TYPE_MATCHES" Inverse="true"/>
+    <Row RequirementId="REQ_MPT_PLAYER_IS_OBSERVER" RequirementType="REQUIREMENT_PLAYER_LEADER_TYPE_MATCHES"/>
+  </Requirements>
+  <RequirementArguments>
+    <Row RequirementId="REQ_MPT_PLAYER_IS_NOT_OBSERVER" Name="LeaderType" Value="LEADER_MPT_OBSERVER"/>
+    <Row RequirementId="REQ_MPT_PLAYER_IS_OBSERVER" Name="LeaderType" Value="LEADER_MPT_OBSERVER"/>
+  </RequirementArguments>
+  <RequirementSets>
+    <Row RequirementSetId="REQSET_MPT_LEADER_IS_OBSERVER" RequirementSetType="REQUIREMENTSET_TEST_ALL"/>
+  </RequirementSets>
+  <RequirementSetRequirements>
+    <Row RequirementSetId="DEFAULT_DEFEAT_REQUIREMENTS" RequirementId="REQ_MPT_PLAYER_IS_NOT_OBSERVER"/>
+    <Row RequirementSetId="REQSET_MPT_LEADER_IS_OBSERVER" RequirementId="REQ_MPT_PLAYER_IS_OBSERVER"/>
+  </RequirementSetRequirements>
+</Database>

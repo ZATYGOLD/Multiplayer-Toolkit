@@ -26,11 +26,19 @@
     <Row Tag="LOC_MPT_PAUSE_KEYBIND_TT">
       <Text>Pauses the multiplayer game, or toggles your readiness while it is paused. Added by Multiplayer Toolkit.</Text>
     </Row>
-    <Row Tag="LOC_MPT_TEAM_OBSERVER">
-      <Text>Observer</Text>
+
+    <!-- MPT Observer leader & civilizations -->
+    <Row Tag="LOC_MPT_OBSERVER_NO_PANTHEON">
+      <Text>No Pantheon yet.</Text>
     </Row>
-    <Row Tag="LOC_MPT_TEAM_OBSERVER_DESC">
-      <Text>Watch the game as a spectator instead of playing. Pick any team to play again.</Text>
+    <Row Tag="LOC_MPT_OBSERVER_AT_WAR_WITH">
+      <Text>At war with {1_Leader}</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_NO_WARS">
+      <Text>Not at war.</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_TECHS_CIVICS">
+      <Text>Techs &amp; Civics</Text>
     </Row>
     <Row Tag="LOC_MPT_OBSERVER_YIELDS">
       <Text>Yields</Text>
@@ -43,18 +51,6 @@
     </Row>
     <Row Tag="LOC_MPT_OBSERVER_SCORE">
       <Text>Score</Text>
-    </Row>
-    <Row Tag="LOC_MPT_OBSERVER_NEXT_TURN">
-      <Text>Next Turn</Text>
-    </Row>
-    <Row Tag="LOC_MPT_OBSERVER_ADVANCING">
-      <Text>Advancing...</Text>
-    </Row>
-    <Row Tag="LOC_MPT_OBSERVER_AUTO_ON">
-      <Text>Auto Turns: On</Text>
-    </Row>
-    <Row Tag="LOC_MPT_OBSERVER_AUTO_OFF">
-      <Text>Auto Turns: Off</Text>
     </Row>
     <Row Tag="LOC_MPT_OBSERVER_TOTAL">
       <Text>Total</Text>
@@ -79,6 +75,66 @@
     </Row>
     <Row Tag="LOC_MPT_OBSERVER_NONE">
       <Text>—</Text>
+    </Row>
+    <Row Tag="LOC_MPT_TEAM_OBSERVER">
+      <Text>Observer</Text>
+    </Row>
+    <Row Tag="LOC_MPT_TEAM_OBSERVER_DESC">
+      <Text>Observers have no team. Pick another leader to play.</Text>
+    </Row>
+    <Row Tag="LOC_LEADER_MPT_OBSERVER_NAME">
+      <Text>Observer</Text>
+    </Row>
+    <Row Tag="LOC_LEADER_MPT_OBSERVER_DESCRIPTION">
+      <Text>Watch the game without playing. The Observer has no abilities, founds no settlement and sees the whole map. Pair with the Observer civilization.</Text>
+    </Row>
+    <Row Tag="LOC_LEADER_MPT_OBSERVER_QUOTE">
+      <Text>"To see everything, hold nothing."</Text>
+    </Row>
+    <Row Tag="LOC_LOADING_LEADER_INTRO_TEXT_MPT_OBSERVER">
+      <Text>You are here to watch. Added by Multiplayer Toolkit.</Text>
+    </Row>
+    <Row Tag="LOC_TRAIT_MPT_OBSERVER_LEADER_NAME">
+      <Text>All-Seeing</Text>
+    </Row>
+    <Row Tag="LOC_TRAIT_MPT_OBSERVER_LEADER_DESCRIPTION">
+      <Text>Never eliminated for having no settlements.</Text>
+    </Row>
+    <Row Tag="LOC_CIVILIZATION_MPT_OBSERVER_NAME">
+      <Text>Observer</Text>
+    </Row>
+    <Row Tag="LOC_CIVILIZATION_MPT_OBSERVER_FULLNAME">
+      <Text>Observer</Text>
+    </Row>
+    <Row Tag="LOC_CIVILIZATION_MPT_OBSERVER_ADJECTIVE">
+      <Text>Observer</Text>
+    </Row>
+    <Row Tag="LOC_CIVILIZATION_MPT_OBSERVER_DESCRIPTION">
+      <Text>A civilization that never settles. In place of a Founder it starts with the Observer's Eye, which sees every plot and every unit. Added by Multiplayer Toolkit.</Text>
+    </Row>
+    <Row Tag="LOC_LOADING_CIV_INTRO_TEXT_MPT_OBSERVER">
+      <Text>No cities, no score - only the view.</Text>
+    </Row>
+    <Row Tag="LOC_CITY_NAME_MPT_OBSERVER1">
+      <Text>Overlook</Text>
+    </Row>
+    <Row Tag="LOC_TRAIT_MPT_OBSERVER_NAME">
+      <Text>Spectator</Text>
+    </Row>
+    <Row Tag="LOC_TRAIT_MPT_OBSERVER_DESCRIPTION">
+      <Text>Starts with the Observer's Eye in place of a Founder. No bonuses.</Text>
+    </Row>
+    <Row Tag="LOC_UNIT_MPT_OBSERVER_EYE_NAME">
+      <Text>Observer's Eye</Text>
+    </Row>
+    <Row Tag="LOC_UNIT_MPT_OBSERVER_EYE_DESCRIPTION">
+      <Text>Sees the whole map through terrain and vegetation, and keeps every unit in sight. Hidden from other players; cannot found a city or be damaged.</Text>
+    </Row>
+    <Row Tag="LOC_UNLOCK_PLAY_AS_MPT_OBSERVER_DESCRIPTION">
+      <Text>Play as [B]Observer[/B].</Text>
+    </Row>
+    <Row Tag="LOC_UNLOCK_PLAY_AS_MPT_OBSERVER_TOOLTIP">
+      <Text>The [B]Observer[/B] watches as the [B]Observer[/B] civilization in every Age.</Text>
     </Row>
 
     <!-- MPT Timers -->

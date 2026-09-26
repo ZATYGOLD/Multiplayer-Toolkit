@@ -46,10 +46,27 @@
                 <UpdateDatabase>
                     <Item>config/SetupParameters.sql</Item>
                     <Item>config/mpt-input.sql</Item>
+                    <Item>config/observer-config.xml</Item>
                 </UpdateDatabase>
                 <ImportFiles>
                     <Item>icons/mpt_observer.png</Item>
+                    <Item>icons/mpt_observer_white.png</Item>
+                    <Item>icons/mpt_observer_civ.png</Item>
+                    <Item>icons/mpt_observer_leader_256.png</Item>
+                    <Item>icons/mpt_observer_leader_140.png</Item>
+                    <Item>icons/mpt_observer_leader_128.png</Item>
+                    <Item>icons/mpt_observer_leader_64.png</Item>
+                    <Item>icons/mpt_observer_circle_256.png</Item>
+                    <Item>icons/mpt_observer_circle_140.png</Item>
+                    <Item>icons/mpt_observer_circle_128.png</Item>
+                    <Item>icons/mpt_observer_circle_64.png</Item>
                 </ImportFiles>
+                <UpdateIcons>
+                    <Item>data/observer/observer-icons.xml</Item>
+                </UpdateIcons>
+                <UpdateColors>
+                    <Item>data/observer/observer-colors.xml</Item>
+                </UpdateColors>
                 <UIScripts>
                     <Item>ui/mp-lobby/mp-lobby-config.js</Item>
                     <Item>ui/mp-lobby/mp-lobby-observer.js</Item>
@@ -86,18 +103,53 @@
             </Actions>
         </ActionGroup>
 
-<!--*********************** GAME: OBSERVER IN-GAME FEATURES *************************************-->
 
-        <ActionGroup id="mpt-observer-script" scope="game" criteria="always">
+
+<!--*********************** GAME: OBSERVER LEADER & CIVILIZATIONS ******************************-->
+
+        <ActionGroup id="mpt-observer" scope="game" criteria="always">
             <Properties><LoadOrder>1000</LoadOrder></Properties>
             <Actions>
+                <ImportFiles>
+                    <Item>maps/assign-starting-plots.js</Item>
+                    <Item>ui-next/screens/victories/victories-screen-model.js</Item>
+                </ImportFiles>
+                <UpdateDatabase>
+                    <Item>data/observer/observer-leader.xml</Item>
+                    <Item>data/observer/observer-civilizations.xml</Item>
+                    <Item>data/observer/observer-units-gameeffects.xml</Item>
+                    <Item>data/observer/observer-units.xml</Item>
+                </UpdateDatabase>
+                <ImportFiles>
+                    <Item>icons/mpt_observer.png</Item>
+                    <Item>icons/mpt_observer_white.png</Item>
+                    <Item>icons/mpt_observer_civ.png</Item>
+                    <Item>icons/mpt_observer_leader_256.png</Item>
+                    <Item>icons/mpt_observer_leader_140.png</Item>
+                    <Item>icons/mpt_observer_leader_128.png</Item>
+                    <Item>icons/mpt_observer_leader_64.png</Item>
+                    <Item>icons/mpt_observer_circle_256.png</Item>
+                    <Item>icons/mpt_observer_circle_140.png</Item>
+                    <Item>icons/mpt_observer_circle_128.png</Item>
+                    <Item>icons/mpt_observer_circle_64.png</Item>
+                </ImportFiles>
+                <UpdateIcons>
+                    <Item>data/observer/observer-icons.xml</Item>
+                </UpdateIcons>
+                <UpdateColors>
+                    <Item>data/observer/observer-colors.xml</Item>
+                </UpdateColors>
                 <UIScripts>
+                    <Item>ui/mp-observer/mp-observer-core.js</Item>
                     <Item>ui/mp-observer/mp-observer-config.js</Item>
+                    <Item>ui/mp-observer/mp-observer-overview.js</Item>
+                    <Item>ui/mp-observer/mp-observer-screens.js</Item>
+                    <Item>ui/mp-observer/mp-observer-seat.js</Item>
                     <Item>ui/mp-observer/mp-observer-ribbon.js</Item>
-                    <Item>ui/mp-observer/mp-observer-turns.js</Item>
-                    <Item>ui/mp-observer/mp-observer-view.js</Item>
-                    <Item>ui/mp-observer/mp-observer-menu.js</Item>
-                    <Item>ui/mp-observer/mp-observer-banners.js</Item>
+                    <Item>ui/mp-observer/mp-observer-victory.js</Item>
+                    <Item>ui/mp-observer/mp-observer-diplomacy.js</Item>
+                    <Item>ui/mp-observer/mp-observer-units.js</Item>
+                    <Item>ui/mp-observer/mp-observer-prompts.js</Item>
                 </UIScripts>
             </Actions>
         </ActionGroup>

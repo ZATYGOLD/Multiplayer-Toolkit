@@ -24,8 +24,8 @@
 
 /** Tunable settings. */
 const CONFIG = {
+  observerRole: true,               // Observer leader/civ act as one locked role in the lobby
   titleStyle: "text-negative-light", // engine text style for ability title lines
-  observerSlots: true,               // EXPERIMENTAL: host-only "Observer" slot action in the MP lobby
   startCountdownSeconds: 5,          // all-ready lobby countdown before the game starts (stock: 10)
   debug: true
 };

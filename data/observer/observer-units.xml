@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Multiplayer Toolkit - Observer's Eye unit (gameplay database, every Age).
+
+  Starting units are granted per Age (AdvancedStartUnits has no civilization
+  column), so the Observer civilizations replace the Founder with their own
+  unique unit through UnitReplaces - the same mechanism that gives Maya a
+  Jaguar Slayer in place of the Scout.
+
+  That unit is the Observer's vision. A player only sees units on plots it has
+  in sight, and revealing the map does not grant sight, so the Eye:
+    - sees the whole map: a sight range larger than any map, through terrain
+      and vegetation (the Chasqui / Hulche see-through effects), and hidden units;
+    - keeps every unit's plot visible (the Squadron "Spotting" effect, without
+      its range and enemy limits), so nothing is missed;
+    - cannot found, be damaged or be captured, and is stealthed, so the
+      real players never see it. It has no 3D model. It keeps 1 move (a unit
+      with 0 moves crashes new-game setup with a divide by zero); the Observer
+      client puts it to sleep so it never asks for orders.
+    - is a naval unit that may enter open ocean in every Age (the Exploration
+      deep-ocean tech effects), placed on the ocean tile bordering marine ice
+      nearest the bottom-center of the map (ice itself is impassable: a unit
+      created on it is left off the map). The Observer client shows its flag
+      at half opacity and never selects it.
+      The game never places the Observer's starting unit, so the map script
+      (maps/assign-starting-plots.js) creates the Eye with Units.create when
+      it sets the Observer's start plot. The UnitReplaces row stays so the
+      Observer can never receive a real Founder.
+-->
+<Database>
+  <Types>
+    <Row Type="UNIT_MPT_OBSERVER_EYE" Kind="KIND_UNIT"/>
+    <Row Type="ABILITY_MPT_OBSERVER_EYE" Kind="KIND_ABILITY"/>
+  </Types>
+
+  <Tags>
+    <Row Tag="UNIT_CLASS_MPT_OBSERVER_EYE" Category="UNIT_CLASS"/>
+  </Tags>
+
+  <Units>
+    <Row UnitType="UNIT_MPT_OBSERVER_EYE" Name="LOC_UNIT_MPT_OBSERVER_EYE_NAME" Description="LOC_UNIT_MPT_OBSERVER_EYE_DESCRIPTION" BaseSightRange="128" BaseMoves="1" UnitMovementClass="UNIT_MOVEMENT_CLASS_NAVAL" Domain="DOMAIN_SEA" CoreClass="CORE_CLASS_SUPPORT" FormationClass="FORMATION_CLASS_NAVAL" ZoneOfControl="false" FoundCity="false" CanTrain="false" CanPurchase="false" CanTriggerDiscovery="false" CanBeDamaged="false" TraitType="TRAIT_MPT_OBSERVER"/>
+  </Units>
+
+  <Unit_Stats>
+    <Row UnitType="UNIT_MPT_OBSERVER_EYE"/>
+  </Unit_Stats>
+
+  <TypeTags>
+    <Row Type="UNIT_MPT_OBSERVER_EYE" Tag="UNIT_CLASS_NON_COMBAT"/>
+    <Row Type="UNIT_MPT_OBSERVER_EYE" Tag="UNIT_CLASS_STEALTH"/>
+    <Row Type="UNIT_MPT_OBSERVER_EYE" Tag="UNIT_CLASS_SEE_HIDDEN"/>
+    <Row Type="UNIT_MPT_OBSERVER_EYE" Tag="UNIT_CLASS_MPT_OBSERVER_EYE"/>
+  </TypeTags>
+
+  <UnitAbilities>
+    <Row UnitAbilityType="ABILITY_MPT_OBSERVER_EYE" Name="LOC_UNIT_MPT_OBSERVER_EYE_NAME" Description="LOC_UNIT_MPT_OBSERVER_EYE_DESCRIPTION"/>
+  </UnitAbilities>
+
+  <UnitClass_Abilities>
+    <Row UnitAbilityType="ABILITY_MPT_OBSERVER_EYE" UnitClassType="UNIT_CLASS_MPT_OBSERVER_EYE"/>
+  </UnitClass_Abilities>
+
+  <!-- Modifiers are defined in observer-units-gameeffects.xml. -->
+  <UnitAbilityModifiers>
+    <Row UnitAbilityType="ABILITY_MPT_OBSERVER_EYE" ModifierId="MPT_OBSERVER_EYE_SEE_THROUGH_TERRAIN"/>
+    <Row UnitAbilityType="ABILITY_MPT_OBSERVER_EYE" ModifierId="MPT_OBSERVER_EYE_SEE_THROUGH_FEATURES"/>
+    <Row UnitAbilityType="ABILITY_MPT_OBSERVER_EYE" ModifierId="MPT_OBSERVER_MOD_SEE_ALL_UNITS"/>
+    <Row UnitAbilityType="ABILITY_MPT_OBSERVER_EYE" ModifierId="MPT_OBSERVER_EYE_OCEAN_VALID"/>
+    <Row UnitAbilityType="ABILITY_MPT_OBSERVER_EYE" ModifierId="MPT_OBSERVER_EYE_OCEAN_NO_OBSTACLE"/>
+    <Row UnitAbilityType="ABILITY_MPT_OBSERVER_EYE" ModifierId="MPT_OBSERVER_EYE_OCEAN_NO_DAMAGE"/>
+  </UnitAbilityModifiers>
+
+  <UnitReplaces>
+    <Row CivUniqueUnitType="UNIT_MPT_OBSERVER_EYE" ReplacesUnitType="UNIT_FOUNDER"/>
+  </UnitReplaces>
+</Database>

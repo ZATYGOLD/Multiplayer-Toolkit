@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Multiplayer Toolkit - Observer leader and civilizations (setup/lobby database).
+  Makes "Observer" selectable in the Leader and Civilization dropdowns of game
+  setup and the multiplayer lobby, one civilization entry per Age domain.
+-->
+<Database>
+  <Leaders>
+    <Row LeaderType="LEADER_MPT_OBSERVER" LeaderName="LOC_LEADER_MPT_OBSERVER_NAME" LeaderDescription="LOC_LEADER_MPT_OBSERVER_DESCRIPTION" LeaderIcon="LEADER_MPT_OBSERVER" LeaderIntroText="LOC_LOADING_LEADER_INTRO_TEXT_MPT_OBSERVER" SortIndex="999"/>
+  </Leaders>
+  <LeaderItems>
+    <Row LeaderType="LEADER_MPT_OBSERVER" Type="TRAIT_MPT_OBSERVER_LEADER" Kind="KIND_TRAIT" Name="LOC_TRAIT_MPT_OBSERVER_LEADER_NAME" Description="LOC_TRAIT_MPT_OBSERVER_LEADER_DESCRIPTION"/>
+  </LeaderItems>
+  <LeaderTags>
+    <Row LeaderType="LEADER_MPT_OBSERVER" TagType="TAG_TRAIT_WILDCARD"/>
+  </LeaderTags>
+  <LeaderQuotes>
+    <Row LeaderType="LEADER_MPT_OBSERVER" Quote="LOC_LEADER_MPT_OBSERVER_QUOTE"/>
+  </LeaderQuotes>
+
+  <Civilizations>
+    <Row Domain="AntiquityAgeCivilizations" CivilizationType="CIVILIZATION_MPT_OBSERVER_ANTIQUITY" CivilizationName="LOC_CIVILIZATION_MPT_OBSERVER_NAME" CivilizationFullName="LOC_CIVILIZATION_MPT_OBSERVER_FULLNAME" CivilizationDescription="LOC_CIVILIZATION_MPT_OBSERVER_DESCRIPTION" CivilizationIcon="mpt_observer.png" CivilizationIntroText="LOC_LOADING_CIV_INTRO_TEXT_MPT_OBSERVER" SortIndex="999"/>
+    <Row Domain="ExplorationAgeCivilizations" CivilizationType="CIVILIZATION_MPT_OBSERVER_EXPLORATION" CivilizationName="LOC_CIVILIZATION_MPT_OBSERVER_NAME" CivilizationFullName="LOC_CIVILIZATION_MPT_OBSERVER_FULLNAME" CivilizationDescription="LOC_CIVILIZATION_MPT_OBSERVER_DESCRIPTION" CivilizationIcon="mpt_observer.png" CivilizationIntroText="LOC_LOADING_CIV_INTRO_TEXT_MPT_OBSERVER" SortIndex="999"/>
+    <Row Domain="ModernAgeCivilizations" CivilizationType="CIVILIZATION_MPT_OBSERVER_MODERN" CivilizationName="LOC_CIVILIZATION_MPT_OBSERVER_NAME" CivilizationFullName="LOC_CIVILIZATION_MPT_OBSERVER_FULLNAME" CivilizationDescription="LOC_CIVILIZATION_MPT_OBSERVER_DESCRIPTION" CivilizationIcon="mpt_observer.png" CivilizationIntroText="LOC_LOADING_CIV_INTRO_TEXT_MPT_OBSERVER" SortIndex="999"/>
+  </Civilizations>
+  <CivilizationTags>
+    <Row CivilizationDomain="AntiquityAgeCivilizations" CivilizationType="CIVILIZATION_MPT_OBSERVER_ANTIQUITY" TagType="TAG_APEX_AGE_ANTIQUITY"/>
+    <Row CivilizationDomain="ExplorationAgeCivilizations" CivilizationType="CIVILIZATION_MPT_OBSERVER_EXPLORATION" TagType="TAG_APEX_AGE_EXPLORATION"/>
+    <Row CivilizationDomain="ModernAgeCivilizations" CivilizationType="CIVILIZATION_MPT_OBSERVER_MODERN" TagType="TAG_APEX_AGE_MODERN"/>
+  </CivilizationTags>
+  <CivilizationItems>
+    <Row CivilizationDomain="AntiquityAgeCivilizations" AgeType="AGE_ANTIQUITY" CivilizationType="CIVILIZATION_MPT_OBSERVER_ANTIQUITY" Type="TRAIT_MPT_OBSERVER" Kind="KIND_TRAIT" Name="LOC_TRAIT_MPT_OBSERVER_NAME" Description="LOC_TRAIT_MPT_OBSERVER_DESCRIPTION"/>
+    <Row CivilizationDomain="ExplorationAgeCivilizations" AgeType="AGE_EXPLORATION" CivilizationType="CIVILIZATION_MPT_OBSERVER_EXPLORATION" Type="TRAIT_MPT_OBSERVER" Kind="KIND_TRAIT" Name="LOC_TRAIT_MPT_OBSERVER_NAME" Description="LOC_TRAIT_MPT_OBSERVER_DESCRIPTION"/>
+    <Row CivilizationDomain="ModernAgeCivilizations" AgeType="AGE_MODERN" CivilizationType="CIVILIZATION_MPT_OBSERVER_MODERN" Type="TRAIT_MPT_OBSERVER" Kind="KIND_TRAIT" Name="LOC_TRAIT_MPT_OBSERVER_NAME" Description="LOC_TRAIT_MPT_OBSERVER_DESCRIPTION"/>
+  </CivilizationItems>
+
+  <!-- No LeaderCivilizationBias rows on purpose: the engine auto-applies every
+       bias row when the leader changes (all three Ages in a row), which left a
+       Modern civ in an Antiquity game. ui/mp-lobby/mp-lobby-observer.js pairs
+       leader and civ for the game's start Age instead. -->
+  <LeaderUnlocks>
+    <Row LeaderType="LEADER_MPT_OBSERVER" AgeDomain="StandardAges" AgeType="AGE_EXPLORATION" Type="CIVILIZATION_MPT_OBSERVER_EXPLORATION" Kind="KIND_CIVILIZATION" Name="LOC_CIVILIZATION_MPT_OBSERVER_NAME" Description="LOC_CIVILIZATION_MPT_OBSERVER_DESCRIPTION" Icon="CIVILIZATION_MPT_OBSERVER_EXPLORATION"/>
+    <Row LeaderType="LEADER_MPT_OBSERVER" AgeDomain="StandardAges" AgeType="AGE_MODERN" Type="CIVILIZATION_MPT_OBSERVER_MODERN" Kind="KIND_CIVILIZATION" Name="LOC_CIVILIZATION_MPT_OBSERVER_NAME" Description="LOC_CIVILIZATION_MPT_OBSERVER_DESCRIPTION" Icon="CIVILIZATION_MPT_OBSERVER_MODERN"/>
+  </LeaderUnlocks>
+</Database>

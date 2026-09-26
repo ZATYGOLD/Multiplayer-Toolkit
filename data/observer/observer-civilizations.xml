@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Multiplayer Toolkit - Observer civilizations (gameplay database, every Age).
+
+  One Observer civilization per Age, mirroring how the base game defines its
+  civilizations in the always-loaded civilizations-shared.xml files. None has
+  the TRAIT_<AGE>_CIV package, so no free army, ship or yields are granted.
+  Exploration and Modern are unlocked for the Observer leader (only) at age
+  transition through the standard Unlock tables.
+-->
+<Database>
+  <Types>
+    <Row Type="CIVILIZATION_MPT_OBSERVER_ANTIQUITY" Kind="KIND_CIVILIZATION"/>
+    <Row Type="CIVILIZATION_MPT_OBSERVER_EXPLORATION" Kind="KIND_CIVILIZATION"/>
+    <Row Type="CIVILIZATION_MPT_OBSERVER_MODERN" Kind="KIND_CIVILIZATION"/>
+    <Row Type="TRAIT_MPT_OBSERVER" Kind="KIND_TRAIT"/>
+    <Row Type="UNLOCK_CIVILIZATION_MPT_OBSERVER_EXPLORATION" Kind="KIND_UNLOCK"/>
+    <Row Type="UNLOCK_CIVILIZATION_MPT_OBSERVER_MODERN" Kind="KIND_UNLOCK"/>
+  </Types>
+
+  <Traits>
+    <Row TraitType="TRAIT_MPT_OBSERVER" InternalOnly="true" Name="LOC_TRAIT_MPT_OBSERVER_NAME" Description="LOC_TRAIT_MPT_OBSERVER_DESCRIPTION"/>
+  </Traits>
+
+  <Civilizations>
+    <Row CivilizationType="CIVILIZATION_MPT_OBSERVER_ANTIQUITY" Name="LOC_CIVILIZATION_MPT_OBSERVER_NAME" FullName="LOC_CIVILIZATION_MPT_OBSERVER_FULLNAME" Description="LOC_CIVILIZATION_MPT_OBSERVER_DESCRIPTION" Adjective="LOC_CIVILIZATION_MPT_OBSERVER_ADJECTIVE" StartingCivilizationLevelType="CIVILIZATION_LEVEL_FULL_CIV" ApexAge="AGE_ANTIQUITY" CapitalName="LOC_CITY_NAME_MPT_OBSERVER1"/>
+    <Row CivilizationType="CIVILIZATION_MPT_OBSERVER_EXPLORATION" Name="LOC_CIVILIZATION_MPT_OBSERVER_NAME" FullName="LOC_CIVILIZATION_MPT_OBSERVER_FULLNAME" Description="LOC_CIVILIZATION_MPT_OBSERVER_DESCRIPTION" Adjective="LOC_CIVILIZATION_MPT_OBSERVER_ADJECTIVE" StartingCivilizationLevelType="CIVILIZATION_LEVEL_FULL_CIV" ApexAge="AGE_EXPLORATION" CapitalName="LOC_CITY_NAME_MPT_OBSERVER1"/>
+    <Row CivilizationType="CIVILIZATION_MPT_OBSERVER_MODERN" Name="LOC_CIVILIZATION_MPT_OBSERVER_NAME" FullName="LOC_CIVILIZATION_MPT_OBSERVER_FULLNAME" Description="LOC_CIVILIZATION_MPT_OBSERVER_DESCRIPTION" Adjective="LOC_CIVILIZATION_MPT_OBSERVER_ADJECTIVE" StartingCivilizationLevelType="CIVILIZATION_LEVEL_FULL_CIV" ApexAge="AGE_MODERN" CapitalName="LOC_CITY_NAME_MPT_OBSERVER1"/>
+  </Civilizations>
+
+  <!-- The shared flavor trait ties the Observer's Eye unit to these civs. -->
+  <CivilizationTraits>
+    <Row CivilizationType="CIVILIZATION_MPT_OBSERVER_ANTIQUITY" TraitType="TRAIT_MPT_OBSERVER"/>
+    <Row CivilizationType="CIVILIZATION_MPT_OBSERVER_EXPLORATION" TraitType="TRAIT_MPT_OBSERVER"/>
+    <Row CivilizationType="CIVILIZATION_MPT_OBSERVER_MODERN" TraitType="TRAIT_MPT_OBSERVER"/>
+  </CivilizationTraits>
+
+  <CityNames>
+    <Row CivilizationType="CIVILIZATION_MPT_OBSERVER_ANTIQUITY" CityName="LOC_CITY_NAME_MPT_OBSERVER1"/>
+    <Row CivilizationType="CIVILIZATION_MPT_OBSERVER_EXPLORATION" CityName="LOC_CITY_NAME_MPT_OBSERVER1"/>
+    <Row CivilizationType="CIVILIZATION_MPT_OBSERVER_MODERN" CityName="LOC_CITY_NAME_MPT_OBSERVER1"/>
+  </CityNames>
+
+  <LeaderCivPriorities>
+    <Row Leader="LEADER_MPT_OBSERVER" Civilization="CIVILIZATION_MPT_OBSERVER_ANTIQUITY" Priority="30"/>
+    <Row Leader="LEADER_MPT_OBSERVER" Civilization="CIVILIZATION_MPT_OBSERVER_EXPLORATION" Priority="20"/>
+    <Row Leader="LEADER_MPT_OBSERVER" Civilization="CIVILIZATION_MPT_OBSERVER_MODERN" Priority="10"/>
+  </LeaderCivPriorities>
+
+  <!-- Art cultures (copied from Rome) so anything that does render has a style. -->
+  <VisArt_CivilizationBuildingCultures>
+    <Row CivilizationType="CIVILIZATION_MPT_OBSERVER_ANTIQUITY" BuildingCulture="BUILDING_CULTURE_MED"/>
+    <Row CivilizationType="CIVILIZATION_MPT_OBSERVER_ANTIQUITY" BuildingCulture="BUILDING_CULTURE_MED_ANT"/>
+    <Row CivilizationType="CIVILIZATION_MPT_OBSERVER_ANTIQUITY" BuildingCulture="ANT_STONE"/>
+    <Row CivilizationType="CIVILIZATION_MPT_OBSERVER_EXPLORATION" BuildingCulture="BUILDING_CULTURE_MED"/>
+    <Row CivilizationType="CIVILIZATION_MPT_OBSERVER_EXPLORATION" BuildingCulture="BUILDING_CULTURE_MED_EXP"/>
+    <Row CivilizationType="CIVILIZATION_MPT_OBSERVER_EXPLORATION" BuildingCulture="EXP_STONE"/>
+    <Row CivilizationType="CIVILIZATION_MPT_OBSERVER_MODERN" BuildingCulture="BUILDING_CULTURE_MED"/>
+    <Row CivilizationType="CIVILIZATION_MPT_OBSERVER_MODERN" BuildingCulture="BUILDING_CULTURE_SAM_MOD"/>
+    <Row CivilizationType="CIVILIZATION_MPT_OBSERVER_MODERN" BuildingCulture="MOD_STONE"/>
+  </VisArt_CivilizationBuildingCultures>
+  <VisArt_CivilizationUnitCultures>
+    <Row CivilizationType="CIVILIZATION_MPT_OBSERVER_ANTIQUITY" UnitCulture="Med"/>
+    <Row CivilizationType="CIVILIZATION_MPT_OBSERVER_EXPLORATION" UnitCulture="Med"/>
+    <Row CivilizationType="CIVILIZATION_MPT_OBSERVER_MODERN" UnitCulture="Med"/>
+  </VisArt_CivilizationUnitCultures>
+
+  <!-- Age transition: the Observer leader unlocks the next Age's Observer civ. -->
+  <Unlocks>
+    <Row UnlockType="UNLOCK_CIVILIZATION_MPT_OBSERVER_EXPLORATION"/>
+    <Row UnlockType="UNLOCK_CIVILIZATION_MPT_OBSERVER_MODERN"/>
+  </Unlocks>
+  <UnlockRewards>
+    <Row UnlockType="UNLOCK_CIVILIZATION_MPT_OBSERVER_EXPLORATION" Name="LOC_CIVILIZATION_MPT_OBSERVER_NAME" Description="LOC_UNLOCK_EXPLORATION_CIV_DESCRIPTION" Icon="CIVILIZATION_MPT_OBSERVER_EXPLORATION" UnlockRewardType="CIVILIZATION_MPT_OBSERVER_EXPLORATION" UnlockRewardKind="KIND_CIVILIZATION"/>
+    <Row UnlockType="UNLOCK_CIVILIZATION_MPT_OBSERVER_MODERN" Name="LOC_CIVILIZATION_MPT_OBSERVER_NAME" Description="LOC_UNLOCK_MODERN_CIV_DESCRIPTION" Icon="CIVILIZATION_MPT_OBSERVER_MODERN" UnlockRewardType="CIVILIZATION_MPT_OBSERVER_MODERN" UnlockRewardKind="KIND_CIVILIZATION"/>
+  </UnlockRewards>
+  <UnlockRequirements>
+    <Row UnlockType="UNLOCK_CIVILIZATION_MPT_OBSERVER_EXPLORATION" RequirementSetId="REQSET_MPT_LEADER_IS_OBSERVER" Description="LOC_UNLOCK_PLAY_AS_MPT_OBSERVER_DESCRIPTION" Tooltip="LOC_UNLOCK_PLAY_AS_MPT_OBSERVER_TOOLTIP"/>
+    <Row UnlockType="UNLOCK_CIVILIZATION_MPT_OBSERVER_MODERN" RequirementSetId="REQSET_MPT_LEADER_IS_OBSERVER" Description="LOC_UNLOCK_PLAY_AS_MPT_OBSERVER_DESCRIPTION" Tooltip="LOC_UNLOCK_PLAY_AS_MPT_OBSERVER_TOOLTIP"/>
+  </UnlockRequirements>
+  <UnlockConfigurationValues>
+    <Row UnlockType="UNLOCK_CIVILIZATION_MPT_OBSERVER_EXPLORATION" ConfigurationValue="CIVILIZATION_MPT_OBSERVER_EXPLORATION"/>
+    <Row UnlockType="UNLOCK_CIVILIZATION_MPT_OBSERVER_MODERN" ConfigurationValue="CIVILIZATION_MPT_OBSERVER_MODERN"/>
+  </UnlockConfigurationValues>
+</Database>

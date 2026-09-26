@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Multiplayer Toolkit - Observer icons (UpdateIcons, game and shell).
+  The leader portrait is the eye badge, padded so it sits inside the frames the
+  UI draws around portraits; the civilization symbol is the eye in white.
+  Files come from ImportFiles (icons/*.png) and are served under fs://game/icons/.
+-->
+<Database>
+  <IconDefinitions>
+    <Row><ID>LEADER_MPT_OBSERVER</ID><Path>fs://game/icons/mpt_observer_leader_256.png</Path><IconSize>256</IconSize></Row>
+    <Row><ID>LEADER_MPT_OBSERVER</ID><Path>fs://game/icons/mpt_observer_leader_128.png</Path><IconSize>128</IconSize></Row>
+    <Row><ID>LEADER_MPT_OBSERVER</ID><Path>fs://game/icons/mpt_observer_leader_64.png</Path><IconSize>64</IconSize></Row>
+    <Row><ID>LEADER_MPT_OBSERVER</ID><Path>fs://game/icons/mpt_observer_leader_128.png</Path><Context>LEADER_HAPPY</Context><IconSize>128</IconSize></Row>
+    <Row><ID>LEADER_MPT_OBSERVER</ID><Path>fs://game/icons/mpt_observer_leader_128.png</Path><Context>LEADER_ANGRY</Context><IconSize>128</IconSize></Row>
+    <Row><ID>LEADER_MPT_OBSERVER</ID><Path>fs://game/icons/mpt_observer_circle_256.png</Path><Context>CIRCLE_MASK</Context><IconSize>256</IconSize></Row>
+    <Row><ID>LEADER_MPT_OBSERVER</ID><Path>fs://game/icons/mpt_observer_circle_128.png</Path><Context>CIRCLE_MASK</Context><IconSize>128</IconSize></Row>
+    <Row><ID>LEADER_MPT_OBSERVER</ID><Path>fs://game/icons/mpt_observer_circle_64.png</Path><Context>CIRCLE_MASK</Context><IconSize>64</IconSize></Row>
+    <Row><ID>LEADER_MPT_OBSERVER</ID><Path>fs://game/icons/mpt_observer_circle_140.png</Path><Context>PORTRAIT_MASK</Context><IconSize>140</IconSize></Row>
+
+    <Row><ID>CIVILIZATION_MPT_OBSERVER_ANTIQUITY</ID><Path>fs://game/icons/mpt_observer_civ.png</Path></Row>
+    <Row><ID>CIVILIZATION_MPT_OBSERVER_EXPLORATION</ID><Path>fs://game/icons/mpt_observer_civ.png</Path></Row>
+    <Row><ID>CIVILIZATION_MPT_OBSERVER_MODERN</ID><Path>fs://game/icons/mpt_observer_civ.png</Path></Row>
+
+    <Row><ID>UNIT_MPT_OBSERVER_EYE</ID><Path>fs://game/icons/mpt_observer_civ.png</Path></Row>
+  </IconDefinitions>
+</Database>

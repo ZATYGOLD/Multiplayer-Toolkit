@@ -19,250 +19,232 @@
  */
 
 /**
- * Multiplayer Toolkit - EXPERIMENTAL observer mode (shell scope).
+ * Multiplayer Toolkit - Observer in the multiplayer lobby (shell scope).
  *
- * The engine ships a never-surfaced observer subsystem (SlotStatus.SS_OBSERVER,
- * observer IDs/counts, observer-aware lobby ready checks). Each player chooses
- * their role through the TEAM dropdown of their own lobby row: an extra
- * "Observer" entry converts you into a spectator, and picking any team (or the
- * blank no-team entry) converts you back into a participant.
- *
- * Design notes:
- *   - Self-service only: a seated player cannot swap into a pre-made observer
- *     seat (the engine moves slot positions without changing what you are),
- *     so the role is a per-player choice on your own row. The player-slot
- *     action dropdown is left completely untouched.
- *   - Observer rows have their civ/leader/memento dropdowns blanked and
- *     disabled - an observer has nothing to configure but their role. Remote
- *     observer rows have their team dropdown blanked too: only you control
- *     your role.
- *   - Diagnostics by design: nothing registers unless the runtime SlotStatus
- *     enum exposes SS_OBSERVER.
+ * The Observer is a real leader + civilization (config/observer-config.xml).
+ * This module makes the lobby treat them as one role:
+ *   - The civilization list shows a single "Observer" entry - the one for the
+ *     game's start Age (the lobby lists every Age's civs together).
+ *   - Picking the Observer leader or civilization sets the other one and
+ *     clears the team; picking another leader releases the civilization.
+ *   - While observing, the civilization and team dropdowns are locked and the
+ *     team column shows the eye badge. The leader dropdown stays open so the
+ *     player can switch back.
+ * Wraps the lobby model's dropdown builders and callbacks; no base file edits.
  */
-import MPLobbyModel, { MPLobbyDataModel, LobbyUpdateEvent } from 'fs://game/core/ui/shell/mp-staging/model-mp-staging-new.js';
+import MPLobbyModel, { MPLobbyDataModel } from 'fs://game/core/ui/shell/mp-staging/model-mp-staging-new.js';
 import { MPStagingTeamDropdown } from 'fs://game/core/ui/shell/mp-staging/mp-staging-team-dropdown.js';
 import { CONFIG } from './mp-lobby-config.js';
 
-const TEAM_DROPDOWN = 'DROPDOWN_TYPE_TEAM';
+const OBSERVER_LEADER = 'LEADER_MPT_OBSERVER';
+const OBSERVER_CIV_PREFIX = 'CIVILIZATION_MPT_OBSERVER_';
 const OBSERVER_ICON = 'fs://game/icons/mpt_observer.png';
+const OBSERVER_CIV_ICON = 'fs://game/icons/mpt_observer_civ.png';
+const PARAM_LEADER = 'PlayerLeader';
+const PARAM_CIV = 'PlayerCivilization';
+const DROPDOWN_PARAM = 'DROPDOWN_TYPE_PLAYER_PARAM';
+const DROPDOWN_TEAM = 'DROPDOWN_TYPE_TEAM';
+const NO_TEAM = -1;
 
 function log(message) {
-  if (CONFIG.debug) console.log(`[MPT lobby] ${message}`);
+  if (CONFIG.debug) { try { console.warn(`[MPT lobby-observer] ${message}`); } catch (e) { /* ignore */ } }
 }
 
-/** SS_OBSERVER from the runtime enum, or undefined when not exposed. */
-function observerSlotStatus() {
-  try { return SlotStatus.SS_OBSERVER; } catch (e) { return undefined; }
-}
+// ============================ Game state ============================
 
-function slotStatusOf(playerID) {
-  try { return Configuration.getPlayer(playerID).slotStatus; } catch (e) { return undefined; }
-}
+function isObserverCiv(civ) { return typeof civ === 'string' && civ.startsWith(OBSERVER_CIV_PREFIX); }
 
-/** True when this is the local player's own slot in a new, un-readied game. */
-function isEditableOwnSlot(playerID) {
+/**
+ * The Observer civilization for the game's start Age. The game config only
+ * exposes the Age's display key (LOC_AGE_ANTIQUITY_NAME), so it is resolved to
+ * the AgeType through the setup database, with a name-strip fallback.
+ */
+let cachedStartAge = '';
+function startAgeType() {
+  let name = '';
+  try { name = Configuration.getGame().startAgeName || ''; } catch (e) { /* unknown */ }
+  if (!name) return cachedStartAge || 'AGE_ANTIQUITY';
   try {
-    return MPLobbyDataModel.isLocalPlayer(playerID)
-      && MPLobbyDataModel.isNewGame
-      && !Network.isPlayerStartReady(GameContext.localPlayerID);
-  } catch (e) { return false; }
+    const row = (Database.query('config', 'select AgeType, Name from Ages') ?? []).find((r) => r.Name === name);
+    if (row?.AgeType) { cachedStartAge = row.AgeType; return cachedStartAge; }
+  } catch (e) { /* fall back */ }
+  cachedStartAge = name.replace(/^LOC_/, '').replace(/_NAME$/, '');
+  return cachedStartAge;
+}
+function observerCivForStartAge() {
+  return OBSERVER_CIV_PREFIX + startAgeType().replace(/^AGE_/, '');
 }
 
-function registerObserverMode() {
-  const observerStatus = observerSlotStatus();
-  if (observerStatus === undefined) {
-    try { log(`SS_OBSERVER not exposed - SlotStatus keys: ${Object.keys(SlotStatus).join(', ')}`); }
-    catch (e) { log('SlotStatus enum unavailable in shell scope'); }
-    return;
+/** Keep RANDOM first, everything else in base order, and the Observer entry last. */
+function moveObserverLast(items, isObserver) {
+  const rest = items.filter((it) => !isObserver(it));
+  const obs = items.filter(isObserver);
+  return rest.concat(obs);
+}
+
+function playerLeader(playerID) {
+  try { return Configuration.getPlayer(playerID)?.leaderTypeName ?? ''; } catch (e) { return ''; }
+}
+function playerCiv(playerID) {
+  try { return Configuration.getPlayer(playerID)?.civilizationTypeName ?? ''; } catch (e) { return ''; }
+}
+function isObserverRow(playerID) {
+  return playerLeader(playerID) === OBSERVER_LEADER || isObserverCiv(playerCiv(playerID));
+}
+
+function setParam(playerID, param, value) {
+  try { GameSetup.setPlayerParameterValue(playerID, param, value); return true; }
+  catch (e) { log(`set ${param}=${value} failed for ${playerID}: ${e}`); return false; }
+}
+function setTeam(playerID, team) {
+  try { Configuration.editPlayer(playerID)?.setTeam(team); } catch (e) { /* ignore */ }
+}
+
+// ============================ Dropdown shaping ============================
+
+function lockDropdown(dropdown, index) {
+  dropdown.selectedItemIndex = index;
+  dropdown.isDisabled = true;
+}
+
+/** Civ list: one Observer entry (start Age only), eye icon; locked while observing. */
+function shapeCivDropdown(dropdown, playerID) {
+  const wanted = observerCivForStartAge();
+  let items = (dropdown.itemList ?? []).filter((it) => !isObserverCiv(it.paramID) || it.paramID === wanted);
+  if (!items.some((it) => it.paramID === wanted)) {   // unknown Age: keep one Observer entry rather than none
+    const first = (dropdown.itemList ?? []).find((it) => isObserverCiv(it.paramID));
+    if (first) items.push(first);
   }
+  items = moveObserverLast(items, (it) => isObserverCiv(it.paramID));
+  for (const it of items) if (isObserverCiv(it.paramID)) it.iconURL = OBSERVER_CIV_ICON;
+  const current = playerCiv(playerID);
+  dropdown.itemList = items;
+  dropdown.selectedItemIndex = items.findIndex((it) => it.paramID === current);
+  if (isObserverRow(playerID)) lockDropdown(dropdown, items.findIndex((it) => isObserverCiv(it.paramID)));
+}
 
-  const isObserverRow = (playerID) => slotStatusOf(playerID) === observerStatus;
+/** Leader list: Observer last with the eye icon; stays enabled to switch back. */
+function shapeLeaderDropdown(dropdown, playerID) {
+  const items = moveObserverLast(dropdown.itemList ?? [], (it) => it.paramID === OBSERVER_LEADER);
+  for (const it of items) if (it.paramID === OBSERVER_LEADER) it.iconURL = OBSERVER_ICON;
+  dropdown.itemList = items;
+  const current = playerLeader(playerID);
+  dropdown.selectedItemIndex = items.findIndex((it) => it.paramID === current);
+}
 
-  const blankDropdown = (dropdown) => {
-    try {
-      dropdown.itemList = [{ label: '', disabled: true }];
-      dropdown.selectedItemIndex = 0;
-      dropdown.selectedItemTooltip = undefined;
-      dropdown.showLabelOnSelectedItem = false;
-      dropdown.isDisabled = true;
-    } catch (e) { /* keep base */ }
-    return dropdown;
-  };
+/**
+ * Team column: an "Observer" entry is appended to the team list (picking it
+ * makes the row an observer). While observing it is the selection, the eye
+ * badge is shown and the numbered teams are disabled.
+ */
+function shapeTeamDropdown(dropdown, playerID) {
+  const observing = isObserverRow(playerID);
+  const items = (dropdown.itemList ?? []).filter((it) => !it.mptObserver);
+  if (observing) for (const it of items) it.disabled = true;
+  items.push({
+    label: Locale.compose('LOC_MPT_TEAM_OBSERVER'),
+    teamID: NO_TEAM,
+    mptObserver: true,
+    tooltip: 'LOC_MPT_TEAM_OBSERVER_DESC',
+    disabled: false
+  });
+  dropdown.itemList = items;
+  if (observing) {
+    dropdown.selectedItemIndex = items.length - 1;
+    dropdown.showLabelOnSelectedItem = false;
+  }
+}
 
-  // Observers have no civ, leader or mementos to configure (any row).
-  const baseParamDropdown = MPLobbyDataModel.prototype.createPlayerParamDropdown;
-  MPLobbyDataModel.prototype.createPlayerParamDropdown = function (playerID, ...rest) {
-    const dropdown = baseParamDropdown.call(this, playerID, ...rest);
-    return dropdown && isObserverRow(playerID) ? blankDropdown(dropdown) : dropdown;
-  };
+// ============================ Selection sync ============================
 
-  // The team dropdown is the role control on your own row: an appended
-  // "Observer" entry, selected while observing. Remote observer rows are
-  // blanked instead.
-  const baseTeamDropdown = MPLobbyDataModel.prototype.createTeamParamDropdown;
-  MPLobbyDataModel.prototype.createTeamParamDropdown = function (playerID, ...rest) {
-    const dropdown = baseTeamDropdown.call(this, playerID, ...rest);
+/** Leader and civ move together: Observer leader <-> Observer civ, team cleared. */
+function syncSelection(playerID, param, value) {
+  const civ = observerCivForStartAge();
+  if (param === PARAM_LEADER) {
+    if (value === OBSERVER_LEADER) {
+      if (playerCiv(playerID) !== civ) setParam(playerID, PARAM_CIV, civ);
+      setTeam(playerID, NO_TEAM);
+      log(`player ${playerID} -> observer (${civ})`);
+    } else if (isObserverCiv(playerCiv(playerID))) {
+      setParam(playerID, PARAM_CIV, 'RANDOM');
+      log(`player ${playerID} left observer; civ reset`);
+    }
+  } else if (param === PARAM_CIV) {
+    if (isObserverCiv(value)) {
+      if (value !== civ) setParam(playerID, PARAM_CIV, civ);
+      if (playerLeader(playerID) !== OBSERVER_LEADER) setParam(playerID, PARAM_LEADER, OBSERVER_LEADER);
+      setTeam(playerID, NO_TEAM);
+      log(`player ${playerID} -> observer via civ`);
+    } else if (playerLeader(playerID) === OBSERVER_LEADER) {
+      setParam(playerID, PARAM_LEADER, 'RANDOM');
+      log(`player ${playerID} left observer via civ; leader reset`);
+    }
+  }
+}
+
+// ============================ Installation ============================
+
+function install() {
+  const proto = MPLobbyDataModel.prototype;
+
+  const baseParamDropdown = proto.createPlayerParamDropdown;
+  proto.createPlayerParamDropdown = function (playerID, dropID, type, dropLabel, dropDesc, paramNameHandle, ...rest) {
+    const dropdown = baseParamDropdown.call(this, playerID, dropID, type, dropLabel, dropDesc, paramNameHandle, ...rest);
     if (!dropdown) return dropdown;
     try {
-      if (isEditableOwnSlot(playerID)) {
-        const items = dropdown.itemList ?? [];
-        items.push({
-          label: Locale.compose('LOC_MPT_TEAM_OBSERVER'),
-          teamID: -1,
-          mptObserver: true,
-          tooltip: 'LOC_MPT_TEAM_OBSERVER_DESC',
-          disabled: false
-        });
-        dropdown.itemList = items;
-        if (isObserverRow(playerID)) {
-          dropdown.selectedItemIndex = items.length - 1;
-          // The icon alone marks the observer; no word over the badge.
-          dropdown.showLabelOnSelectedItem = false;
-        }
-        dropdown.isDisabled = false;
-      } else if (isObserverRow(playerID)) {
-        // Read-only badge: a readied local observer or a remote observer
-        // keeps the observer mark, just without the role controls.
-        dropdown.itemList = [{
-          label: Locale.compose('LOC_MPT_TEAM_OBSERVER'),
-          teamID: -1,
-          mptObserver: true,
-          disabled: true
-        }];
-        dropdown.selectedItemIndex = 0;
-        dropdown.showLabelOnSelectedItem = false;
-        dropdown.isDisabled = true;
-      }
-    } catch (e) { /* keep base */ }
+      if (paramNameHandle === this.PlayerCivilizationStringHandle) shapeCivDropdown(dropdown, playerID);
+      else if (paramNameHandle === this.PlayerLeaderStringHandle) shapeLeaderDropdown(dropdown, playerID);
+    } catch (e) { log(`dropdown shaping failed: ${e}`); }
     return dropdown;
   };
 
-  // Selection routing: "Observer" converts; any team pick while observing
-  // restores the participant first, then the base handler sets the team.
-  const baseTeamCallback = MPLobbyModel.dropdownCallbacks.get(TEAM_DROPDOWN);
-  MPLobbyModel.dropdownCallbacks.set(TEAM_DROPDOWN, (event) => {
+  const baseTeamDropdown = proto.createTeamParamDropdown;
+  proto.createTeamParamDropdown = function (playerID, ...rest) {
+    const dropdown = baseTeamDropdown.call(this, playerID, ...rest);
+    if (dropdown) { try { shapeTeamDropdown(dropdown, playerID); } catch (e) { log(`team shaping failed: ${e}`); } }
+    return dropdown;
+  };
+
+  // Sync after the base handler has applied the player's pick.
+  const baseParamCallback = MPLobbyModel.dropdownCallbacks.get(DROPDOWN_PARAM);
+  MPLobbyModel.dropdownCallbacks.set(DROPDOWN_PARAM, (event) => {
+    baseParamCallback?.(event);
     try {
-      const selected = event?.detail?.selectedItem;
+      const target = event?.target;
+      const playerID = parseInt(target?.getAttribute?.('data-player-id') ?? '');
+      const param = target?.getAttribute?.('data-player-param');
+      const value = event?.detail?.selectedItem?.paramID;
+      if (Number.isInteger(playerID) && param && value) syncSelection(playerID, param, value);
+    } catch (e) { log(`sync failed: ${e}`); }
+  });
+
+  // Team "Observer" makes the row an observer (leader + civ follow); an
+  // observer row never joins a numbered team.
+  const baseTeamCallback = MPLobbyModel.dropdownCallbacks.get(DROPDOWN_TEAM);
+  MPLobbyModel.dropdownCallbacks.set(DROPDOWN_TEAM, (event) => {
+    try {
       const playerID = parseInt(event?.target?.getAttribute?.('data-player-id') ?? '');
       if (Number.isInteger(playerID)) {
-        if (selected?.mptObserver) {
-          const playerConfig = Configuration.editPlayer(playerID);
-          playerConfig?.setSlotStatus(observerStatus);
-          playerConfig?.setTeam?.(-1);
-          // Clear the civ/leader so the engine does not carry a phantom
-          // participant (with a civ that must transition Ages) for a slot that
-          // is only observing.
-          try { playerConfig?.setCivilizationTypeName?.('CIVILIZATION_NONE'); } catch (e) { /* ignore */ }
-          try { playerConfig?.setLeaderTypeName?.('LEADER_NONE'); } catch (e) { /* ignore */ }
-          log(`slot ${playerID} -> observing`);
-          MPLobbyModel.update();
+        if (event?.detail?.selectedItem?.mptObserver) {
+          if (playerLeader(playerID) !== OBSERVER_LEADER) setParam(playerID, PARAM_LEADER, OBSERVER_LEADER);
+          syncSelection(playerID, PARAM_LEADER, OBSERVER_LEADER);
           return;
         }
-        if (isObserverRow(playerID)) {
-          const playerConfig = Configuration.editPlayer(playerID);
-          playerConfig?.setSlotStatus(SlotStatus.SS_TAKEN);
-          playerConfig?.setAsMajorCiv?.();
-          log(`slot ${playerID} -> playing`);
-          baseTeamCallback?.(event);
-          MPLobbyModel.update();
-          return;
-        }
+        if (isObserverRow(playerID)) { setTeam(playerID, NO_TEAM); return; }
       }
-    } catch (e) { /* fall through to base */ }
+    } catch (e) { /* fall through */ }
     baseTeamCallback?.(event);
   });
 
-  // Observers are not participants, and the lobby renders non-participants
-  // with the bare "closed slot" row template - no dropdown elements at all,
-  // which would strand an observer with no way back. After every model update,
-  // re-shape observer rows: flip the row's VIEW-MODEL isParticipant flag
-  // (display only - the engine config is untouched) so the full row template
-  // renders, and supply the dropdowns the participant branch skipped. They
-  // pass through the wrappers above, so the local row's team dropdown comes
-  // back with "Observer" selected while civ/leader (and remote observers'
-  // team) come back blanked.
-  let mptInjecting = false;
-  const baseUpdate = MPLobbyDataModel.prototype.update;
-  MPLobbyDataModel.prototype.update = function (...args) {
-    const result = baseUpdate.apply(this, args);
-    if (mptInjecting) return result;
-    try {
-      let injected = false;
-      for (const playerData of this.playersData ?? []) {
-        const playerID = parseInt(playerData.playerID);
-        if (!Number.isInteger(playerID) || playerData.isParticipant) continue;
-        if (!isObserverRow(playerID)) continue;
-        playerData.isParticipant = true;
-        playerData.teamDropdown = this.createTeamParamDropdown(
-          playerID,
-          'team_selector_0',
-          'PLAYER_TEAM',
-          'PLAYER_TEAM',
-          Locale.compose('LOC_UI_MP_LOBBY_DROPDOWN_TEAM_DESC'),
-          this.PlayerTeamStringHandle,
-          false,
-          true
-        );
-        playerData.civilizationDropdown = this.createPlayerParamDropdown(
-          playerID,
-          'civ_selector_0',
-          'PLAYER_CIV',
-          'PLAYER_CIV',
-          Locale.compose('LOC_UI_MP_LOBBY_DROPDOWN_CIV_DESC'),
-          this.PlayerCivilizationStringHandle,
-          true,
-          false,
-          this.civIconURLGetter
-        );
-        const leaderDropdown = this.createPlayerParamDropdown(
-          playerID,
-          'leader_selector_0',
-          'PLAYER_LEADER',
-          'PLAYER_LEADER',
-          Locale.compose('LOC_UI_MP_LOBBY_DROPDOWN_LEADER_DESC'),
-          this.PlayerLeaderStringHandle,
-          true,
-          true,
-          this.leaderIconURLGetter
-        );
-        if (leaderDropdown) {
-          // Observer "leader": our icon with the word Observer, locked.
-          leaderDropdown.itemList = [{
-            label: Locale.compose('LOC_MPT_TEAM_OBSERVER'),
-            iconURL: OBSERVER_ICON,
-            disabled: true
-          }];
-          leaderDropdown.selectedItemIndex = 0;
-          leaderDropdown.showLabelOnSelectedItem = true;
-          leaderDropdown.isDisabled = true;
-        }
-        playerData.leaderDropdown = leaderDropdown;
-        injected = true;
-      }
-      if (injected) {
-        mptInjecting = true;
-        try {
-          this.onUpdate?.(this);
-          window.dispatchEvent(new LobbyUpdateEvent());
-        } finally {
-          mptInjecting = false;
-        }
-        log('observer row re-shaped to the full row template');
-      }
-    } catch (e) { /* leave base data untouched */ }
-    return result;
-  };
-
-  // Collapsed team icon: the base team-dropdown paints a tinted circle from
-  // multiplayerTeamColors[selectedIndex] - our Observer entry indexes past
-  // that array (broken red tint). When the observer entry is the selection,
-  // paint the observer icon instead and hide the redundant text label.
+  // Collapsed team badge: paint the eye instead of a team color for the Observer
+  // entry. Re-checked when the items change too, since the index may not move.
   const baseTeamAttrChanged = MPStagingTeamDropdown.prototype.onAttributeChanged;
   MPStagingTeamDropdown.prototype.onAttributeChanged = function (name, oldValue, newValue) {
     baseTeamAttrChanged.call(this, name, oldValue, newValue);
     try {
-      if (name !== 'selected-item-index') return;
-      const observing = !!this.dropdownItems?.[parseInt(newValue)]?.mptObserver;
+      if (name !== 'selected-item-index' && name !== 'dropdown-items') return;
+      const index = parseInt(this.Root.getAttribute('selected-item-index') ?? '-1');
+      const observing = !!this.dropdownItems?.[index]?.mptObserver;
       if (observing) {
         this.Root.setAttribute('icon-container-innerhtml',
           `<div class='absolute w-16 h-16' style='background-image: url("${OBSERVER_ICON}"); background-size: contain; background-repeat: no-repeat; background-position: center;'></div>`);
@@ -271,7 +253,9 @@ function registerObserverMode() {
     } catch (e) { /* keep base visuals */ }
   };
 
-  log('observer mode registered on the team dropdown (SS_OBSERVER exposed)');
+  log(`observer role installed (start-age civ: ${observerCivForStartAge()})`);
 }
 
-if (CONFIG.observerSlots) registerObserverMode();
+if (CONFIG.observerRole !== false) {
+  try { install(); } catch (e) { log(`install failed: ${e}`); }
+}
