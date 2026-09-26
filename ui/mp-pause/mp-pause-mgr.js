@@ -37,17 +37,45 @@
  *  - Keeps the game paused through a synchronized "UNPAUSING..." countdown.
  *  - Pauses immediately on a player disconnect, before the AI can take over.
  *  - Suppresses the stock "Game Paused" popup (shared DialogBoxManager).
- *
- * Engine limitation: there is no per-player/host pause query and no custom UI
- * network message, so a unilateral instant host-only override is not possible;
- * host authority is expressed through the configurable vote/override delays.
+ *  - Host "Resume (All Players)" over the chat channel (mp-pause-net.js).
  */
+import { createLogger, isObserverPlayer } from '../mpt-shared/mpt-util.js';
+import { PAUSE_ACTION_ID } from '../mp-keybind/mp-keybind.js';
 import { FILTER_SOURCE, PAUSE_MENU_MODE, NATIVE_PAUSE_DIALOG_TITLE, CONFIG, PROGRESS_ACTIONS, LOC, coreCandidates } from './mp-pause-config.js';
 import styles from './mp-pause.scss.js';
 import PauseCountdownOverlay from './mp-pause-overlay.js';
 import MPTNet from './mp-pause-net.js';
 
 const STATE = { IDLE: "idle", PAUSED: "paused", COUNTDOWN: "countdown" };
+const log = createLogger("pause");
+const MENU_INJECT_RETRIES = 20;
+const MENU_INJECT_INTERVAL_MS = 50;
+
+/** Connection state of a player (assumed connected when the engine cannot say). */
+function isConnected(id) {
+  try { return Network.isPlayerConnected(id); } catch (e) { return true; }
+}
+
+/**
+ * Living human major players (engine observer slots excluded). The Observer
+ * leader holds a pause flag like everyone else, so it counts toward the ready
+ * tally, but its disconnect never pauses the game (includeObservers = false).
+ */
+function humanParticipantIds(includeObservers = false) {
+  try {
+    return Players.getAliveMajorIds().filter((id) => {
+      const pc = Configuration.getPlayer(id);
+      return pc?.isHuman && !pc.isObserver && (includeObservers || !isObserverPlayer(id));
+    });
+  } catch (e) { return []; }
+}
+
+function textDiv(className, text) {
+  const div = document.createElement("div");
+  div.className = className;
+  div.textContent = text;
+  return div;
+}
 
 const STYLE_ELEMENT_ID = "mpt-styles";
 const READY_BUTTON_ID = "mpt-ready-button";
@@ -66,10 +94,11 @@ class MultiplayerPauseManager {
   iHoldFlag = false;          // does THIS client hold a want-pause flag?
   finalizing = false;         // countdown finished, releasing our flag
   pauseStart = 0;
-  maxCount = 0;               // peak want-pause count (calibrates player total)
   pauseReason = "";           // optional cause shown in the menu (e.g. disconnect)
   pollTimer = 0;
   countdownTimer = 0;
+  backstopTimer = 0;
+  statusText = "";            // last rendered hint / tally, to skip unchanged DOM writes
   progressFiltersActive = false;
   menuListenerBound = false;
   connState = {};             // playerId -> last-known connected? (disconnect watchdog)
@@ -103,9 +132,6 @@ class MultiplayerPauseManager {
   }
 
   // ============================ Small helpers ============================
-  log(m) { try { console.log("[MultiplayerToolkit] " + m); } catch (e) {} }
-  warn(m) { try { console.warn("[MultiplayerToolkit] " + m); } catch (e) {} }
-
   amHost() {
     try { return GameContext.localPlayerID === Network.getHostPlayerId(); }
     catch (e) { return false; }
@@ -115,29 +141,10 @@ class MultiplayerPauseManager {
   }
   toggleEnginePause() {
     try { Network.toggleMultiplayerPause(); return true; }
-    catch (e) { this.warn("toggleMultiplayerPause failed: " + e); return false; }
+    catch (e) { log("toggleMultiplayerPause failed: " + e); return false; }
   }
-  /**
-   * Count of CONNECTED human major players. Disconnected players are excluded so
-   * "everyone is ready" means every player still present - a dropped player can
-   * never be part of the consensus and must not hold the tally short.
-   */
-  humanPlayerCount() {
-    let n = 0;
-    try {
-      const ids = Players.getAliveMajorIds();
-      for (let i = 0; i < ids.length; i++) {
-        const p = Players.get(ids[i]);
-        if (!p || !p.isHuman) continue;
-        let connected = true;
-        try { connected = Network.isPlayerConnected(ids[i]); } catch (e) { connected = true; }
-        if (connected) n++;
-      }
-    } catch (e) { /* fall through */ }
-    return n;
-  }
-  totalPlayers() { return Math.max(this.humanPlayerCount(), 1); }
-  readyCount() { return Math.max(0, this.totalPlayers() - this.numWantPause()); }
+  /** Connected participants: a dropped player is never part of the "everyone is ready" consensus. */
+  totalPlayers() { return Math.max(humanParticipantIds(true).filter(isConnected).length, 1); }
   converged() { return (Date.now() - this.pauseStart) >= CONFIG.convergenceDelayMs; }
 
   // ===================== Core singletons (dynamic import) =====================
@@ -159,8 +166,9 @@ class MultiplayerPauseManager {
     this.dialogBox = dbMod ? (dbMod.DialogBoxManager || dbMod.default || null) : null;
 
     this.suppressNativePausePopup();
-    this.log("singletons: inputFilter=" + !!this.inputFilter +
-      " interfaceMode=" + !!this.interfaceMode + " dialogBox=" + !!this.dialogBox);
+    if (!this.inputFilter || !this.interfaceMode || !this.dialogBox) {
+      log("missing core singletons: inputFilter=" + !!this.inputFilter + " interfaceMode=" + !!this.interfaceMode + " dialogBox=" + !!this.dialogBox);
+    }
   }
 
   // Wrap the shared DialogBoxManager so the stock multiplayer "Game Paused"
@@ -177,7 +185,6 @@ class MultiplayerPauseManager {
       return original(params);
     };
     mgr.__mptPatched = true;
-    this.log("Native 'Game Paused' popup suppressed.");
   }
 
   // ============================= Input filtering =============================
@@ -210,12 +217,12 @@ class MultiplayerPauseManager {
   openPauseMenu() {
     if (this.pauseMenuIsOpen()) return;
     try { this.interfaceMode?.switchTo?.(PAUSE_MENU_MODE); }
-    catch (e) { this.warn("openPauseMenu failed: " + e); }
+    catch (e) { log("openPauseMenu failed: " + e); }
   }
   closePauseMenu() {
     if (!this.pauseMenuIsOpen()) return;
     try { this.interfaceMode?.switchToDefault?.(); }
-    catch (e) { this.warn("closePauseMenu failed: " + e); }
+    catch (e) { log("closePauseMenu failed: " + e); }
   }
 
   // ================================= Styles ==================================
@@ -240,11 +247,10 @@ class MultiplayerPauseManager {
     }
     if (this.pauseMenuIsOpen()) this.tryInjectWhenMenuReady(0);
   }
-  tryInjectWhenMenuReady(attempt) {
-    attempt = attempt || 0;
+  tryInjectWhenMenuReady(attempt = 0) {
     const container = document.querySelector(PAUSE_MENU_CONTAINER);
     if (container) { this.injectMenuButtons(container); return; }
-    if (attempt < 20) setTimeout(() => this.tryInjectWhenMenuReady(attempt + 1), 50);
+    if (attempt < MENU_INJECT_RETRIES) setTimeout(() => this.tryInjectWhenMenuReady(attempt + 1), MENU_INJECT_INTERVAL_MS);
   }
   // fxs-button dispatches "action-activate" for both mouse and controller, just
   // like the base game's own buttons - using only this avoids double-invocation.
@@ -269,7 +275,8 @@ class MultiplayerPauseManager {
       const hint = document.createElement("div");
       hint.className = "mpt-host-hint mpt-injected";
       hint.id = HOST_HINT_ID;
-      hint.innerHTML = this.hostHintHTML();
+      this.statusText = "";
+      this.renderHint(hint);
 
       const isHost = this.amHost();
       const hostResumeAll = isHost && CONFIG.hostAuthoritativeResume;
@@ -310,16 +317,17 @@ class MultiplayerPauseManager {
     const gi = document.querySelector(".pause-menu-game-info");
     return gi ? gi.parentElement : null;
   }
-  footerReadyText() {
-    const n = this.totalPlayers();
-    const r = this.converged() ? this.readyCount() : 0;   // avoid a misleading early tally
-    return "Ready: " + r + " / " + n;
+  /** "Ready: r / n" and whether every connected player is ready (tally held at 0 until clients converge). */
+  footerTally() {
+    const total = this.totalPlayers();
+    const ready = this.converged() ? Math.max(0, total - this.numWantPause()) : 0;
+    return { text: Locale.compose(LOC.readyTally, ready, total), enough: ready >= total };
   }
-  applyFooterClass(el) {
-    const n = this.totalPlayers();
-    const enough = this.converged() && n > 0 && this.readyCount() >= n;   // green only when ALL connected are ready
-    el.classList.toggle("mpt-enough", enough);
-    el.classList.toggle("mpt-not-enough", !enough);
+  renderFooter(el) {
+    const tally = this.footerTally();
+    if (el.textContent !== tally.text) el.textContent = tally.text;
+    el.classList.toggle("mpt-enough", tally.enough);
+    el.classList.toggle("mpt-not-enough", !tally.enough);
   }
   injectFooterReady() {
     let el = document.querySelector("#" + FOOTER_READY_ID);
@@ -331,8 +339,7 @@ class MultiplayerPauseManager {
       el.className = "mpt-footer-ready";
       fc.appendChild(el);
     }
-    el.textContent = this.footerReadyText();
-    this.applyFooterClass(el);
+    this.renderFooter(el);
   }
   removeFooterReady() {
     const el = document.querySelector("#" + FOOTER_READY_ID);
@@ -352,36 +359,42 @@ class MultiplayerPauseManager {
   addDisconnectNotice(id, name) {
     if (id !== null && this.disconnectNotices.some((n) => n.id === id)) return;
     if (name && this.disconnectNotices.some((n) => n.name === name)) return;
-    this.disconnectNotices.push({ id, name: name || "A player" });
+    this.disconnectNotices.push({ id, name: name || Locale.compose(LOC.aPlayer) });
     this.refreshStatus();
   }
   removeDisconnectNotice(id) {
     this.disconnectNotices = this.disconnectNotices.filter((n) => n.id !== id);
     this.refreshStatus();
   }
-  hostHintHTML() {
-    // One line per disconnected player (bright red, padded - see .mpt-reason).
-    const notices = this.disconnectNotices
-      .map((n) => '<div class="mpt-reason">' + n.name + ' disconnected.</div>')
-      .join("");
-    const reason = this.pauseReason ? ('<div class="mpt-reason">' + this.pauseReason + '</div>') : "";
-    let line;
-    if (this.amHost()) line = "You are the host. Resume when ready.";
-    else if (!this.iHoldFlag) line = "You are ready. Waiting for the host to resume.";
-    else line = "Waiting for the host to resume.";
-    return notices + reason + line;
+  /** Hint lines: one per disconnected player and the pause reason (red, see .mpt-reason), then the status line. */
+  hintLines() {
+    const reasons = this.disconnectNotices.map((n) => Locale.compose(LOC.playerDisconnected, n.name));
+    if (this.pauseReason) reasons.push(this.pauseReason);
+    const status = this.amHost() ? LOC.hintHost : (this.iHoldFlag ? LOC.hintWaiting : LOC.hintReady);
+    return { reasons, status: Locale.compose(status) };
+  }
+  /** Rebuild the hint only when its text changed (player names are set as text, never markup). */
+  renderHint(hint) {
+    const { reasons, status } = this.hintLines();
+    const key = reasons.join("\n") + "\n" + status;
+    if (key === this.statusText) return;
+    this.statusText = key;
+    hint.textContent = "";
+    for (const reason of reasons) hint.appendChild(textDiv("mpt-reason", reason));
+    hint.appendChild(document.createTextNode(status));
   }
   refreshStatus() {
     const hint = document.querySelector("#" + HOST_HINT_ID);
-    if (hint) hint.innerHTML = this.hostHintHTML();
+    if (hint) this.renderHint(hint);
     let footer = document.querySelector("#" + FOOTER_READY_ID);
     if (!footer && this.state === STATE.PAUSED) {
       this.injectFooterReady();
       footer = document.querySelector("#" + FOOTER_READY_ID);
     }
-    if (footer) { footer.textContent = this.footerReadyText(); this.applyFooterClass(footer); }
+    if (footer) this.renderFooter(footer);
     const rb = document.querySelector("#" + READY_BUTTON_ID);
-    if (rb && !this.amHost()) rb.setAttribute("caption", this.iHoldFlag ? LOC.ready : LOC.cancelReady);
+    const caption = this.iHoldFlag ? LOC.ready : LOC.cancelReady;
+    if (rb && !this.amHost() && rb.getAttribute("caption") !== caption) rb.setAttribute("caption", caption);
   }
 
   // ============================== Button handlers ============================
@@ -398,7 +411,7 @@ class MultiplayerPauseManager {
   // fallback; debounced so a single press through both paths acts once.
   triggerPauseToggle() {
     const now = Date.now();
-    if (now - this.hotkeyLastAt < 250) return;
+    if (now - this.hotkeyLastAt < CONFIG.hotkeyDebounceMs) return;
     this.hotkeyLastAt = now;
     if (this.state === STATE.PAUSED || this.numWantPause() > 0) this.onReadyClick(null);
     else this.onPauseClick(null);
@@ -409,7 +422,7 @@ class MultiplayerPauseManager {
     try {
       if (!this.isMultiplayer) return;
       const d = ev?.detail;
-      if (!d || d.name !== "mpt-pause-game") return;
+      if (!d || d.name !== PAUSE_ACTION_ID) return;
       if (d.status !== InputActionStatuses.FINISH) return;
       this.triggerPauseToggle();
     } catch (e) { /* ignore */ }
@@ -446,7 +459,7 @@ class MultiplayerPauseManager {
     if (this.state !== STATE.PAUSED) return;
     this.onRemoteResume();
     MPTNet.send("RESUME");
-    this.log("Host broadcast resume to all connected players.");
+    log("Host broadcast resume to all connected players.");
   }
   /** A trusted RESUME arrived (or we issued one): clear our own flag. */
   onRemoteResume() {
@@ -463,14 +476,7 @@ class MultiplayerPauseManager {
   // ===================== Disconnect deadlock recovery (host) ==================
   /** Currently-disconnected watched human ids. */
   disconnectedIds() {
-    const out = [];
-    const ids = this.watchedHumans.length ? this.watchedHumans : this.humanParticipantIds();
-    for (const id of ids) {
-      let connected = true;
-      try { connected = Network.isPlayerConnected(id); } catch (e) { connected = true; }
-      if (!connected) out.push(id);
-    }
-    return out;
+    return (this.watchedHumans.length ? this.watchedHumans : humanParticipantIds()).filter((id) => !isConnected(id));
   }
   /** True when this client is allowed to direct-kick (i.e. is the host with the privilege). */
   canHostKick() {
@@ -491,9 +497,9 @@ class MultiplayerPauseManager {
         let allowed = true;
         try { allowed = Network.canDirectKickPlayerNow(id); } catch (e) { allowed = true; }
         if (allowed) { Network.directKickPlayer(id); kicked++; }
-      } catch (e) { this.warn("directKickPlayer failed for " + id + ": " + e); }
+      } catch (e) { log("directKickPlayer failed for " + id + ": " + e); }
     }
-    this.log("Host dropped " + kicked + " disconnected player(s) to break the pause deadlock.");
+    log("Host dropped " + kicked + " disconnected player(s) to break the pause deadlock.");
     // Clear every remaining connected player's flag too, so the game resumes the
     // moment the kicked slots free up (kick alone only clears the dropped flags).
     this.onRemoteResume();
@@ -518,7 +524,7 @@ class MultiplayerPauseManager {
   enterPaused() {
     this.state = STATE.PAUSED;
     this.pauseStart = Date.now();
-    this.maxCount = this.numWantPause();
+    this.statusText = "";
     if (!this.iHoldFlag) { this.iHoldFlag = true; this.toggleEnginePause(); }
     this.applyProgressFilters();
     this.openPauseMenu();
@@ -546,7 +552,7 @@ class MultiplayerPauseManager {
     try {
       if (chooser.viewHidden === false) {
         chooser.viewHidden = true;
-        this.log("Production chooser: 'View Hidden' forced on while paused.");
+        log("Production chooser: 'View Hidden' forced on while paused.");
       }
       this.viewHiddenForcedEl = el;
     } catch (e) { /* chooser internals changed; leave it alone */ }
@@ -561,8 +567,6 @@ class MultiplayerPauseManager {
 
   onPoll() {
     if (this.state !== STATE.PAUSED) return;
-    const count = this.numWantPause();
-    if (count > this.maxCount) this.maxCount = count;
     this.syncProductionChooser();
 
     // The pause menu is a reactive (SolidJS) screen; if a re-render dropped our
@@ -578,9 +582,6 @@ class MultiplayerPauseManager {
       }
     }
     this.refreshStatus();
-    // Resume is pure consensus now: the engine unpauses on its own the moment
-    // every want-pause flag clears (each connected player readies). No voting,
-    // no auto-resume timers.
   }
   beginCountdown() {
     if (this.state === STATE.COUNTDOWN) return;
@@ -612,23 +613,23 @@ class MultiplayerPauseManager {
     // The players chose to resume; accept AI control of anyone still absent so we
     // don't instantly re-pause them. A NEW disconnect later still pauses.
     for (const id of this.watchedHumans) {
-      try { if (!Network.isPlayerConnected(id)) this.acknowledged[id] = true; } catch (e) {}
+      if (!isConnected(id)) this.acknowledged[id] = true;
     }
     this.overlay.show(false);
     if (this.iHoldFlag) { this.iHoldFlag = false; this.toggleEnginePause(); }
-    setTimeout(() => { if (this.state === STATE.COUNTDOWN) this.enterIdle(); }, CONFIG.finalizeBackstopMs);
+    this.backstopTimer = setTimeout(() => { if (this.state === STATE.COUNTDOWN) this.enterIdle(); }, CONFIG.finalizeBackstopMs);
   }
   enterIdle() {
     this.state = STATE.IDLE;
     this.stopPoll();
     if (this.countdownTimer) { clearTimeout(this.countdownTimer); this.countdownTimer = 0; }
+    if (this.backstopTimer) { clearTimeout(this.backstopTimer); this.backstopTimer = 0; }
     this.overlay.show(false);
     this.clearProgressFilters();
     const nativeResume = document.querySelector(NATIVE_RESUME_BUTTON);
     if (nativeResume) nativeResume.style.display = "";
     this.iHoldFlag = false;
     this.finalizing = false;
-    this.maxCount = 0;
     this.pauseReason = "";
     this.disconnectNotices = [];
     this.restoreProductionChooser();
@@ -648,21 +649,6 @@ class MultiplayerPauseManager {
   //      disconnected we pause first - this is the exact moment the engine would
   //      otherwise hand the absent player's turn to the AI.
 
-  /** List of currently human, non-observer major player ids. */
-  humanParticipantIds() {
-    const out = [];
-    try {
-      const ids = Players.getAliveMajorIds();
-      for (let i = 0; i < ids.length; i++) {
-        const id = ids[i];
-        let pc = null;
-        try { pc = Configuration.getPlayer(id); } catch (e) { pc = null; }
-        if (pc && pc.isHuman && !pc.isObserver) out.push(id);
-      }
-    } catch (e) { /* fall through */ }
-    return out;
-  }
-
   /**
    * True if any monitored human slot is disconnected AND has not been
    * deliberately resumed past. The initial drop always trips this; once the
@@ -670,14 +656,8 @@ class MultiplayerPauseManager {
    * turn guard does not fight that choice (a fresh drop later still trips it).
    */
   disconnectedHumanExists() {
-    const ids = this.watchedHumans.length ? this.watchedHumans : this.humanParticipantIds();
-    for (const id of ids) {
-      if (this.acknowledged[id]) continue;
-      let connected = true;
-      try { connected = Network.isPlayerConnected(id); } catch (e) { connected = true; }
-      if (!connected) return true;
-    }
-    return false;
+    const ids = this.watchedHumans.length ? this.watchedHumans : humanParticipantIds();
+    return ids.some((id) => !this.acknowledged[id] && !isConnected(id));
   }
 
   /** Shared entry point: pause now (before AI) if we are idle and not at endgame. */
@@ -688,7 +668,7 @@ class MultiplayerPauseManager {
     try { if (document.querySelector("#screen-endgame")) return; } catch (e) {}
     this.iHoldFlag = true;
     this.toggleEnginePause();
-    this.log("Auto-paused before AI takeover: " + reason);
+    log("Auto-paused before AI takeover: " + reason);
   }
 
   // Layer 1 - engine disconnect event.
@@ -704,29 +684,23 @@ class MultiplayerPauseManager {
   }
 
   // Layer 2 - connection watchdog (polled).
-  primeConnections() {
-    for (const id of this.humanParticipantIds()) {
-      if (this.watchedHumans.indexOf(id) === -1) this.watchedHumans.push(id);
-      try { this.connState[id] = Network.isPlayerConnected(id); } catch (e) { this.connState[id] = true; }
+  /** Add newly present participants to the watch set (covers hot-join). */
+  watchParticipants() {
+    for (const id of humanParticipantIds()) {
+      if (this.watchedHumans.includes(id)) continue;
+      this.watchedHumans.push(id);
+      this.connState[id] = isConnected(id);
     }
   }
   startConnectionWatch() {
     if (this.connectionTimer) return;
-    this.primeConnections();
+    this.watchParticipants();
     this.connectionTimer = setInterval(() => this.checkConnections(), CONFIG.connectionWatchMs);
   }
   checkConnections() {
-    if (!this.isMultiplayer) return;
-    // Keep the watch set current (covers hot-join).
-    for (const id of this.humanParticipantIds()) {
-      if (this.watchedHumans.indexOf(id) === -1) {
-        this.watchedHumans.push(id);
-        try { this.connState[id] = Network.isPlayerConnected(id); } catch (e) { this.connState[id] = true; }
-      }
-    }
+    this.watchParticipants();
     for (const id of this.watchedHumans) {
-      let connected = true;
-      try { connected = Network.isPlayerConnected(id); } catch (e) { connected = true; }
+      const connected = isConnected(id);
       const was = this.connState[id];
       this.connState[id] = connected;
       if (was === true && connected === false) {   // newly dropped (edge) -> pause once
@@ -739,21 +713,20 @@ class MultiplayerPauseManager {
     let id = null;
     try { id = payload && (payload.data !== undefined ? payload.data : payload.player); } catch (e) {}
     if (id === undefined || id === null) return;
-    if (this.watchedHumans.indexOf(id) === -1) this.watchedHumans.push(id);
+    if (!this.watchedHumans.includes(id)) this.watchedHumans.push(id);
     this.connState[id] = true;       // reconnected -> a later drop is a fresh edge
     delete this.acknowledged[id];    // and is eligible to pause again if it drops
     this.removeDisconnectNotice(id);
     // A rejoin forces every client through a resync/reload; make sure the game
     // is paused and the pause menu is up on everyone's screen for its duration.
-    const name = this.playerNameById(id);
+    const reason = Locale.compose(LOC.playerReconnecting, this.playerNameById(id) || Locale.compose(LOC.aPlayer));
     if (this.state === STATE.IDLE) {
-      this.requestDisconnectPause((name || "A player") + " is reconnecting - resyncing.");
+      this.requestDisconnectPause(reason);
     } else {
-      this.pauseReason = (name || "A player") + " is reconnecting - resyncing.";
+      this.pauseReason = reason;
       this.openPauseMenu();
       this.refreshStatus();
     }
-    this.log("Player " + id + " connected.");
   }
 
   /**
@@ -763,12 +736,9 @@ class MultiplayerPauseManager {
    */
   onHostMigrated(data) {
     if (!this.isMultiplayer) return;
-    this.log("Host migrated" + (data && data.player !== undefined ? " to player " + data.player : "") + ".");
-    if (this.state === STATE.IDLE) {
-      this.requestDisconnectPause("The host changed.");
-    } else {
-      this.pauseReason = "The host changed.";
-    }
+    const reason = Locale.compose(LOC.hostChanged);
+    if (this.state === STATE.IDLE) this.requestDisconnectPause(reason);
+    else this.pauseReason = reason;
     // Captions depend on amHost(); rebuild the injected buttons on next poll.
     document.querySelectorAll(".mpt-injected").forEach((el) => el.remove());
     if (this.pauseMenuIsOpen()) this.tryInjectWhenMenuReady(0);
@@ -779,7 +749,7 @@ class MultiplayerPauseManager {
   onTurnActivated() {
     if (!this.isMultiplayer || this.state !== STATE.IDLE) return;
     if (this.disconnectedHumanExists()) {
-      this.requestDisconnectPause("A player is disconnected.");
+      this.requestDisconnectPause(Locale.compose(LOC.playerIsDisconnected));
     }
   }
 
@@ -789,10 +759,9 @@ class MultiplayerPauseManager {
     catch (e) { return false; }
   }
   async onReady() {
-    if (CONFIG.enabled === false) { this.log("Pause feature disabled via config."); return; }
+    if (CONFIG.enabled === false) return;
     this.isMultiplayer = this.isMultiplayerGame();
-    if (!this.isMultiplayer) { this.log("Single-player; Multiplayer Toolkit dormant."); return; }
-    this.log("Multiplayer; initializing Multiplayer Toolkit.");
+    if (!this.isMultiplayer) return;
     await this.loadCoreSingletons();
     this.injectStyles();
     this.overlay.build();

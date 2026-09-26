@@ -19,13 +19,13 @@
  */
 
 /**
- * Multiplayer Toolkit - resume countdown overlay.
+ * Multiplayer Toolkit - Pause resume countdown overlay.
  *
  * A small, self-contained component that owns the full-screen "UNPAUSING..."
  * element. It only manipulates its own DOM, so it can be reused/replaced
  * independently of the pause manager.
  */
-import { CONFIG } from './mp-pause-config.js';
+import { CONFIG, LOC } from './mp-pause-config.js';
 
 const OVERLAY_ID = "mpt-countdown";
 
@@ -40,7 +40,7 @@ class PauseCountdownOverlay {
     const el = document.createElement("div");
     el.id = OVERLAY_ID;
     el.innerHTML =
-      '<div class="mpt-count-label">Unpausing...</div>' +
+      '<div class="mpt-count-label">' + Locale.compose(LOC.unpausing) + '</div>' +
       '<div class="mpt-count-num">' + CONFIG.resumeCountdownSeconds + '</div>';
     document.body.appendChild(el);
     this.element = el;

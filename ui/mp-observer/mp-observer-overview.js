@@ -22,14 +22,14 @@
  * Multiplayer Toolkit - Observer overview panel (in-game scope).
  *
  * One reusable screen that lists something for every watched leader: a leader
- * header, then that leader's entries (icon, title, description). Built from the
- * base game's pantheon panel markup and stylesheet so it looks native.
- * Each "source" supplies the title and the per-player entries; the Observer's
- * Religion button opens it (see mp-observer-screens.js).
+ * header, then that leader's entries (icon, title, description), in the base
+ * pantheon panel's markup and stylesheet. Each source supplies the title and
+ * the entries; screen routing (mp-observer-screens.js) picks the source.
  */
 import Panel from 'fs://game/core/ui/panel-support.js';
 import { FocusManager } from 'fs://game/core/ui-next/services/focus-manager.js';
 import { InputEngineEventName } from 'fs://game/core/ui/input/input-support.js';
+import { clearChildren } from '../mpt-shared/mpt-util.js';
 import { watchedPlayers } from './mp-observer-core.js';
 
 const PANEL_TAG = 'mpt-observer-overview';
@@ -105,7 +105,7 @@ class ObserverOverviewPanel extends Panel {
     this.Root.querySelector('.mpt-overview-title')?.setAttribute('title', source.title);
     const list = this.Root.querySelector('.mpt-overview-list');
     if (!list) return;
-    list.innerHTML = '';
+    clearChildren(list);
     for (const player of watchedPlayers()) {
       list.appendChild(leaderHeader(player));
       const entries = source.entries(player);
@@ -126,8 +126,7 @@ function leaderHeader(player) {
   const name = document.createElement('p');
   name.classList.value = 'font-title-base text-accent-2';
   name.textContent = Locale.compose(player.name);
-  row.appendChild(portrait);
-  row.appendChild(name);
+  row.append(portrait, name);
   return row;
 }
 
@@ -144,8 +143,7 @@ function entryItem(entry) {
   const title = document.createElement('p');
   title.classList.value = 'pantheon-list_title font-title-base text-accent-2';
   title.setAttribute('data-l10n-id', entry.title);
-  item.appendChild(iconBox);
-  item.appendChild(title);
+  item.append(iconBox, title);
   if (entry.description) {
     const desc = document.createElement('div');
     desc.role = 'paragraph';
@@ -172,7 +170,7 @@ Controls.define(PANEL_TAG, {
   attributes: []
 });
 
-/** Screen routing hands over the source key (see SOURCES) before opening the panel. */
+/** Which source (a SOURCES key) the next opened panel shows. */
 function setOverviewSource(source) { requestedSource = source; }
 
 export { PANEL_TAG as OVERVIEW_PANEL_TAG, setOverviewSource };

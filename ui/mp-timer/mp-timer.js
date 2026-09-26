@@ -22,11 +22,13 @@
  * Multiplayer Toolkit - Competitive turn timer (component subclass).
  *
  * The engine only enforces None/Standard/Dynamic, so the custom "Competitive"
- * type is driven here, derived from the active Age's TURN_SEGMENT_SINGLEPHASE
- * numbers plus the MPT_TimerScaling values (data/timers/):
+ * type is driven here from the mod's MPT_TurnSegments and MPT_TimerScaling
+ * tables for the active Age (data/timers/):
  *
  *   seconds = Base + PerCity*cities + PerUnit*units
  *           + PerHuman*humanPlayers + PerTurn*turnNumber
+ *
+ * Human players never include Observers.
  *
  * Architecture: instead of proxying the action panel's event listener, the
  * panel COMPONENT itself is replaced. Controls.define supports priority-based
@@ -51,30 +53,23 @@
  *   orangeStart..flashStart+1  orange text, urgency beep every warnEverySeconds
  *   flashStart..0              engine's red flash + per-second beeps
  */
+import { createLogger, isObserverPlayer } from '../mpt-shared/mpt-util.js';
 import { TIMER_TYPE, CONFIG, ENGINE } from './mp-timer-config.js';
 
 const COMPETITIVE_HASH = Database.makeHash(TIMER_TYPE);
 const DEFINE_RETRY_MS = 200;
 const DEFINE_RETRIES = 50;
-// Timer events (TurnTimerUpdated) stop firing while some screens are open (e.g.
-// a settlement's details/production). When they have been silent this long, the
-// wall-clock enforcement sweep takes over the beeps so the audible cue never
-// stops even though the on-screen number is frozen behind the open panel.
-const STALE_EVENT_MS = 1200;
 
-let MPT_PanelAction = null;
-let mptEnforcementStarted = false;
-let mptLastEventMs = 0;   // last time a competitive TurnTimerUpdated was handled
+const log = createLogger('timer');
+const debug = CONFIG.debug ? log : () => {};
 
-function log(message) {
-  if (CONFIG.debug) console.log(`[MPT timer] ${message}`);
-}
+let mptLastEventMs = 0;    // last time a competitive TurnTimerUpdated was handled
 
 // ============================ Pure helpers ============================
 
-function isCompetitiveSelected() {
-  try { return Configuration.getGame().turnTimerType === COMPETITIVE_HASH; }
-  catch (e) { return false; }
+/** A living human major player who plays (Observers excluded). */
+function isHumanParticipant(player) {
+  return !!player?.isMajor && player.isHuman && !isObserverPlayer(player.id);
 }
 
 /** The configured timer type, or undefined while the configuration is unreadable. */
@@ -116,16 +111,15 @@ function scalingValues() {
   } catch (e) { return { perHuman: 0, perTurn: 0 }; }
 }
 
-/** One pass over living major players: max cities/units and human count (synced). */
+/** One pass over living major players (Observers excluded): max cities/units and human count (synced). */
 function playerTallies() {
   const tallies = { cities: 0, units: 0, humans: 0 };
   try {
-    for (const entry of Players.getAlive()) {
-      const player = (entry && entry.isMajor !== undefined) ? entry : Players.get(entry);
-      if (!player || !player.isMajor) continue;
+    for (const player of Players.getAlive()) {
+      if (!player?.isMajor || isObserverPlayer(player.id)) continue;
       tallies.cities = Math.max(tallies.cities, player.Cities?.getCities()?.length ?? 0);
       tallies.units = Math.max(tallies.units, player.Units?.getUnits()?.length ?? 0);
-      if (player.isHuman) tallies.humans++;
+      if (isHumanParticipant(player)) tallies.humans++;
     }
   } catch (e) { /* keep zeros */ }
   return tallies;
@@ -140,6 +134,7 @@ function computeSeconds() {
   const limit = segmentLimits();
   if (!limit) return 0;
   const { cities, units, humans } = playerTallies();
+  CLOCK.humans = humans;
   const { perHuman, perTurn } = scalingValues();
   const raw = limit.base
     + (limit.perCity * cities)
@@ -156,16 +151,16 @@ function computeSeconds() {
 /**
  * The authoritative countdown, kept at module scope so it survives the
  * panel-action being rebuilt. Elapsed time is measured on the wall clock and
- * frozen only for a real multiplayer pause - never affected by the engine's
- * elapsedTime field, which this timer no longer trusts.
+ * frozen only for a real multiplayer pause, never taken from the engine's
+ * elapsedTime field.
  */
 const CLOCK = {
   turn: -1,
   total: 0,
+  humans: 0,       // human players when the turn began (read by the enforcement sweep)
   startMs: 0,
   pausedAccumMs: 0,
   pausedSinceMs: 0,
-  lastEnforceMs: -Infinity,
   lastWarnTick: Infinity,
   staleBeepSecond: Infinity,
 
@@ -178,10 +173,9 @@ const CLOCK = {
       this.startMs = Date.now();
       this.pausedAccumMs = 0;
       this.pausedSinceMs = 0;
-      this.lastEnforceMs = -Infinity;
       this.lastWarnTick = Infinity;
       this.staleBeepSecond = Infinity;
-      log(`turn ${t}: total=${this.total}s`);
+      debug(`turn ${t}: total=${this.total}s`);
     }
     return this.total;
   },
@@ -233,23 +227,6 @@ function localHasCity() {
     const player = Players.get(GameContext.localPlayerID);
     return !!player && (player.Cities?.getCities()?.length ?? 0) > 0;
   } catch (e) { return true; }   // unknown: don't hold the clock
-}
-
-/**
- * True when the timer is allowed to force-end the local turn. The only remaining
- * guard is that the player has a city: never advance a player who has not yet
- * founded their capital (turn 1 is already off via firstTimedTurn, but this
- * covers any edge where they still have none). Everything the End Turn button
- * treats as a blocker - units awaiting orders and pending-choice notifications
- * (research, civic, city growth, narrative) - is instead cleared at expiry, the
- * same way the engine's own timer force-end abandons them.
- */
-function mptCanForceEnd() {
-  try {
-    const player = Players.get(GameContext.localPlayerID);
-    if (player && (player.Cities?.getCities()?.length ?? 0) === 0) return false;
-  } catch (e) { /* fall through */ }
-  return true;
 }
 
 /**
@@ -306,7 +283,7 @@ function unitAwaitsOrders(id) {
 function mptSkipReadyUnits() {
   if (!unitsBlockEndTurn()) return;
   const seen = new Set();
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < CONFIG.maxUnitSkips; i++) {
     let id = null;
     try { id = UI.Player.getFirstReadyUnit(); } catch (e) { break; }
     if (!id) break;
@@ -343,50 +320,32 @@ function mptBeepFromClock() {
 /**
  * Independent enforcement sweep. Runs on wall time regardless of whether timer
  * events are firing, so the countdown beeps and the turn ends on time even
- * while a settlement panel is open. Clears the units-need-orders block, then
- * ends the local turn; it keeps trying (units clear asynchronously) and will
- * re-end if the player unreadies at zero.
+ * while a settlement panel is open. Clears what blocks the end of the turn,
+ * then ends it; it keeps trying (units clear asynchronously) and re-ends the
+ * turn if the player unreadies at zero. Never ends the turn of a player
+ * without a settlement: their countdown is held at full instead, so founding a
+ * capital late never lands on an already-expired clock.
  */
-/** Living human major players (a "competitive" force-end only makes sense with 2+). */
-function livingHumanCount() {
-  let n = 0;
-  try {
-    for (const entry of Players.getAlive()) {
-      const p = (entry && entry.isMajor !== undefined) ? entry : Players.get(entry);
-      if (p && p.isMajor && p.isHuman) n++;
-    }
-  } catch (e) { /* keep count */ }
-  return n;
-}
-
 function mptEnforceTick() {
-  if (!isCompetitiveSelected() || !localPlayerTurnActive()) return;
-  if (inGrace()) return;                                          // untimed opening turn(s)
-  if (livingHumanCount() < CONFIG.minPlayersToEnforce) return;    // optional: never auto-end solo games
+  if (!localPlayerTurnActive() || inGrace()) return;
   CLOCK.syncTurn();
-  // No settlement yet: keep the countdown at full so founding a capital late
-  // never lands on an already-expired clock and ends the turn instantly.
+  if (CLOCK.humans < CONFIG.minPlayersToEnforce) return;
   if (!localHasCity()) { CLOCK.restart(); return; }
-  // Keep the audible countdown alive while timer events are stalled.
-  if (Date.now() - mptLastEventMs > STALE_EVENT_MS) mptBeepFromClock();
-  if (!CLOCK.expired() || !mptCanForceEnd()) return;
+  if (Date.now() - mptLastEventMs > CONFIG.staleEventMs) mptBeepFromClock();
+  if (!CLOCK.expired()) return;
   try { if (GameContext.hasSentTurnComplete && GameContext.hasSentTurnComplete()) return; } catch (e) {}
   mptSkipReadyUnits();       // only if units genuinely block; automated/queued units untouched
   mptDismissTurnBlockers();  // clear pending-choice blockers (research/civic/growth/narrative)
-  log(`time expired - ending local turn (turn ${CLOCK.turn})`);
+  debug(`time expired - ending local turn (turn ${CLOCK.turn})`);
   // Mirror the native End Turn button exactly (panel-action sendEndTurn).
   try { UI.Player.deselectAllUnits(); } catch (e) { /* ignore */ }
   try { GameContext.sendTurnComplete(); } catch (e) { /* ignore */ }
 }
 
-/** Start the enforcement sweep and pause accounting once (idempotent). */
+/** Start the enforcement sweep and pause accounting (once, when the Competitive timer is selected). */
 function startMptEnforcement() {
-  if (mptEnforcementStarted) return;
-  mptEnforcementStarted = true;
-  engine.on('GamePauseStateChanged',
-    (data) => CLOCK.setPaused(!!data && Number(data.data) === 1));
+  engine.on('GamePauseStateChanged', (data) => CLOCK.setPaused(!!data && Number(data.data) === 1));
   setInterval(mptEnforceTick, CONFIG.guardianMs);
-  log('enforcement sweep started (wall clock)');
 }
 
 // ============================ Render helpers ==========================
@@ -440,10 +399,7 @@ function defineMptPanelAction(attempts) {
     else log('game configuration never became readable; competitive timer inactive');
     return;
   }
-  if (configured !== COMPETITIVE_HASH) {
-    log('Competitive timer not selected - base panel-action left untouched');
-    return;
-  }
+  if (configured !== COMPETITIVE_HASH) return;
   let base = null;
   try { base = Controls.getDefinition('panel-action'); } catch (e) { base = null; }
   if (!base?.createInstance) {
@@ -455,7 +411,7 @@ function defineMptPanelAction(attempts) {
   injectRingKeyframes();
   startMptEnforcement();   // wall-clock enforcement runs even while the panel is rebuilt
 
-  MPT_PanelAction = class MPT_PanelAction extends PanelAction {
+  class MPT_PanelAction extends PanelAction {
     // --- ring freeze on pause (display-only; the clock itself is CLOCK) ---
     mptPauseListener = (data) => this.mptOnGamePauseChanged(data);
 
@@ -470,10 +426,9 @@ function defineMptPanelAction(attempts) {
 
     /** Single override point: feed the base renderer our clock. */
     onTurnTimerUpdated(data) {
-      if (isCompetitiveSelected()) mptLastEventMs = Date.now();   // events are flowing
-      // Grace turn(s): keep the competitive timer off entirely - hide it by
-      // handing the base renderer a zero limit (its own "no timer" path).
-      if (isCompetitiveSelected() && inGrace()) {
+      mptLastEventMs = Date.now();   // events are flowing
+      // Grace turn(s): hide the timer by handing the base renderer a zero limit (its own "no timer" path).
+      if (inGrace()) {
         super.onTurnTimerUpdated({ ...data, phaseTimeLimit: 0 });
         return;
       }
@@ -492,7 +447,7 @@ function defineMptPanelAction(attempts) {
      */
     mptContext(data) {
       const limit = data?.phaseTimeLimit ?? 0;
-      if (limit <= 0 || limit > CONFIG.maxProxyLimit || !isCompetitiveSelected()) return null;
+      if (limit <= 0 || limit > CONFIG.maxProxyLimit) return null;
       CLOCK.syncTurn();
       if (!localHasCity()) CLOCK.restart();   // show a full clock until the capital exists
       const total = CLOCK.total;
@@ -581,7 +536,6 @@ function defineMptPanelAction(attempts) {
       if (n >= CLOCK.lastWarnTick) return;
       CLOCK.lastWarnTick = n;
       try { UI.sendAudioEvent(ENGINE.audioUrgency); } catch (e) { /* no audio */ }
-      log(`urgency beep at ${n}s`);
     }
 
     /**
@@ -595,9 +549,8 @@ function defineMptPanelAction(attempts) {
       if (rings) {
         for (const el of rings) el.style.animationPlayState = paused ? 'paused' : 'running';
       }
-      log(paused ? 'game paused - ring frozen' : 'game resumed');
     }
-  };
+  }
 
   Controls.define('panel-action', {
     ...base,
@@ -605,16 +558,9 @@ function defineMptPanelAction(attempts) {
     description: (base.description ?? '') + ' (Multiplayer Toolkit competitive timer)',
     priority: (base.priority ?? 0) + 1
   });
-  log('panel-action redefined as MPT_PanelAction');
-
-  // If the HUD already built the panel with the base class, our subclass only
-  // applies to future creations - surface that loudly for testing.
+  // The subclass only applies to panels created from now on.
   const existing = document.querySelector('panel-action')?.maybeComponent;
-  if (existing && !(existing instanceof MPT_PanelAction)) {
-    log('WARNING: an existing panel-action predates the redefinition; timer inactive until it is recreated');
-  }
+  if (existing && !(existing instanceof MPT_PanelAction)) log('a panel-action predates the redefinition; timer inactive until it is recreated');
 }
 
 defineMptPanelAction(DEFINE_RETRIES);
-
-export { MPT_PanelAction };

@@ -49,7 +49,7 @@ then bounded by a clock computed for the active Age:
 seconds = Base
         + PerCity  × (most cities any civ has)
         + PerUnit  × (most units any civ has)
-        + PerHuman × (living human players)
+        + PerHuman × (living human players, Observers excluded)
         + PerTurn  × (current turn number)
 ```
 
@@ -107,8 +107,10 @@ player who un-readies after zero is re-ended within seconds.
 
 ## Synchronized Pause
 
-- **Pause (any player):** open the pause menu (Esc) and click **Pause Game**.
-  The game pauses for everyone and the pause menu opens on every player's screen.
+- **Pause (any player):** open the pause menu (Esc) and click **Pause Game**,
+  or press the **Pause Game** key (default **P**, rebindable in Options ->
+  keyboard mapping; while paused it toggles your readiness). The game pauses
+  for everyone and the pause menu opens on every player's screen.
 - **While paused** every player sees the pause menu with:
   - **Resume (Host) / Ready** – the primary button (a working `fxs-button`; the
     native ui-next "Resume Game" hero button can't be hooked to actually unpause,
@@ -277,7 +279,7 @@ out of every player's reach.
   effects), sees hidden units, keeps every unit's plot visible (the Squadron
   "Spotting" effect without its limits), stealthed, cannot be damaged, no
   3D model. It keeps 1 move (0 moves crashes new-game setup) and
-  `mp-observer-seat.js` keeps it asleep so it never asks for orders. A
+  `mp-observer-eye.js` keeps it asleep so it never asks for orders. A
   player only sees units on plots in its sight; revealing the map is not
   enough, so the mod no longer reveals the map and relies on the Eye.
 - Default defeat ("no cities and no founder") gets an extra inverse
@@ -305,57 +307,65 @@ out of every player's reach.
 
 ```
 Multiplayer-Toolkit/
-├─ multiplayer-toolkit.modinfo        # manifest: shell settings, per-Age data, UI scripts
-├─ config/
-│  └─ SetupParameters.sql             # registers the Competitive option in the lobby dropdown
-├─ icons/                             # eye badge + hex/circle leader portraits
-├─ maps/assign-starting-plots.js      # base-game override: Observer starts by the bottom-center ice (marked MPT:)
-├─ config/observer-config.xml         # lobby: Observer leader + civ per Age (setup DB)
-├─ data/observer/
+├─ multiplayer-toolkit.modinfo        # manifest: shell + game action groups, per-Age timer data
+├─ config/                            # setup (lobby) database
+│  ├─ SetupParameters.sql             # the Competitive option in the turn-timer dropdown
+│  ├─ mpt-input.sql                   # rebindable "Pause Game" keyboard action (default P)
+│  └─ observer-config.xml             # Observer leader + one civ per Age
+├─ data/observer/                     # gameplay database: the Observer
 │  ├─ observer-leader.xml             # leader, defeat exemption
 │  ├─ observer-civilizations.xml      # one civ per Age + age-transition unlocks
 │  ├─ observer-units-gameeffects.xml  # Observer's Eye ability modifiers
 │  ├─ observer-units.xml              # Observer's Eye: whole-map sight unit (replaces UNIT_FOUNDER)
-│  ├─ observer-icons.xml              # portraits/symbols (reuse "unknown" art)
+│  ├─ observer-icons.xml              # portraits / symbols / Eye flag icon
 │  └─ observer-colors.xml             # player colors
-├─ data/timers/
-│  ├─ TimerScaling.sql                # MPT_TimerScaling schema + default PerHuman/PerTurn
-│  ├─ antiquity/CompetitiveTimer.sql  # Antiquity segment values + scaling overrides
-│  ├─ exploration/CompetitiveTimer.sql
-│  └─ modern/CompetitiveTimer.sql
+├─ data/timers/                       # gameplay database: Competitive timer numbers
+│  ├─ TimerScaling.sql                # schema + default values
+│  └─ <age>/CompetitiveTimer.sql      # per-Age tuning
+├─ icons/                             # eye badge + hex/circle leader portraits
+├─ maps/assign-starting-plots.js      # base-game override: Observer start + Eye creation (marked MPT:)
+├─ ui-next/screens/victories/victories-screen-model.js  # base-game override: no Observers on the Victories screens (marked MPT:)
 ├─ text/en_us/
-│  ├─ mod-info-text.xml               # mod name/description (Additional Content screen)
-│  └─ mpt-text.xml                    # button captions + timer/observer strings
-├─ ui/mp-pause/                       # synchronized pause feature
-│  ├─ mp-pause-config.js              # constants & tunable settings (data)
-│  ├─ mp-pause.scss.js                # styles, shipped as a string
-│  ├─ mp-pause-overlay.js             # reusable "UNPAUSING..." countdown overlay
-│  └─ mp-pause-mgr.js                 # manager singleton / entry point
-├─ ui/mp-lobby/                       # lobby UI fixes (shell scope)
-│  ├─ mp-lobby-config.js              # constants & tunable settings (data)
-│  ├─ mp-lobby-observer.js            # Observer role: one civ entry, leader<->civ sync, locked team badge
-│  └─ mp-lobby-tooltips.js            # civ/leader ability-title tooltip patch (logic)
-├─ ui/mp-observer/                    # in-game Observer (game scope)
-│  ├─ mp-observer-core.js             # shared: Observer detection, watched players, war pairs, logger
-│  ├─ mp-observer-config.js           # ribbon view settings
-│  ├─ mp-observer-overview.js         # reusable per-leader list panel (pantheons)
-│  ├─ mp-observer-screens.js          # screen routing: advisor blocked, religion -> overview
-│  ├─ mp-observer-seat.js             # keeps the Eye asleep
-│  ├─ mp-observer-ribbon.js           # all leaders on the ribbon, fixed card size, moods, war colours, clicks
-│  ├─ mp-observer-victory.js          # observers excluded from the age rankings / score data
-│  ├─ mp-observer-diplomacy.js        # met-everyone; leader panel: that leader's wars, no Observer relationships
-│  ├─ mp-observer-units.js            # selects other players' units natively (guarded), combat estimate, hidden Eye flag
-│  └─ mp-observer-prompts.js          # no narrative / diplomacy / crisis / age-countdown prompts
-├─ ui-next/screens/victories/victories-screen-model.js  # base-game override: no observers on the Victories screens, real names for the Observer (marked MPT:)
-├─ ui/mp-timer/                       # competitive turn timer feature
-│  ├─ mp-timer-config.js              # constants & tunable settings (data)
-│  └─ mp-timer.js                     # MPT_PanelAction subclass: tiers, ring sync, enforcement
-└─ TESTING.md                         # FireTuner test guide + MPTTimer debug API
+│  ├─ mod-info-text.xml               # mod name / description
+│  └─ mpt-text.xml                    # every in-game string
+└─ ui/
+   ├─ mpt-shared/mpt-util.js          # shared helpers: logger, method wrapping, deferred patching, Observer identity
+   ├─ mp-keybind/mp-keybind.js        # lists the pause action in the keyboard-mapping options
+   ├─ mp-lobby/                       # lobby (shell scope)
+   │  ├─ mp-lobby-config.js
+   │  ├─ mp-lobby-observer.js         # Observer role: one civ entry, leader/civ/team kept in sync and locked
+   │  └─ mp-lobby-tooltips.js         # ability titles in tooltips, shorter start countdown
+   ├─ mp-pause/                       # synchronized pause
+   │  ├─ mp-pause-config.js
+   │  ├─ mp-pause.scss.js             # styles, shipped as a string
+   │  ├─ mp-pause-overlay.js          # "UNPAUSING..." countdown overlay
+   │  ├─ mp-pause-net.js              # hidden commands over chat (host resume for all)
+   │  └─ mp-pause-mgr.js              # pause manager
+   ├─ mp-timer/                       # Competitive turn timer
+   │  ├─ mp-timer-config.js
+   │  └─ mp-timer.js                  # panel-action subclass: clock, tiers, ring, enforcement
+   └─ mp-observer/                    # in-game Observer (every module no-ops for other players)
+      ├─ mp-observer-config.js
+      ├─ mp-observer-core.js          # Observer seat, watched players, war pairs, diplomacy modes
+      ├─ mp-observer-overview.js      # reusable every-leader list panel (pantheons)
+      ├─ mp-observer-screens.js       # screen routing: advisor blocked, religion -> overview
+      ├─ mp-observer-ribbon.js        # ribbon model: every leader, pinned stats, moods, views
+      ├─ mp-observer-ribbon-data.js   # Research / Production / Score rows
+      ├─ mp-observer-ribbon-style.js  # fixed card size, celebration / war highlights
+      ├─ mp-observer-ribbon-toolbar.js  # view buttons on the Observer's card
+      ├─ mp-observer-navigation.js    # portrait / banner / city-center clicks
+      ├─ mp-observer-victory.js       # Observers left out of victory data
+      ├─ mp-observer-diplomacy.js     # met everyone; leader panel: wars, no actions, no Observer rows
+      ├─ mp-observer-units.js         # selecting other players' units, with guards
+      ├─ mp-observer-combat.js        # combat preview between other players' units
+      ├─ mp-observer-eye.js           # the Eye: hidden flag, kept asleep, vision diagnostics
+      └─ mp-observer-prompts.js       # no narrative / meeting / diplomacy / crisis / age-countdown prompts
 ```
 
-Each feature follows the same pattern: a `*-config.js` data module and a logic
-module, mirroring the base game's UI conventions. See [`TESTING.md`](TESTING.md)
-for live-testing with FireTuner.
+Each feature has a `*-config.js` module for its settings and constants, and
+every module patches the base UI at runtime (the two base-game overrides above
+are the exceptions, marked `MPT:`). Diagnostics go to `UI.log` through the
+shared logger; features with a `debug` setting log more when it is on.
 
 ---
 
@@ -374,6 +384,13 @@ for live-testing with FireTuner.
   gold for celebrations and colour-match leaders at war with each other.
   Crisis, narrative and end-of-age prompts no longer interrupt the Observer,
   and the leader panel shows no ribbon.
+- **Cleanup:** shared helpers (`ui/mpt-shared/mpt-util.js`) for logging,
+  method wrapping and deferred patching across every feature; the Observer's
+  ribbon split into model / rows / look / buttons / navigation modules; all
+  logs reach `UI.log`; pause-menu texts are localized and player names are
+  shown as plain text; Observers no longer count as human players for the
+  Competitive timer or for disconnect pauses; pause/resume chat commands no
+  longer play the chat sound or mark chat unread once chat has been opened.
 - **Removed: the old Observer slot role and in-game dashboard.** Findings kept
   for the record: an observer slot has no player in-game, the September 16
   game update made `advice-manager.js` throw at load for the seatless observer

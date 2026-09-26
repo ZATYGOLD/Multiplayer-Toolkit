@@ -2,31 +2,22 @@
 <!--
   Multiplayer Toolkit - Observer's Eye unit (gameplay database, every Age).
 
-  Starting units are granted per Age (AdvancedStartUnits has no civilization
-  column), so the Observer civilizations replace the Founder with their own
-  unique unit through UnitReplaces - the same mechanism that gives Maya a
-  Jaguar Slayer in place of the Scout.
-
-  That unit is the Observer's vision. A player only sees units on plots it has
-  in sight, and revealing the map does not grant sight, so the Eye:
-    - sees the whole map: a sight range larger than any map, through terrain
-      and vegetation (the Chasqui / Hulche see-through effects), and hidden units;
-    - keeps every unit's plot visible (the Squadron "Spotting" effect, without
-      its range and enemy limits), so nothing is missed;
-    - cannot found, be damaged or be captured, and is stealthed, so the
-      real players never see it. It has no 3D model. It keeps 1 move (a unit
-      with 0 moves crashes new-game setup with a divide by zero); the Observer
-      client puts it to sleep so it never asks for orders.
-    - sits on the Ocean / Marine / Ice tile nearest the bottom-center of the
-      map, out of every player's reach. Ice is impassable, so it is created on
-      the neighbouring open water (valid in every Age through the Exploration
-      deep-ocean tech effects) and then moved onto the ice, which the engine
-      accepts. The Observer client never selects it, so it never moves; its
-      flag is hidden.
-      The game never places the Observer's starting unit, so the map script
-      (maps/assign-starting-plots.js) creates the Eye with Units.create when
-      it sets the Observer's start plot. The UnitReplaces row stays so the
-      Observer can never receive a real Founder.
+  The Observer's only unit and its vision: a player sees units only on plots
+  in its sight (revealing the map is not enough), so the Eye
+    - sees the whole map: sight 128 through terrain and vegetation (the
+      Chasqui / Hulche effects), and hidden units;
+    - keeps every unit's plot visible (the Squadron "Spotting" effect without
+      its range and enemy limits);
+    - cannot found, be damaged or be captured, and is stealthed, so other
+      players never see it. It has no art of its own (the game shows a
+      generic ship), and keeps 1 move: 0 moves crashes new-game setup with a
+      divide by zero. The Observer client keeps it asleep and hidden.
+  The game never places the Observer's starting unit, so the map script
+  (maps/assign-starting-plots.js) creates the Eye on open water next to the
+  Ocean / Marine / Ice tile nearest the bottom-center of the map, then moves
+  it onto the ice (impassable, but the engine accepts the move). Open ocean is
+  valid for it in every Age through the Exploration deep-ocean tech effects.
+  UnitReplaces keeps the Observer from ever receiving a real Founder.
 -->
 <Database>
   <Types>

@@ -19,22 +19,13 @@
  */
 
 /**
- * Multiplayer Toolkit - shared Observer helpers (in-game scope).
- * The Observer is a real player whose leader is LEADER_MPT_OBSERVER.
+ * Multiplayer Toolkit - Observer core (in-game scope).
+ *
+ * Who is watching and who is being watched. Every Observer module no-ops
+ * unless isObserverSeat() - other players are untouched.
  */
-const OBSERVER_LEADER = 'LEADER_MPT_OBSERVER';
-
-/** Logger that reaches UI.log (console.log output does not). */
-function createLogger(tag) {
-  return (message) => { try { console.warn(`[MPT ${tag}] ${message}`); } catch (e) { /* ignore */ } };
-}
-
-function isObserverPlayer(playerId) {
-  try {
-    const p = Players.get(playerId);
-    return !!p && GameInfo.Leaders.lookup(p.leaderType)?.LeaderType === OBSERVER_LEADER;
-  } catch (e) { return false; }
-}
+import { InterfaceMode } from 'fs://game/core/ui/interface-modes/interface-modes.js';
+import { isObserverPlayer } from '../mpt-shared/mpt-util.js';
 
 /** True when this client plays the Observer. */
 function isObserverSeat() {
@@ -60,4 +51,14 @@ function warPairs() {
   return pairs;
 }
 
-export { OBSERVER_LEADER, createLogger, isObserverPlayer, isObserverSeat, watchedPlayers, warPairs };
+/** True in any diplomacy screen (leader panel, dialogs, call to arms, peace deal). */
+function inDiplomacyMode() {
+  try { return /DIPLOMACY|CALL_TO_ARMS|PEACE_DEAL/.test(InterfaceMode.getCurrent() ?? ''); } catch (e) { return false; }
+}
+
+/** True in the leader panel itself. */
+function inLeaderPanel() {
+  try { return /DIPLOMACY_HUB/.test(InterfaceMode.getCurrent() ?? ''); } catch (e) { return false; }
+}
+
+export { isObserverPlayer, isObserverSeat, watchedPlayers, warPairs, inDiplomacyMode, inLeaderPanel };

@@ -19,11 +19,7 @@
  */
 
 /**
- * Multiplayer Toolkit - configuration & constants.
- *
- * Centralizes every tunable value and identifier so the manager, overlay and
- * styles stay consistent. Mirrors the data/logic separation used across the
- * base game's UI modules.
+ * Multiplayer Toolkit - Pause configuration & constants.
  */
 
 /** Source tag used when registering/removing engine input filters. */
@@ -44,7 +40,8 @@ const CONFIG = {
   convergenceDelayMs: 2000,    // wait for all clients to flag in before evaluating readiness
   finalizeBackstopMs: 4000,    // fallback idle if the unpause event is missed
   connectionWatchMs: 500,      // how often to poll player connections for drops
-  pauseHotkey: "p"             // key that pauses / toggles readiness ("" disables)
+  hotkeyDebounceMs: 250,       // one press through the keybind and the raw key acts once
+  pauseHotkey: "p"             // raw-key fallback for the rebindable Pause keybind ("" = keybind only)
 };
 
 /**
@@ -59,7 +56,7 @@ const PROGRESS_ACTIONS = [
   "trigger-accept-dip", "quick-load"
 ];
 
-/** Localization keys for the injected buttons (see text/en_us/mp-pause-text.xml). */
+/** Localization keys (text/en_us/mpt-text.xml; View Map reuses the base game's string). */
 const LOC = {
   pauseGame: "LOC_MPT_PAUSE_GAME",
   ready: "LOC_MPT_READY",
@@ -67,7 +64,17 @@ const LOC = {
   resumeHost: "LOC_MPT_RESUME_HOST",
   resumeAll: "LOC_MPT_RESUME_ALL",        // host-authoritative: resume for every connected player
   dropResume: "LOC_MPT_DROP_RESUME",      // host-only: kick disconnected players to break a pause deadlock
-  viewMap: "LOC_ADVANCED_START_VIEW_MAP"  // reuse the base game's existing string
+  viewMap: "LOC_ADVANCED_START_VIEW_MAP",
+  readyTally: "LOC_MPT_PAUSE_READY_TALLY",
+  hintHost: "LOC_MPT_PAUSE_HINT_HOST",
+  hintReady: "LOC_MPT_PAUSE_HINT_READY",
+  hintWaiting: "LOC_MPT_PAUSE_HINT_WAITING",
+  aPlayer: "LOC_MPT_PAUSE_A_PLAYER",
+  playerDisconnected: "LOC_MPT_PAUSE_PLAYER_DISCONNECTED",
+  playerIsDisconnected: "LOC_MPT_PAUSE_PLAYER_IS_DISCONNECTED",
+  playerReconnecting: "LOC_MPT_PAUSE_PLAYER_RECONNECTING",
+  hostChanged: "LOC_MPT_PAUSE_HOST_CHANGED",
+  unpausing: "LOC_MPT_PAUSE_UNPAUSING"
 };
 
 /** Candidate import paths for a core singleton (mod is not co-located w/ core). */

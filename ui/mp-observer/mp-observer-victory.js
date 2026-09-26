@@ -19,39 +19,33 @@
  */
 
 /**
- * Multiplayer Toolkit - Observer players are never listed on the Victories
- * screens (Summary, each victory path, Score) or in the age rankings, on any
- * client. The base VictoryManager builds those lists; its results are
- * filtered after each rebuild.
+ * Multiplayer Toolkit - Observer victory lists (in-game scope, every client).
+ *
+ * Observers are never listed on the Victories screens (Summary, each victory
+ * path, Score) or in the age rankings: the base VictoryManager's results are
+ * filtered after each rebuild. The Victories screen model itself is a base-file
+ * override (ui-next/screens/victories/victories-screen-model.js).
  */
 import VictoryManager from 'fs://game/base-standard/ui/victory-manager/victory-manager.js';
-import { createLogger, isObserverPlayer } from './mp-observer-core.js';
+import { createLogger, isObserverPlayer, wrapMethod } from '../mpt-shared/mpt-util.js';
 
 const log = createLogger('observer-victory');
+const proto = Object.getPrototypeOf(VictoryManager);
 
-function install() {
-  const proto = Object.getPrototypeOf(VictoryManager);
-  const baseVictory = proto.processVictoryData;
-  const baseScore = proto.processScoreData;
-  if (typeof baseVictory !== 'function' || typeof baseScore !== 'function') { log('victory manager unavailable'); return; }
+wrapMethod(proto, 'processVictoryData', function (base, ...args) {
+  const result = base(...args);
+  try {
+    this.victoryEnabledPlayers = (this.victoryEnabledPlayers ?? []).filter((id) => !isObserverPlayer(id));
+    for (const list of this.processedVictoryData?.values?.() ?? []) {
+      for (const victory of list) victory.playerData = victory.playerData.filter((d) => !isObserverPlayer(d.playerID));
+    }
+  } catch (e) { log(`victory filter failed: ${e}`); }
+  return result;
+});
 
-  proto.processVictoryData = function (...args) {
-    const result = baseVictory.apply(this, args);
-    try {
-      this.victoryEnabledPlayers = (this.victoryEnabledPlayers ?? []).filter((id) => !isObserverPlayer(id));
-      for (const list of this.processedVictoryData?.values?.() ?? []) {
-        for (const victory of list) victory.playerData = victory.playerData.filter((d) => !isObserverPlayer(d.playerID));
-      }
-    } catch (e) { log(`victory filter failed: ${e}`); }
-    return result;
-  };
-  proto.processScoreData = function (...args) {
-    const result = baseScore.apply(this, args);
-    try { this.processedScoreData = (this.processedScoreData ?? []).filter((d) => !isObserverPlayer(d.playerID)); }
-    catch (e) { log(`score filter failed: ${e}`); }
-    return result;
-  };
-  log('observer excluded from victory lists');
-}
-
-install();
+wrapMethod(proto, 'processScoreData', function (base, ...args) {
+  const result = base(...args);
+  try { this.processedScoreData = (this.processedScoreData ?? []).filter((d) => !isObserverPlayer(d.playerID)); }
+  catch (e) { log(`score filter failed: ${e}`); }
+  return result;
+});

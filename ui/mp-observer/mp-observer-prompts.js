@@ -23,27 +23,40 @@
  *
  * The Observer is a real player, so the game also sends it the prompts meant
  * for an empire. For the Observer seat:
- *   - narrative events (crises included) never open; the pending story is
+ *   - narrative events (crises included) never open; each pending story is
  *     answered with its first available choice, so nothing waits on it;
- *   - the end-of-age countdown popup never opens;
+ *   - first meetings are answered with the neutral greeting (the turn cannot
+ *     end until they are);
  *   - diplomacy dialogs addressed to the Observer never open; their session
  *     is closed, as the dialog's own buttons do;
- *   - first meetings are answered with the neutral greeting (the game waits
- *     on that answer before the turn can end);
+ *   - the end-of-age countdown popup never opens;
  *   - crisis, age-progress, "player met" and agenda notifications are dismissed.
- * Other players are untouched.
  */
 import { DisplayQueueManager } from 'fs://game/core/ui/context-manager/display-queue-manager.js';
 import AgeProgressionPopupManager from 'fs://game/base-standard/ui/age-progression-warning-popup/age-progression-warning-popup-manager.js';
 import { NarrativePopupManager } from 'fs://game/base-standard/ui/narrative-event/narrative-popup-manager.js';
 import { DiplomacyDialogManagerImpl } from 'fs://game/base-standard/ui/diplomacy/diplomacy-manager.js';
-import { createLogger, isObserverSeat } from './mp-observer-core.js';
+import { createLogger, wrapMethod } from '../mpt-shared/mpt-util.js';
+import { CONFIG } from './mp-observer-config.js';
+import { isObserverSeat } from './mp-observer-core.js';
 
 const log = createLogger('observer-prompts');
+const debug = CONFIG.debug ? log : () => {};
 const SILENCED_NOTIFICATIONS = /^NOTIFICATION_(CRISIS|AGE_(EARLY|LATE|VERY_LATE)_PROGRESS|AGE_PROGRESSION_|AGE_EXTENDED|PLAYER_MET|DIPLOMATIC_ACTION_AGENDA)/;
 const STORY_NOTIFICATIONS = /STORY_DIRECTION$/;
 const STORY_RETRY_MS = 1500;
 const SWEEP_DELAY_MS = 500;
+
+/** Send a player operation for the Observer if the engine allows it. */
+function tryOperation(type, args) {
+  const me = GameContext.localPlayerID;
+  if (!Game.PlayerOperations.canStart(me, type, args, false)?.Success) return false;
+  Game.PlayerOperations.sendRequest(me, type, args);
+  return true;
+}
+
+/** Close a display request without showing it (after the current show call returns). */
+const skipDisplay = (request) => setTimeout(() => DisplayQueueManager.close(request), 0);
 
 // ============================ Narrative stories ============================
 
@@ -59,23 +72,19 @@ function storyChoices(stories, storyId) {
   return [...links, 'CLOSE'];
 }
 
-/** Answer the Observer's next pending story (one per call; the engine applies it asynchronously). */
+/** Answer the next pending story (one per call; the engine applies it asynchronously). */
 function answerPendingStory() {
   if (!isObserverSeat()) return;
   try {
     const stories = Players.get(GameContext.localPlayerID)?.Stories;
     const storyId = stories?.getFirstPendingMetId?.() || stories?.getFirstPendingDiscoveryLastMetID?.();
     if (!storyId || storyId === lastAnsweredStory) return;
-    for (const key of storyChoices(stories, storyId)) {
-      const args = { TargetType: key, Target: storyId, Action: PlayerOperationParameters.Activate };
-      if (!Game.PlayerOperations.canStart(GameContext.localPlayerID, PlayerOperationTypes.CHOOSE_NARRATIVE_STORY_DIRECTION, args, false)?.Success) continue;
-      Game.PlayerOperations.sendRequest(GameContext.localPlayerID, PlayerOperationTypes.CHOOSE_NARRATIVE_STORY_DIRECTION, args);
-      lastAnsweredStory = storyId;
-      log(`story ${storyId} answered with ${key}`);
-      setTimeout(answerPendingStory, STORY_RETRY_MS);   // the next pending story, if any
-      return;
-    }
-    log(`story ${storyId}: no available choice`);
+    const answered = storyChoices(stories, storyId).find((key) =>
+      tryOperation(PlayerOperationTypes.CHOOSE_NARRATIVE_STORY_DIRECTION, { TargetType: key, Target: storyId, Action: PlayerOperationParameters.Activate }));
+    if (!answered) { log(`story ${storyId}: no available choice`); return; }
+    lastAnsweredStory = storyId;
+    debug(`story ${storyId} answered with ${answered}`);
+    setTimeout(answerPendingStory, STORY_RETRY_MS);   // the next pending story, if any
   } catch (e) { log(`story answer failed: ${e}`); }
 }
 
@@ -83,18 +92,14 @@ function answerPendingStory() {
 
 const answeredMeets = new Set();
 
-/** Answer every pending first meeting with the neutral greeting (once per leader). */
 function answerFirstMeets() {
-  if (!isObserverSeat()) return;
   const me = GameContext.localPlayerID;
   for (const id of Players.getAliveIds()) {
     if (id === me || answeredMeets.has(id)) continue;
     try {
-      const args = { Player1: me, Player2: id, Type: DiplomacyPlayerFirstMeets.PLAYER_REALATIONSHIP_FIRSTMEET_NEUTRAL };
-      if (!Game.PlayerOperations.canStart(me, PlayerOperationTypes.RESPOND_DIPLOMATIC_FIRST_MEET, args, false)?.Success) continue;
-      Game.PlayerOperations.sendRequest(me, PlayerOperationTypes.RESPOND_DIPLOMATIC_FIRST_MEET, args);
+      if (!tryOperation(PlayerOperationTypes.RESPOND_DIPLOMATIC_FIRST_MEET, { Player1: me, Player2: id, Type: DiplomacyPlayerFirstMeets.PLAYER_REALATIONSHIP_FIRSTMEET_NEUTRAL })) continue;
       answeredMeets.add(id);
-      log(`first meeting with player ${id} answered`);
+      debug(`first meeting with player ${id} answered`);
     } catch (e) { log(`first meeting answer failed: ${e}`); }
   }
 }
@@ -106,19 +111,15 @@ function notificationType(id) {
   return GameInfo.Notifications.lookup(type)?.NotificationType ?? Game.Notifications.getTypeName(type) ?? '';
 }
 
-/** Dismiss silenced notifications and answer what the others wait on. */
-function sweepNotifications() {
+/** Answer what the game waits on and dismiss silenced notifications. */
+function sweep() {
   if (!isObserverSeat()) return;
   answerFirstMeets();
   for (const id of Game.Notifications.getIdsForPlayer(GameContext.localPlayerID) ?? []) {
     try {
       const type = notificationType(id);
-      if (STORY_NOTIFICATIONS.test(type)) { answerPendingStory(); continue; }
-      if (!SILENCED_NOTIFICATIONS.test(type)) continue;
-      if (Game.Notifications.canUserDismissNotification(id)) {
-        Game.Notifications.dismiss(id);
-        log(`dismissed ${type}`);
-      }
+      if (STORY_NOTIFICATIONS.test(type)) answerPendingStory();
+      else if (SILENCED_NOTIFICATIONS.test(type) && Game.Notifications.canUserDismissNotification(id)) Game.Notifications.dismiss(id);
     } catch (e) { log(`notification handling failed: ${e}`); }
   }
 }
@@ -127,43 +128,31 @@ let sweepQueued = false;
 function queueSweep() {
   if (sweepQueued) return;
   sweepQueued = true;
-  setTimeout(() => { sweepQueued = false; sweepNotifications(); }, SWEEP_DELAY_MS);
+  setTimeout(() => { sweepQueued = false; sweep(); }, SWEEP_DELAY_MS);
 }
 
 // ============================ Popups ============================
 
 function patchPopups() {
-  const baseRaise = NarrativePopupManager.raiseNotificationPanel.bind(NarrativePopupManager);
-  NarrativePopupManager.raiseNotificationPanel = (...args) => {
-    if (!isObserverSeat()) return baseRaise(...args);
+  wrapMethod(NarrativePopupManager, 'raiseNotificationPanel', (base, ...args) => {
+    if (!isObserverSeat()) return base(...args);
     answerPendingStory();
     return false;
-  };
-
-  const baseShow = AgeProgressionPopupManager.show.bind(AgeProgressionPopupManager);
-  AgeProgressionPopupManager.show = (request, ...rest) => {
-    if (!isObserverSeat()) return baseShow(request, ...rest);
-    setTimeout(() => DisplayQueueManager.close(request), 0);   // release the queue without showing
-    log('age countdown popup skipped');
-  };
-
-  const dialogProto = DiplomacyDialogManagerImpl.prototype;
-  const baseDialog = dialogProto.show;
-  dialogProto.show = function (request, ...rest) {
-    if (!isObserverSeat()) return baseDialog.call(this, request, ...rest);
+  });
+  wrapMethod(AgeProgressionPopupManager, 'show', (base, request, ...rest) => {
+    if (!isObserverSeat()) return base(request, ...rest);
+    skipDisplay(request);
+  });
+  wrapMethod(DiplomacyDialogManagerImpl.prototype, 'show', (base, request, ...rest) => {
+    if (!isObserverSeat()) return base(request, ...rest);
     answerFirstMeets();
     try { Game.DiplomacySessions.closeSession(request.SessionID); } catch (e) { log(`close session failed: ${e}`); }
-    setTimeout(() => DisplayQueueManager.close(request), 0);
-    log(`diplomacy dialog from player ${request?.OtherPlayerID} skipped`);
+    skipDisplay(request);
     queueSweep();
-  };
+  });
 }
 
-engine.whenReady.then(() => {
-  patchPopups();
-  engine.on('NotificationAdded', (data) => { if (data?.id?.owner == GameContext.localPlayerID) queueSweep(); });
-  engine.on('LocalPlayerTurnBegin', () => { answerPendingStory(); queueSweep(); });
-  answerPendingStory();
-  queueSweep();
-  log('observer prompt filtering installed');
-});
+patchPopups();
+engine.on('NotificationAdded', (data) => { if (data?.id?.owner == GameContext.localPlayerID) queueSweep(); });
+engine.on('LocalPlayerTurnBegin', () => { answerPendingStory(); queueSweep(); });
+engine.whenReady.then(() => { answerPendingStory(); queueSweep(); });

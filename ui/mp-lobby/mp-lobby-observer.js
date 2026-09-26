@@ -34,9 +34,9 @@
  */
 import MPLobbyModel, { MPLobbyDataModel } from 'fs://game/core/ui/shell/mp-staging/model-mp-staging-new.js';
 import { MPStagingTeamDropdown } from 'fs://game/core/ui/shell/mp-staging/mp-staging-team-dropdown.js';
+import { createLogger, OBSERVER_LEADER, wrapMethod } from '../mpt-shared/mpt-util.js';
 import { CONFIG } from './mp-lobby-config.js';
 
-const OBSERVER_LEADER = 'LEADER_MPT_OBSERVER';
 const OBSERVER_CIV_PREFIX = 'CIVILIZATION_MPT_OBSERVER_';
 const OBSERVER_ICON = 'fs://game/icons/mpt_observer.png';
 const OBSERVER_CIV_ICON = 'fs://game/icons/mpt_observer_civ.png';
@@ -46,9 +46,7 @@ const DROPDOWN_PARAM = 'DROPDOWN_TYPE_PLAYER_PARAM';
 const DROPDOWN_TEAM = 'DROPDOWN_TYPE_TEAM';
 const NO_TEAM = -1;
 
-function log(message) {
-  if (CONFIG.debug) { try { console.warn(`[MPT lobby-observer] ${message}`); } catch (e) { /* ignore */ } }
-}
+const log = CONFIG.debug ? createLogger('lobby-observer') : () => {};
 
 // ============================ Game state ============================
 
@@ -59,27 +57,23 @@ function isObserverCiv(civ) { return typeof civ === 'string' && civ.startsWith(O
  * exposes the Age's display key (LOC_AGE_ANTIQUITY_NAME), so it is resolved to
  * the AgeType through the setup database, with a name-strip fallback.
  */
-let cachedStartAge = '';
+let ageRows = null;
+let lastStartAge = 'AGE_ANTIQUITY';
 function startAgeType() {
   let name = '';
   try { name = Configuration.getGame().startAgeName || ''; } catch (e) { /* unknown */ }
-  if (!name) return cachedStartAge || 'AGE_ANTIQUITY';
-  try {
-    const row = (Database.query('config', 'select AgeType, Name from Ages') ?? []).find((r) => r.Name === name);
-    if (row?.AgeType) { cachedStartAge = row.AgeType; return cachedStartAge; }
-  } catch (e) { /* fall back */ }
-  cachedStartAge = name.replace(/^LOC_/, '').replace(/_NAME$/, '');
-  return cachedStartAge;
+  if (!name) return lastStartAge;
+  try { ageRows ??= Database.query('config', 'select AgeType, Name from Ages') ?? []; } catch (e) { ageRows = []; }
+  lastStartAge = ageRows.find((r) => r.Name === name)?.AgeType ?? name.replace(/^LOC_/, '').replace(/_NAME$/, '');
+  return lastStartAge;
 }
 function observerCivForStartAge() {
   return OBSERVER_CIV_PREFIX + startAgeType().replace(/^AGE_/, '');
 }
 
-/** Keep RANDOM first, everything else in base order, and the Observer entry last. */
+/** Base order, with the Observer entry moved last. */
 function moveObserverLast(items, isObserver) {
-  const rest = items.filter((it) => !isObserver(it));
-  const obs = items.filter(isObserver);
-  return rest.concat(obs);
+  return items.filter((it) => !isObserver(it)).concat(items.filter(isObserver));
 }
 
 function playerLeader(playerID) {
@@ -187,23 +181,20 @@ function syncSelection(playerID, param, value) {
 function install() {
   const proto = MPLobbyDataModel.prototype;
 
-  const baseParamDropdown = proto.createPlayerParamDropdown;
-  proto.createPlayerParamDropdown = function (playerID, dropID, type, dropLabel, dropDesc, paramNameHandle, ...rest) {
-    const dropdown = baseParamDropdown.call(this, playerID, dropID, type, dropLabel, dropDesc, paramNameHandle, ...rest);
-    if (!dropdown) return dropdown;
+  wrapMethod(proto, 'createPlayerParamDropdown', function (base, playerID, dropID, type, dropLabel, dropDesc, paramNameHandle, ...rest) {
+    const dropdown = base(playerID, dropID, type, dropLabel, dropDesc, paramNameHandle, ...rest);
     try {
-      if (paramNameHandle === this.PlayerCivilizationStringHandle) shapeCivDropdown(dropdown, playerID);
-      else if (paramNameHandle === this.PlayerLeaderStringHandle) shapeLeaderDropdown(dropdown, playerID);
+      if (dropdown && paramNameHandle === this.PlayerCivilizationStringHandle) shapeCivDropdown(dropdown, playerID);
+      else if (dropdown && paramNameHandle === this.PlayerLeaderStringHandle) shapeLeaderDropdown(dropdown, playerID);
     } catch (e) { log(`dropdown shaping failed: ${e}`); }
     return dropdown;
-  };
+  });
 
-  const baseTeamDropdown = proto.createTeamParamDropdown;
-  proto.createTeamParamDropdown = function (playerID, ...rest) {
-    const dropdown = baseTeamDropdown.call(this, playerID, ...rest);
-    if (dropdown) { try { shapeTeamDropdown(dropdown, playerID); } catch (e) { log(`team shaping failed: ${e}`); } }
+  wrapMethod(proto, 'createTeamParamDropdown', (base, playerID, ...rest) => {
+    const dropdown = base(playerID, ...rest);
+    try { if (dropdown) shapeTeamDropdown(dropdown, playerID); } catch (e) { log(`team shaping failed: ${e}`); }
     return dropdown;
-  };
+  });
 
   // Sync after the base handler has applied the player's pick.
   const baseParamCallback = MPLobbyModel.dropdownCallbacks.get(DROPDOWN_PARAM);
@@ -238,9 +229,8 @@ function install() {
 
   // Collapsed team badge: paint the eye instead of a team color for the Observer
   // entry. Re-checked when the items change too, since the index may not move.
-  const baseTeamAttrChanged = MPStagingTeamDropdown.prototype.onAttributeChanged;
-  MPStagingTeamDropdown.prototype.onAttributeChanged = function (name, oldValue, newValue) {
-    baseTeamAttrChanged.call(this, name, oldValue, newValue);
+  wrapMethod(MPStagingTeamDropdown.prototype, 'onAttributeChanged', function (base, name, oldValue, newValue) {
+    base(name, oldValue, newValue);
     try {
       if (name !== 'selected-item-index' && name !== 'dropdown-items') return;
       const index = parseInt(this.Root.getAttribute('selected-item-index') ?? '-1');
@@ -251,7 +241,7 @@ function install() {
       }
       this.Root.setAttribute('show-label-on-selected-item', observing ? 'false' : 'true');
     } catch (e) { /* keep base visuals */ }
-  };
+  });
 
   log(`observer role installed (start-age civ: ${observerCivForStartAge()})`);
 }

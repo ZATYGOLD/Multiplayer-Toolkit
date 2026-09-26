@@ -19,48 +19,34 @@
  */
 
 /**
- * Multiplayer Toolkit - Keybind editor injection.
+ * Multiplayer Toolkit - Pause keybind in the keyboard-mapping options (shell and game scope).
  *
- * The keyboard-mapping options screen only lists the action IDs in a hardcoded
- * (non-exported) KEYS_TO_ADD array inside the game's editor-keyboard-mapping.js,
- * so a mod-registered action does not appear there on its own. This patches the
- * editor panel to also list our pause action (registered by config/mpt-input.sql)
- * so it shows up and can be rebound like any built-in keybind.
- *
- * Loaded in both shell and game scope, since the keyboard-mapping screen can be
- * opened from the main menu and the in-game pause menu.
+ * The keyboard-mapping screen only lists the action IDs in a hard-coded,
+ * non-exported array in the game's editor-keyboard-mapping.js, so the pause
+ * action registered by config/mpt-input.sql would not appear there. The
+ * editor is patched to list it, so it can be rebound like any built-in key.
+ * Loaded in both scopes: the screen opens from the main menu and in game.
  */
+import { createLogger, whenDefined, wrapMethod } from '../mpt-shared/mpt-util.js';
+
+const log = createLogger('keybind');
 const EDITOR_TAG = 'editor-keyboard-mapping';
-const ACTION_ID = 'mpt-pause-game';
-const RETRY_MS = 300;
-const RETRIES = 50;
+const PAUSE_ACTION_ID = 'mpt-pause-game';
 
-function log(message) {
-  console.log(`[MPT keybind] ${message}`);
-}
-
-function patchEditor(attempts) {
-  let def = null;
-  try { def = Controls.getDefinition(EDITOR_TAG); } catch (e) { def = null; }
-  if (!def?.createInstance) {
-    if (attempts > 0) setTimeout(() => patchEditor(attempts - 1), RETRY_MS);
-    return;
-  }
-  const EditorClass = def.createInstance;
-  if (EditorClass.prototype.mptKeybindPatched) return;
-  EditorClass.prototype.mptKeybindPatched = true;
-
-  const baseAddActions = EditorClass.prototype.addActionsForContext;
-  EditorClass.prototype.addActionsForContext = function (inputContext) {
-    baseAddActions.call(this, inputContext);
+whenDefined(EDITOR_TAG, (definition) => {
+  const proto = definition.createInstance.prototype;
+  if (proto.mptKeybindPatched) return;
+  proto.mptKeybindPatched = true;
+  wrapMethod(proto, 'addActionsForContext', function (base, inputContext, ...rest) {
+    const result = base(inputContext, ...rest);
     try {
-      const actionId = Input.getActionIdByName(ACTION_ID);
+      const actionId = Input.getActionIdByName(PAUSE_ACTION_ID);
       if (actionId && !this.mappingDataMap.has(actionId) && this.actionContainer) {
         this.actionContainer.appendChild(this.createActionEntry(actionId, inputContext));
       }
     } catch (e) { /* leave the base list intact */ }
-  };
-  log('keyboard-mapping editor patched to list the pause action');
-}
+    return result;
+  });
+}, { retries: 50, intervalMs: 300, log });
 
-patchEditor(RETRIES);
+export { PAUSE_ACTION_ID };

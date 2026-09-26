@@ -20,6 +20,36 @@
     <Row Tag="LOC_MPT_DROP_RESUME">
       <Text>Drop Disconnected &amp; Resume</Text>
     </Row>
+    <Row Tag="LOC_MPT_PAUSE_READY_TALLY">
+      <Text>Ready: {1_Ready} / {2_Total}</Text>
+    </Row>
+    <Row Tag="LOC_MPT_PAUSE_HINT_HOST">
+      <Text>You are the host. Resume when ready.</Text>
+    </Row>
+    <Row Tag="LOC_MPT_PAUSE_HINT_READY">
+      <Text>You are ready. Waiting for the host to resume.</Text>
+    </Row>
+    <Row Tag="LOC_MPT_PAUSE_HINT_WAITING">
+      <Text>Waiting for the host to resume.</Text>
+    </Row>
+    <Row Tag="LOC_MPT_PAUSE_A_PLAYER">
+      <Text>A player</Text>
+    </Row>
+    <Row Tag="LOC_MPT_PAUSE_PLAYER_DISCONNECTED">
+      <Text>{1_Name} disconnected.</Text>
+    </Row>
+    <Row Tag="LOC_MPT_PAUSE_PLAYER_IS_DISCONNECTED">
+      <Text>A player is disconnected.</Text>
+    </Row>
+    <Row Tag="LOC_MPT_PAUSE_PLAYER_RECONNECTING">
+      <Text>{1_Name} is reconnecting - resyncing.</Text>
+    </Row>
+    <Row Tag="LOC_MPT_PAUSE_HOST_CHANGED">
+      <Text>The host changed.</Text>
+    </Row>
+    <Row Tag="LOC_MPT_PAUSE_UNPAUSING">
+      <Text>Unpausing...</Text>
+    </Row>
     <Row Tag="LOC_MPT_PAUSE_KEYBIND">
       <Text>Pause Game (Multiplayer)</Text>
     </Row>
@@ -54,21 +84,6 @@
     </Row>
     <Row Tag="LOC_MPT_OBSERVER_SCORE">
       <Text>Score</Text>
-    </Row>
-    <Row Tag="LOC_MPT_OBSERVER_TOTAL">
-      <Text>Total</Text>
-    </Row>
-    <Row Tag="LOC_MPT_OBSERVER_TOURISM">
-      <Text>Tourism</Text>
-    </Row>
-    <Row Tag="LOC_MPT_OBSERVER_GDP">
-      <Text>GDP</Text>
-    </Row>
-    <Row Tag="LOC_MPT_OBSERVER_DOMINION">
-      <Text>Dominion</Text>
-    </Row>
-    <Row Tag="LOC_MPT_OBSERVER_INNOVATION">
-      <Text>Innovation</Text>
     </Row>
     <Row Tag="LOC_MPT_OBSERVER_RESEARCH_TECH">
       <Text>Researching</Text>

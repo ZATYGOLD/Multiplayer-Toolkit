@@ -23,16 +23,15 @@
  *
  * For the Observer seat:
  *   - met everyone: the Observer's own hasMet answers true, so every screen
- *     shows real leader names and portraits instead of "unmet".
+ *     shows real leader names and portraits instead of "unmet";
  *   - leader panel: the actions tab lists every war the selected leader is in
- *     (the base panel only lists wars involving the local player), the
- *     Observer gets no diplomatic action buttons, and the relationships tab
- *     leaves out the Observer (its own relationship and its portrait).
- * Other players are untouched.
+ *     (the base panel lists only wars involving the local player) and offers
+ *     no diplomatic actions; the relationships tab leaves the Observer out.
  */
 import DiplomacyManager from 'fs://game/base-standard/ui/diplomacy/diplomacy-manager.js';
 import 'fs://game/base-standard/ui/diplomacy-actions/panel-other-diplomacy.js';   // defines PANEL_TAG
-import { createLogger, isObserverPlayer, isObserverSeat } from './mp-observer-core.js';
+import { clearChildren, createLogger, isObserverPlayer, wrapMethod } from '../mpt-shared/mpt-util.js';
+import { isObserverSeat } from './mp-observer-core.js';
 
 const log = createLogger('observer-diplomacy');
 const PANEL_TAG = 'panel-other-player-diplomacy-actions';
@@ -42,19 +41,15 @@ const OTHER_RELATIONSHIPS = '#panel-diplomacy-actions__other-relationships-conta
 
 let metInstalled = false;
 
+/** The Observer's own diplomacy object answers hasMet with true (requires the engine to reuse that object). */
 function installMetEveryone() {
   if (metInstalled || !isObserverSeat()) return;
   metInstalled = true;
   const own = Players.get(GameContext.localPlayerID)?.Diplomacy;
-  const proto = own && Object.getPrototypeOf(own);
-  const base = proto?.hasMet;
-  if (typeof base !== 'function') { log('hasMet not found'); return; }
-  if (Players.get(GameContext.localPlayerID)?.Diplomacy !== own) { log('diplomacy objects are not stable; met-everyone skipped'); return; }
-  proto.hasMet = function (playerId, ...rest) {
-    if (this === own && playerId !== GameContext.localPlayerID) return true;
-    return base.call(this, playerId, ...rest);
-  };
-  log('observer has met everyone');
+  if (!own || Players.get(GameContext.localPlayerID)?.Diplomacy !== own) { log('diplomacy object is not stable; met-everyone skipped'); return; }
+  wrapMethod(Object.getPrototypeOf(own), 'hasMet', function (base, playerId, ...rest) {
+    return (this === own && playerId !== GameContext.localPlayerID) || base(playerId, ...rest);
+  });
 }
 
 /** Every war the given player is part of (one entry per war). */
@@ -84,43 +79,39 @@ function note(loc) {
   return p;
 }
 
-/** Drop Observer portraits (and rows left empty) plus the leader's relationship with the Observer. */
+/** Drop Observer portraits (and rows left empty) and the leader's relationship with the Observer. */
 function removeObserverRelationships(root) {
   root.querySelector(OWN_RELATIONSHIP)?.style.setProperty('display', 'none');
-  for (const icon of root.querySelectorAll('.' + OMIT_CLASS)) icon.parentElement?.removeChild(icon);
+  for (const icon of root.querySelectorAll('.' + OMIT_CLASS)) icon.remove();
   const rows = root.querySelector(OTHER_RELATIONSHIPS);
   for (const row of [...(rows?.children ?? [])]) {
-    if (!row.querySelector('#relationship-icon-row')?.children.length) rows.removeChild(row);
+    if (!row.querySelector('#relationship-icon-row')?.children.length) row.remove();
   }
 }
 
 function patchPanel(proto) {
-  const baseIcon = proto.createBorderedIcon;
-  proto.createBorderedIcon = function (iconURL, leaderID, ...rest) {
-    const icon = baseIcon.call(this, iconURL, leaderID, ...rest);
+  wrapMethod(proto, 'createBorderedIcon', (base, iconURL, leaderID, ...rest) => {
+    const icon = base(iconURL, leaderID, ...rest);
     if (isObserverSeat() && leaderID != null && isObserverPlayer(leaderID)) icon.classList.add(OMIT_CLASS);
     return icon;
-  };
+  });
 
-  const baseRelationships = proto.populateRelationshipInfo;
-  proto.populateRelationshipInfo = function (...args) {
-    const result = baseRelationships.apply(this, args);
+  wrapMethod(proto, 'populateRelationshipInfo', function (base, ...args) {
+    const result = base(...args);
     if (isObserverSeat()) removeObserverRelationships(this.Root);
     return result;
-  };
+  });
 
-  const baseActions = proto.populateAvailableActions;
-  proto.populateAvailableActions = function (...args) {
-    if (!isObserverSeat()) return baseActions.apply(this, args);
-    while (this.majorActionsSlot?.firstChild) this.majorActionsSlot.removeChild(this.majorActionsSlot.firstChild);
-  };
+  wrapMethod(proto, 'populateAvailableActions', function (base, ...args) {
+    if (!isObserverSeat()) return base(...args);
+    clearChildren(this.majorActionsSlot);
+  });
 
-  const basePanel = proto.populateActionsPanel;
-  proto.populateActionsPanel = function (...args) {
-    if (!isObserverSeat()) return basePanel.apply(this, args);
+  wrapMethod(proto, 'populateActionsPanel', function (base, ...args) {
+    if (!isObserverSeat()) return base(...args);
     const slot = this.Root.querySelector('#available-projects-slot');
     if (!slot) return;
-    while (slot.firstChild) slot.removeChild(slot.firstChild);
+    clearChildren(slot);
     this.firstFocusSection = null;
     const wars = warsOf(DiplomacyManager.selectedPlayerID);
     slot.appendChild(header('LOC_DIPLOMACY_WAR_HEADER'));
@@ -130,14 +121,14 @@ function patchPanel(proto) {
       item.addEventListener('action-activate', () => this.clickOngoingAction(war.uniqueID));
       slot.appendChild(item);
     }
-  };
+  });
 }
+
+const proto = Controls.getDefinition(PANEL_TAG)?.createInstance?.prototype;
+if (proto) patchPanel(proto);
+else log('leader panel not found');
 
 engine.whenReady.then(() => {
   installMetEveryone();
   engine.on('LocalPlayerTurnBegin', installMetEveryone);
-  const proto = Controls.getDefinition(PANEL_TAG)?.createInstance?.prototype;
-  if (!proto) { log('leader panel not found'); return; }
-  patchPanel(proto);
-  log('observer leader panel installed');
 });

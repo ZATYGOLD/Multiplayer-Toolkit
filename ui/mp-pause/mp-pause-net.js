@@ -19,37 +19,37 @@
  */
 
 /**
- * Multiplayer Toolkit - lightweight cross-client RPC over multiplayer chat.
+ * Multiplayer Toolkit - cross-client commands over multiplayer chat (in-game scope).
  *
- * Civilization VII exposes no custom UI network message, but it does expose
- * chat: Network.sendChat(text, target, id) to send and the "MultiplayerChat"
- * engine event to receive. Following the approach proven by the Civ VI
- * "Multiplayer Helper" mod, we tunnel small commands through chat - a prefixed
- * message every client parses - so one authorized player can drive an action
- * on every other client (e.g. the host resuming the game for everyone).
+ * Civilization VII has no custom UI network message, but it has chat
+ * (Network.sendChat and the "MultiplayerChat" event). As in the Civ VI
+ * "Multiplayer Helper" mod, small commands travel as prefixed chat lines that
+ * every client parses, so one authorized player can drive an action on every
+ * client (the host resuming the game for everyone). Handlers get
+ * { from, arg } and validate authority themselves (isFromHost).
  *
- * Command lines are hidden from the visible chat window by patching the chat
- * screen's createMessage to drop any message carrying our prefix. Handlers get
- * { from, arg }; callers should validate authority (isFromHost) themselves.
+ * Command lines never reach the chat window: chat screens skip them (no
+ * message, sound, speech or unread badge) and any message element still built
+ * for one is hidden. The mini-map binds the chat handler it first sees, so the
+ * sound can still play until chat is first opened.
  */
-
+import { createLogger, whenDefined, wrapMethod } from '../mpt-shared/mpt-util.js';
 import { CONFIG } from './mp-pause-config.js';
 
-const PREFIX = "​MPTNET:";   // leading zero-width space keeps it untypeable/inconspicuous
+const log = createLogger('net');
+const PREFIX = "\u200BMPTNET:";   // leading zero-width space: untypeable and inconspicuous
+const CHAT_TAG = "screen-mp-chat";
 const handlers = {};
-let listenerBound = false;
 
-function log(m) { try { console.log("[MPT net] " + m); } catch (e) {} }
+const isCommand = (data) => typeof data?.text === "string" && data.text.startsWith(PREFIX);
 
 const MPTNet = {
   /** Broadcast a command (optionally with a string arg) to every player. */
   send(cmd, arg) {
-    try {
-      const msg = PREFIX + cmd + (arg != null ? (":" + String(arg)) : "");
-      Network.sendChat(msg, ChatTargetTypes.CHATTARGET_ALL, -1);
-    } catch (e) { log("send failed: " + e); }
+    try { Network.sendChat(PREFIX + cmd + (arg != null ? ":" + String(arg) : ""), ChatTargetTypes.CHATTARGET_ALL, -1); }
+    catch (e) { log("send failed: " + e); }
   },
-  /** Register a handler for a command name. Handler receives { from, arg }. */
+  /** Register the handler for a command name. */
   on(cmd, fn) { handlers[cmd] = fn; },
   /** True when the sender is the game host. */
   isFromHost(fromPlayer) {
@@ -58,63 +58,42 @@ const MPTNet = {
 };
 
 function onChat(data) {
+  if (!isCommand(data)) return;
   try {
-    const text = data && data.text;
-    if (typeof text !== "string" || text.indexOf(PREFIX) !== 0) return;
-    const body = text.slice(PREFIX.length);
+    const body = data.text.slice(PREFIX.length);
     const idx = body.indexOf(":");
-    const cmd = idx >= 0 ? body.slice(0, idx) : body;
-    const arg = idx >= 0 ? body.slice(idx + 1) : undefined;
-    const fn = handlers[cmd];
-    if (fn) fn({ from: data.fromPlayer, arg });
+    const fn = handlers[idx >= 0 ? body.slice(0, idx) : body];
+    fn?.({ from: data.fromPlayer, arg: idx >= 0 ? body.slice(idx + 1) : undefined });
   } catch (e) { /* ignore malformed */ }
 }
 
-function bindReceiver() {
-  if (listenerBound) return;
-  try { engine.on("MultiplayerChat", onChat); listenerBound = true; log("receiver bound"); }
-  catch (e) { log("bind failed: " + e); }
+/** Keep command lines out of the chat window. */
+function hideCommandsFromChat() {
+  whenDefined(CHAT_TAG, (definition) => {
+    const proto = definition.createInstance.prototype;
+    if (proto.mptNetPatched) return;
+    proto.mptNetPatched = true;
+    // onMultiplayerChat is an instance field (the mini-map binds it directly), so wrap it per instance.
+    wrapMethod(proto, "onInitialize", function (base, ...args) {
+      const result = base(...args);
+      const handler = this.onMultiplayerChat;
+      if (typeof handler === "function") this.onMultiplayerChat = (data, ...rest) => (isCommand(data) ? undefined : handler(data, ...rest));
+      return result;
+    });
+    wrapMethod(proto, "createMessage", (base, data, ...rest) => {
+      const el = base(data, ...rest);
+      if (el?.style && isCommand(data)) el.style.display = "none";
+      return el;
+    });
+  }, { retries: 30, intervalMs: 300, log });
 }
 
-/**
- * Hide our command messages from the chat window. createMessage is a real
- * prototype method on the chat screen; we let it build the genuine message
- * element (so the chat list never receives a malformed node) and only hide it
- * when it carries our prefix. Never throws into the chat's render path.
- */
-function suppressChatDisplay(attempts) {
-  try {
-    const def = Controls.getDefinition ? Controls.getDefinition("screen-mp-chat") : null;
-    const cls = def && def.createInstance;
-    if (cls && cls.prototype && !cls.prototype.mptNetPatched) {
-      const base = cls.prototype.createMessage;
-      if (typeof base === "function") {
-        cls.prototype.createMessage = function (data) {
-          const el = base.call(this, data);   // always the real, well-formed element
-          try {
-            const t = data && data.text;
-            if (el && typeof t === "string" && t.indexOf(PREFIX) === 0 && el.style) {
-              el.style.display = "none";       // keep OUR command line invisible
-            }
-          } catch (e) { /* leave the message as-is */ }
-          return el;
-        };
-        cls.prototype.mptNetPatched = true;
-        log("chat command display suppressed");
-        return;
-      }
-    }
-  } catch (e) { /* retry */ }
-  if (attempts > 0) setTimeout(() => suppressChatDisplay(attempts - 1), 300);
+// The chat channel only serves host-authoritative resume; with that off the chat screen is untouched.
+if (CONFIG.hostAuthoritativeResume !== false) {
+  engine.whenReady.then(() => {
+    engine.on("MultiplayerChat", onChat);
+    hideCommandsFromChat();
+  });
 }
-
-engine.whenReady.then(() => {
-  // The chat-RPC only exists to serve host-authoritative resume. When that is
-  // off, do not touch the chat screen at all - both a clean fallback and an A/B
-  // switch for diagnosing chat issues.
-  if (CONFIG.hostAuthoritativeResume === false) { log("chat-RPC disabled via config"); return; }
-  bindReceiver();
-  suppressChatDisplay(30);
-});
 
 export default MPTNet;

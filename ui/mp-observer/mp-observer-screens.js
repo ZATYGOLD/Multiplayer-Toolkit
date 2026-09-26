@@ -23,16 +23,15 @@
  *
  * Every screen opens through ContextManager.push (popups first pass through
  * the PopupSequencer queue). For the Observer seat:
- *   - blocked: the advisor screens (nothing to advise an empire that has none)
- *   - redirected: religion screens -> every leader's pantheon (mp-observer-overview.js)
- * Other players are untouched.
+ *   - blocked: the advisor screens (there is no empire to advise);
+ *   - redirected: religion screens open every leader's pantheon
+ *     (mp-observer-overview.js).
  */
 import { ContextManager } from 'fs://game/core/ui/context-manager/context-manager.js';
 import PopupSequencer from 'fs://game/base-standard/ui/popup-sequencer/popup-sequencer.js';
-import { createLogger, isObserverSeat } from './mp-observer-core.js';
+import { wrapMethod } from '../mpt-shared/mpt-util.js';
+import { isObserverSeat } from './mp-observer-core.js';
 import { OVERVIEW_PANEL_TAG, setOverviewSource } from './mp-observer-overview.js';
-
-const log = createLogger('observer-screens');
 
 const BLOCKED = new Set(['screen-advisor-council', 'advisor-council-popup']);
 const REDIRECTS = {
@@ -42,28 +41,14 @@ const REDIRECTS = {
   'panel-belief-picker': 'pantheons'
 };
 
-function install() {
-  const basePush = ContextManager.push.bind(ContextManager);
-  ContextManager.push = (target, properties, ...rest) => {
-    if (typeof target === 'string' && isObserverSeat()) {
-      if (BLOCKED.has(target)) { log(`blocked ${target}`); return null; }
-      const source = REDIRECTS[target];
-      if (source) {
-        setOverviewSource(source);
-        log(`${target} -> ${OVERVIEW_PANEL_TAG} (${source})`);
-        return basePush(OVERVIEW_PANEL_TAG, { singleton: true, createMouseGuard: true });
-      }
-    }
-    return basePush(target, properties, ...rest);
-  };
+wrapMethod(ContextManager, 'push', (base, target, ...rest) => {
+  if (typeof target !== 'string' || !isObserverSeat()) return base(target, ...rest);
+  if (BLOCKED.has(target)) return null;
+  if (!REDIRECTS[target]) return base(target, ...rest);
+  setOverviewSource(REDIRECTS[target]);
+  return base(OVERVIEW_PANEL_TAG, { singleton: true, createMouseGuard: true });
+});
 
-  // Queued popups never reach the queue, so nothing waits on a screen that will not open.
-  const baseRequest = PopupSequencer.addDisplayRequest.bind(PopupSequencer);
-  PopupSequencer.addDisplayRequest = (request, ...rest) => {
-    if (isObserverSeat() && BLOCKED.has(request?.screenId)) { log(`dropped queued ${request.screenId}`); return request; }
-    return baseRequest(request, ...rest);
-  };
-  log('observer screen routing installed');
-}
-
-install();
+// Blocked popups never enter the queue, so nothing waits on a screen that will not open.
+wrapMethod(PopupSequencer, 'addDisplayRequest', (base, request, ...rest) =>
+  (isObserverSeat() && BLOCKED.has(request?.screenId) ? request : base(request, ...rest)));
