@@ -45,19 +45,13 @@ const CONTENT = `
 
 // ============================ Sources ============================
 
+/** A leader's pantheons (Antiquity). */
 function pantheonEntries(player) {
-  const religion = player.Religion;
   const entries = [];
-  for (const type of religion?.getPantheons?.() ?? []) {
+  for (const type of player.Religion?.getPantheons?.() ?? []) {
     const def = GameInfo.Beliefs.lookup(type);
     if (def) entries.push({ icon: UI.getIconCSS(def.BeliefType, 'PANTHEONS'), title: def.Name, description: def.Description });
   }
-  try {
-    if (religion?.hasCreatedReligion?.()) {
-      const def = GameInfo.Religions.lookup(religion.getReligionType());
-      entries.push({ icon: def ? UI.getIconCSS(def.ReligionType, 'RELIGION_DECO') : '', title: religion.getReligionName(), description: '' });
-    }
-  } catch (e) { /* religion optional */ }
   return entries;
 }
 
@@ -143,7 +137,8 @@ function entryItem(entry) {
   const title = document.createElement('p');
   title.classList.value = 'pantheon-list_title font-title-base text-accent-2';
   title.setAttribute('data-l10n-id', entry.title);
-  item.append(iconBox, title);
+  if (entry.icon) item.appendChild(iconBox);
+  item.appendChild(title);
   if (entry.description) {
     const desc = document.createElement('div');
     desc.role = 'paragraph';

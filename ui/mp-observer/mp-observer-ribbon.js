@@ -38,13 +38,14 @@ import { PanelDiploRibbon } from 'fs://game/base-standard/ui/diplo-ribbon/panel-
 import { createLogger, wrapMethod } from '../mpt-shared/mpt-util.js';
 import { CONFIG, OBSERVER_VIEW } from './mp-observer-config.js';
 import { inDiplomacyMode, inLeaderPanel, isObserverSeat } from './mp-observer-core.js';
-import { productionItems, researchItems, scoreItems } from './mp-observer-ribbon-data.js';
+import { productionItems, researchItems, scoreItems, yieldsItems } from './mp-observer-ribbon-data.js';
 import { lockCardSize, markCards, setRibbonHidden } from './mp-observer-ribbon-style.js';
 import { placeViewButtons } from './mp-observer-ribbon-toolbar.js';
 
 const log = createLogger('observer-ribbon');
 const RIGHT_EDGE_CLASS = 'right-4';   // the base panel uses right-24; the Observer's ribbon sits at the edge
 const VIEW_ITEMS = {
+  [OBSERVER_VIEW.YIELDS]: yieldsItems,
   [OBSERVER_VIEW.RESEARCH]: researchItems,
   [OBSERVER_VIEW.PRODUCTION]: productionItems,
   [OBSERVER_VIEW.SCORE]: scoreItems
@@ -98,12 +99,12 @@ function rebuildRibbon() {
     const component = panel?.maybeComponent ?? panel?.component;
     if (!component) return;
     const first = component.firstLeaderIndex;
-    component.populateFlags?.();
+    component.populateFlags?.();   // decorated by the populateFlags wrapper
     if (first != null && component.firstLeaderIndex !== first) {
       component.firstLeaderIndex = first;
       component.refreshRibbonVis?.();
+      decorateRibbon(panel);
     }
-    decorateRibbon(panel);
   } catch (e) { log(`ribbon rebuild failed: ${e}`); }
 }
 
@@ -138,7 +139,7 @@ function patchModel() {
   wrapMethod(DiploRibbonData, 'createPlayerYieldsData', (base, player, ...rest) => {
     if (!isObserverSeat() || !player) return base(player, ...rest);
     if (player.id === GameContext.localPlayerID) return [];   // the Observer's card holds the view buttons
-    try { return VIEW_ITEMS[viewMode]?.(player) ?? base(player, ...rest); }
+    try { return VIEW_ITEMS[viewMode](player, () => base(player, ...rest)); }
     catch (e) { return base(player, ...rest); }
   });
   wrapMethod(DiploRibbonData, 'createPlayerSizeData', (base, player, ...rest) =>

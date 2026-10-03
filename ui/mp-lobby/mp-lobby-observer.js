@@ -38,10 +38,9 @@
  */
 import MPLobbyModel, { MPLobbyDataModel } from 'fs://game/core/ui/shell/mp-staging/model-mp-staging-new.js';
 import { MPStagingTeamDropdown } from 'fs://game/core/ui/shell/mp-staging/mp-staging-team-dropdown.js';
-import { createLogger, OBSERVER_LEADER, wrapMethod } from '../mpt-shared/mpt-util.js';
+import { createLogger, isObserverCiv, OBSERVER_CIV_PREFIX, OBSERVER_LEADER, wrapMethod } from '../mpt-shared/mpt-util.js';
 import { CONFIG } from './mp-lobby-config.js';
 
-const OBSERVER_CIV_PREFIX = 'CIVILIZATION_MPT_OBSERVER_';
 const OBSERVER_ICON = 'fs://game/icons/mpt_observer.png';
 const OBSERVER_CIV_ICON = 'fs://game/icons/mpt_observer_civ.png';
 const PARAM_LEADER = 'PlayerLeader';
@@ -53,8 +52,6 @@ const NO_TEAM = -1;
 const log = CONFIG.debug ? createLogger('lobby-observer') : () => {};
 
 // ============================ Game state ============================
-
-function isObserverCiv(civ) { return typeof civ === 'string' && civ.startsWith(OBSERVER_CIV_PREFIX); }
 
 /**
  * The Observer civilization for the game's start Age. The game config only

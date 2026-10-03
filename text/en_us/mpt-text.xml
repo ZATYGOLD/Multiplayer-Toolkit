@@ -61,6 +61,15 @@
     <Row Tag="LOC_MPT_OBSERVER_NO_PANTHEON">
       <Text>No Pantheon yet.</Text>
     </Row>
+    <Row Tag="LOC_MPT_OBSERVER_MILITARY_STRENGTH">
+      <Text>Military Strength</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_AUTO_END_TURN_ON">
+      <Text>Auto End Turn: On</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_AUTO_END_TURN_OFF">
+      <Text>Auto End Turn: Off</Text>
+    </Row>
     <Row Tag="LOC_MPT_OBSERVER_AT_WAR_WITH">
       <Text>At war with {1_Leader}</Text>
     </Row>

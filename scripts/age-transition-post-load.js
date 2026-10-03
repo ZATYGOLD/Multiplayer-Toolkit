@@ -10,7 +10,7 @@ import { placeObserverEyes } from '../maps/mpt-observer-eye.js';   // MPT
 /*
  * Multiplayer Toolkit - base-game override.
  * Copied verbatim from the game's base-standard/scripts/age-transition-post-load.js
- * (build dated 2026-09-16); the ONLY changes are the "MPT:" import and the call
+ * (build dated 2026-09-30); the ONLY changes are the "MPT:" import and the call
  * at the end of generateTransition. Re-apply after game updates.
  *
  * MPT: an Age transition resets every unit, so each Observer gets a new
@@ -433,7 +433,7 @@ function addNewResourcesEarthHuge() {
     stampResourceEarthHuge(53, 27, "RESOURCE_NITER");
     stampResourceEarthHuge(49, 12, "RESOURCE_NITER");
     stampResourceEarthHuge(16, 49, "RESOURCE_NITER");
-    stampResourceEarthHuge(20, 49, "RESOURCE_FURS");
+    stampResourceEarthHuge(20, 59, "RESOURCE_FURS");
     stampResourceEarthHuge(49, 27, "RESOURCE_NITER");
     stampResourceEarthHuge(45, 25, "RESOURCE_NITER");
     stampResourceEarthHuge(22, 62, "RESOURCE_FURS");
@@ -480,7 +480,6 @@ function addNewResourcesEarthHuge() {
     stampResourceEarthHuge(44, 22, "RESOURCE_COCOA");
     stampResourceEarthHuge(47, 22, "RESOURCE_COCOA");
     stampResourceEarthHuge(35, 18, "RESOURCE_COCOA");
-    stampResourceEarthHuge(68, 13, "RESOURCE_COCOA");
     stampResourceEarthHuge(91, 25, "RESOURCE_COCOA");
     stampResourceEarthHuge(88, 26, "RESOURCE_COCOA");
     stampResourceEarthHuge(28, 36, "RESOURCE_COCOA");
@@ -995,6 +994,21 @@ function addNewResourcesEarthHuge() {
     placeRuralDistrict(xCoord, yCoord);
     xCoord = 25;
     yCoord = 28;
+    removeRuralDistrict(xCoord, yCoord);
+    ResourceBuilder.setResourceType(xCoord, yCoord, ResourceTypes.NO_RESOURCE);
+    placeRuralDistrict(xCoord, yCoord);
+    xCoord = 60;
+    yCoord = 42;
+    removeRuralDistrict(xCoord, yCoord);
+    ResourceBuilder.setResourceType(xCoord, yCoord, ResourceTypes.NO_RESOURCE);
+    placeRuralDistrict(xCoord, yCoord);
+    xCoord = 99;
+    yCoord = 40;
+    removeRuralDistrict(xCoord, yCoord);
+    ResourceBuilder.setResourceType(xCoord, yCoord, ResourceTypes.NO_RESOURCE);
+    placeRuralDistrict(xCoord, yCoord);
+    xCoord = 101;
+    yCoord = 43;
     removeRuralDistrict(xCoord, yCoord);
     ResourceBuilder.setResourceType(xCoord, yCoord, ResourceTypes.NO_RESOURCE);
     placeRuralDistrict(xCoord, yCoord);

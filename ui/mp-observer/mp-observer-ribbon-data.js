@@ -21,12 +21,13 @@
 /**
  * Multiplayer Toolkit - Observer ribbon stat rows (in-game scope).
  *
- * Builds each leader card's rows for the Research, Production and Score views
- * in the base ribbon's displayItems shape. Meters and score rows live in the
+ * Builds each leader card's rows for every view in the base ribbon's
+ * displayItems shape (the Yields view extends the base rows). Meters and score rows live in the
  * item's `img` HTML so they fit the narrow card column; they use only markup
  * the Gameface renderer supports (plain <img>, width-based bars).
  */
 import { Icon } from 'fs://game/core/ui/utilities/utilities-image.js';
+import { unitStrength } from './mp-observer-core.js';
 
 const TEXT_COLOR = '#e7d9ac';
 const BAR_COLOR = { tech: '#5fb5f0', civic: '#c08fe0', production: '#7fc77f' };
@@ -47,6 +48,53 @@ function meterHTML(iconUrl, label, pct, barColor) {
     icon + name +
     `<div style='width:2.4rem;height:0.22rem;border-radius:0.11rem;background-color:rgba(255,255,255,0.22);margin-top:0.25rem;'>` +
     `<div style='height:100%;border-radius:0.11rem;background-color:${barColor};width:${p}%;'></div></div></div>`;
+}
+
+// ============================ Yields ============================
+
+const MILITARY_ICON = 'blp:fi_nar_rew_combat_64';
+
+/** Signed per-turn value, formatted as the base ribbon does. */
+function formatYield(value) {
+  return (value >= 0 ? '+' : '') + (value > 100 ? Math.trunc(value) : Math.trunc(value * 10) / 10);
+}
+
+/** A plain value row in the base ribbon's look. */
+function valueRow(type, labelLoc, iconUrl, value, rawValue) {
+  return { type, label: Locale.compose(labelLoc), value, img: `<img src='${iconUrl}'>`, details: '', rawValue, warningThreshold: Infinity };
+}
+
+function yieldRow(player, yieldType, labelLoc) {
+  const value = player.Stats?.getNetYield?.(YieldTypes[yieldType]) ?? 0;
+  return valueRow(yieldType.toLowerCase(), labelLoc, UI.getIconURL(yieldType, 'YIELD'), formatYield(value), value);
+}
+
+const strengthCache = new Map();   // player id -> military strength, cleared when units change
+const STRENGTH_EVENTS = ['UnitAddedToMap', 'UnitRemovedFromMap', 'UnitDamageChanged', 'UnitPromoted', 'LocalPlayerTurnBegin'];
+
+/** Sum of every unit's current base strength (cached until a unit changes). */
+function militaryStrength(player) {
+  if (strengthCache.has(player.id)) return strengthCache.get(player.id);
+  let total = 0;
+  try { for (const unit of player.Units?.getUnits?.() ?? []) total += unitStrength(unit); } catch (e) { /* keep the partial sum */ }
+  strengthCache.set(player.id, total);
+  return total;
+}
+
+for (const event of STRENGTH_EVENTS) engine.on(event, () => strengthCache.clear());
+
+/**
+ * The base Yields rows (from baseItems()) without trade routes (always 0/0
+ * with the Observer), plus food, production and military strength.
+ */
+function yieldsItems(player, baseItems) {
+  const military = militaryStrength(player);
+  return [
+    ...baseItems().filter((item) => item.type !== 'trade'),
+    yieldRow(player, 'YIELD_FOOD', 'LOC_YIELD_FOOD'),
+    yieldRow(player, 'YIELD_PRODUCTION', 'LOC_YIELD_PRODUCTION'),
+    valueRow('military', 'LOC_MPT_OBSERVER_MILITARY_STRENGTH', MILITARY_ICON, String(military), military)
+  ];
 }
 
 // ============================ Research ============================
@@ -171,4 +219,4 @@ function scoreItems(player) {
   return items.length ? items : [scoreRow({ label: 'LOC_MPT_OBSERVER_NONE' }, 0)];
 }
 
-export { researchItems, productionItems, scoreItems };
+export { yieldsItems, researchItems, productionItems, scoreItems };

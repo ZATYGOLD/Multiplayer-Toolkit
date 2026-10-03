@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Mod id="multiplayer-toolkit" version="00600" xmlns="ModInfo">
+<Mod id="multiplayer-toolkit" version="00601" xmlns="ModInfo">
     <Properties>
         <Name>LOC_MOD_MPT_NAME</Name>
         <Description>LOC_MOD_MPT_DESCRIPTION</Description>
         <Authors>Zatygold</Authors>
         <Package>Mod</Package>
         <AffectsSavedGames>0</AffectsSavedGames>
-        <Version>0.6.00</Version>
-        <LastUpdated>2026-09-27</LastUpdated>
+        <Version>0.6.01</Version>
+        <LastUpdated>2026-10-03</LastUpdated>
         <ShowInBrowser>1</ShowInBrowser>
     </Properties>
 
@@ -118,12 +118,27 @@
                     <Item>maps/mpt-observer-eye.js</Item>
                     <Item>scripts/age-transition-post-load.js</Item>
                     <Item>ui-next/screens/victories/victories-screen-model.js</Item>
+                    <Item>ui-next/screens/commerce/commerce-screen.js</Item>
+                    <Item>ui-next/screens/commerce/commerce-screen-model.js</Item>
+                    <Item>ui-next/screens/commerce/commerce-screen-empire-tab.js</Item>
+                    <Item>ui-next/screens/commerce/commerce-screen-trade-tab.js</Item>
+                    <Item>ui-next/screens/legacies/legacies-screen.js</Item>
+                    <Item>ui-next/screens/legacies/legacies-model.js</Item>
+                    <Item>ui-next/screens/legacies/dedications-model.js</Item>
+                    <Item>ui/policies/government-hub.js</Item>
+                    <Item>ui/policies/model-government.js</Item>
+                    <Item>ui/policies/model-policies.js</Item>
+                    <Item>ui/policies/policies-support.js</Item>
+                    <Item>ui/great-works/model-great-works.js</Item>
+                    <Item>ui/great-works/screen-great-works.js</Item>
+                    <Item>ui/panel-belief-picker/panel-belief-picker.js</Item>
                 </ImportFiles>
                 <UpdateDatabase>
                     <Item>data/observer/observer-leader.xml</Item>
                     <Item>data/observer/observer-civilizations.xml</Item>
                     <Item>data/observer/observer-units-gameeffects.xml</Item>
                     <Item>data/observer/observer-units.xml</Item>
+                    <Item>data/observer/observer-legacies.sql</Item>
                 </UpdateDatabase>
                 <ImportFiles>
                     <Item>icons/mpt_observer.png</Item>
@@ -148,13 +163,18 @@
                     <Item>ui/mp-observer/mp-observer-core.js</Item>
                     <Item>ui/mp-observer/mp-observer-overview.js</Item>
                     <Item>ui/mp-observer/mp-observer-screens.js</Item>
+                    <Item>ui/mp-observer/mp-observer-leader-view.js</Item>
+                    <Item>ui/mp-observer/mp-observer-civ-lists.js</Item>
                     <Item>ui/mp-observer/mp-observer-ribbon-data.js</Item>
                     <Item>ui/mp-observer/mp-observer-ribbon-style.js</Item>
+                    <Item>ui/mp-observer/mp-observer-turn.js</Item>
                     <Item>ui/mp-observer/mp-observer-ribbon-toolbar.js</Item>
                     <Item>ui/mp-observer/mp-observer-ribbon.js</Item>
                     <Item>ui/mp-observer/mp-observer-navigation.js</Item>
                     <Item>ui/mp-observer/mp-observer-victory.js</Item>
                     <Item>ui/mp-observer/mp-observer-diplomacy.js</Item>
+                    <Item>ui/mp-observer/mp-observer-yields.js</Item>
+                    <Item>ui/mp-observer/mp-observer-hud.js</Item>
                     <Item>ui/mp-observer/mp-observer-units.js</Item>
                     <Item>ui/mp-observer/mp-observer-combat.js</Item>
                     <Item>ui/mp-observer/mp-observer-eye.js</Item>

@@ -1,7 +1,7 @@
 # Multiplayer Toolkit
 
 A toolkit of multiplayer quality-of-life features for **Sid Meier's Civilization
-VII**, built on the game's own UI components. Current version: **0.6.00**.
+VII**, built on the game's own UI components. Current version: **0.6.01**.
 
 Four tools so far:
 
@@ -212,9 +212,12 @@ are **not** blocked.
 In the multiplayer lobby pick **Observer** in either the **Leader** or the
 **Civilization** dropdown - the other one follows, the team is cleared and both
 the civilization and team columns lock with the eye badge (pick any other
-leader to play again; "Observer" is also an entry in the Team dropdown). In-game you are a normal player: every turn you press
-**End Turn** (or let the turn timer do it), you can pause, chat and open every
-screen. In place of a Founder you get the **Observer's Eye**: a hidden,
+leader to play again; "Observer" is also an entry in the Team dropdown). In-game you are a normal player:
+every turn you press **End Turn** (or switch on **Auto End Turn**, the
+end-turn button on the white banner of your ribbon card: the turn then ends by
+itself as soon as nothing blocks it, never while paused, and the End Turn
+button is hidden unless the game is paused), you can pause, chat and open
+every screen. In place of a Founder you get the **Observer's Eye**: a hidden,
 sleeping naval unit whose sight covers the whole map, so every unit shows live.
 Its flag is hidden and it cannot be selected; click (left or
 right) your own portrait on the ribbon to jump to it. You never own a settlement. At an
@@ -226,16 +229,21 @@ The diplomacy ribbon shows **every** living leader (a unit-less empire never
 the Observer's own card at the right edge. That card has no stats; it holds
 round icon buttons (the game's own mini-map lens button with its yield
 glyphs) that switch every other card between **Yields / Research /
-Production / Score**. Observers are never listed on the Victories screens or
+Production / Score**. The Yields view adds food,
+production and military strength (the sum of every unit's base strength) and
+drops trade routes (always 0/0 with the Observer). Observers are never listed on the Victories screens or
 the age rankings, on any client, and the Observer sees every leader's real
-name there instead of "An unmet Player". Left-click any leader's portrait to jump the camera to
+name there instead of "An unmet Player". While a leader panel is open the
+top yield bar shows that leader's yields, treasuries and settlement limit,
+food and production included. Left-click any leader's portrait to jump the camera to
 their capital; right-click also opens their leader panel; click a settlement banner or city-center tile to open that
 leader's diplomacy panel (shown without the ribbon), whose war section lists
 every war that leader is in and whose relationships leave out the Observer.
 Portraits turn angry for leaders at war and happy for leaders in a
-celebration; a celebrating leader's portrait and civ banner glow gold, and
-leaders at war with each other share a portrait highlight colour (one colour
-per war, with a coloured pip under the portrait for each war a leader is in). Every unit stays in
+celebration. Allied leaders share a portrait hex-border colour (one per
+alliance); every leader at war glows red, a celebrating leader's portrait and
+civ banner glow gold (red wins on the portrait), and a coloured pip under the
+portrait marks each war a leader is in (one colour per war pair). Every unit stays in
 sight, military and civilian, so war moves, scouts, merchants, settlers,
 missionaries and commanders can be followed live. Click any unit (tile or
 flag; click the tile again to cycle a stack) to select it with the game's own
@@ -247,7 +255,18 @@ shows an estimate from base strengths and health, with an "Estimate" note
 above the outcome; the window sits higher so the unit panel does not cover it. Move ranges and
 paths are not drawn for other players' units, and no order is ever sent for
 them.
-The Religion button lists every leader's pantheon. The advisor screens,
+In Antiquity the Religion button lists every leader's pantheons; from
+Exploration on it opens the game's own Religion screen (every founded religion
+in its tabs, beliefs, founder, holy city). The **Resources & Trade**,
+**Legacies** (Triumphs, civ unlocks, dedications), **Government** (overview,
+policies and traditions, crisis), **Great Works** and **Religion** screens have a row of leader portraits under their title: pick
+a leader to see that screen as theirs, on the same tab (read-only; the pick is
+shared by every such screen). The Observer's camera zooms 25% closer and 50%
+further out than the game allows, in smaller, smoother steps, and its
+notification bar is 25% smaller. Observer civilizations are never
+listed in Civ Unlocks or offered to real leaders at an Age transition. The
+Observer never completes Triumphs (its whole-map sight would otherwise claim
+ones like "First to Circumnavigate"). The advisor screens,
 narrative events (crises included), diplomacy dialogs (first meetings
 included; first meetings get the neutral greeting automatically), the
 end-of-age countdown popup and crisis / age-progress / "player
@@ -286,6 +305,13 @@ out of every player's reach.
   enough, so the mod no longer reveals the map and relies on the Eye.
 - Default defeat ("no cities and no founder") gets an extra inverse
   leader-match requirement so the Observer is never eliminated.
+- Every Triumph's trigger requirement set gets the same inverse leader-match
+  requirement (`observer-legacies.sql`, with `ProgressWeight` 0 so Triumph
+  progress counts are unchanged), so the Observer completes none.
+- The engine clamps camera zoom to 0..1; past either end the Observer's zoom
+  changes the camera's vertical field of view instead (`Camera.setVerticalFoV`),
+  as the Zoom+ mod does, and re-applies it while the camera moves. Range and
+  step: `zoomIn`, `zoomOut`, `zoomStepScale` in `mp-observer-config.js`.
 - UI.log reports `units on visible plots: N/M` each turn to confirm the
   Eye's vision.
 - Narrative stories sent to the Observer are answered automatically with
@@ -323,6 +349,7 @@ Multiplayer-Toolkit/
 │  ├─ observer-civilizations.xml      # one civ per Age + age-transition unlocks
 │  ├─ observer-units-gameeffects.xml  # Observer's Eye ability modifiers
 │  ├─ observer-units.xml              # Observer's Eye: whole-map sight unit (replaces UNIT_FOUNDER)
+│  ├─ observer-legacies.sql           # the Observer completes no Triumphs
 │  ├─ observer-icons.xml              # portraits / symbols / Eye flag icon
 │  └─ observer-colors.xml             # player colors
 ├─ data/timers/                       # gameplay database: Competitive timer numbers
@@ -333,6 +360,11 @@ Multiplayer-Toolkit/
 ├─ maps/mpt-observer-eye.js           # Observer's Eye placement, shared by the two gameplay-script overrides
 ├─ scripts/age-transition-post-load.js  # base-game override: a new Eye each Age (marked MPT:)
 ├─ ui-next/screens/victories/victories-screen-model.js  # base-game override: no Observers on the Victories screens (marked MPT:)
+├─ ui-next/screens/commerce/          # base-game overrides: Resources & Trade for a picked leader (marked MPT:)
+├─ ui-next/screens/legacies/          # base-game overrides: Legacies for a picked leader (marked MPT:)
+├─ ui/policies/                       # base-game overrides: Government for a picked leader (marked MPT:)
+├─ ui/great-works/                    # base-game overrides: Great Works for a picked leader (marked MPT:)
+├─ ui/panel-belief-picker/            # base-game override: Religion screen for a picked leader (marked MPT:)
 ├─ text/en_us/
 │  ├─ mod-info-text.xml               # mod name / description
 │  └─ mpt-text.xml                    # every in-game string
@@ -354,16 +386,21 @@ Multiplayer-Toolkit/
    │  └─ mp-timer.js                  # panel-action subclass: clock, tiers, ring, enforcement
    └─ mp-observer/                    # in-game Observer (every module no-ops for other players)
       ├─ mp-observer-config.js
-      ├─ mp-observer-core.js          # Observer seat, watched players, war pairs, diplomacy modes
+      ├─ mp-observer-core.js          # Observer seat, watched players, wars / alliances snapshot, unit strength, diplomacy modes
       ├─ mp-observer-overview.js      # reusable every-leader list panel (pantheons)
-      ├─ mp-observer-screens.js       # screen routing: advisor blocked, religion -> overview
+      ├─ mp-observer-screens.js       # screen routing: advisor blocked, pantheons -> overview, religion picker -> religion screen
+      ├─ mp-observer-leader-view.js   # leader picker (and kept tab) for the Resources, Legacies, Government, Great Works and Religion screens
+      ├─ mp-observer-civ-lists.js     # Observer civs out of Civ Unlocks and Age-transition choices (every player)
       ├─ mp-observer-ribbon.js        # ribbon model: every leader, pinned stats, moods, views
-      ├─ mp-observer-ribbon-data.js   # Research / Production / Score rows
-      ├─ mp-observer-ribbon-style.js  # fixed card size, celebration / war highlights
-      ├─ mp-observer-ribbon-toolbar.js  # view buttons on the Observer's card
+      ├─ mp-observer-ribbon-data.js   # Yields / Research / Production / Score rows
+      ├─ mp-observer-ribbon-style.js  # fixed card size, alliance / war / celebration highlights
+      ├─ mp-observer-turn.js          # auto end turn (hides End Turn), turn recovery after a pause
+      ├─ mp-observer-ribbon-toolbar.js  # view buttons and Auto End Turn toggle on the Observer's card
       ├─ mp-observer-navigation.js    # portrait / banner / city-center clicks
       ├─ mp-observer-victory.js       # Observers left out of victory data
       ├─ mp-observer-diplomacy.js     # met everyone; leader panel: wars, no actions, no Observer rows
+      ├─ mp-observer-yields.js        # top yield bar: food / production, the leader panel's leader
+      ├─ mp-observer-hud.js           # wider camera zoom, smaller notification bar
       ├─ mp-observer-units.js         # selecting other players' units, with guards
       ├─ mp-observer-combat.js        # combat preview between other players' units
       ├─ mp-observer-eye.js           # the Eye: hidden flag, kept asleep, vision diagnostics
@@ -371,13 +408,75 @@ Multiplayer-Toolkit/
 ```
 
 Each feature has a `*-config.js` module for its settings and constants, and
-every module patches the base UI at runtime (the two base-game overrides above
-are the exceptions, marked `MPT:`). Diagnostics go to `UI.log` through the
+every module patches the base UI at runtime (the base-game overrides above are
+the exceptions, each a verbatim copy with its changes marked `MPT:`). Diagnostics go to `UI.log` through the
 shared logger; features with a `debug` setting log more when it is on.
 
 ---
 
 ## Changelog
+
+### 0.6.01
+
+- **New: Observer Auto End Turn** (off by default): the toggle on the
+  Observer's ribbon card banner ends the Observer's turn as soon as nothing
+  blocks it, never while paused; the End Turn button is hidden meanwhile.
+- **New: food, production and military strength** on the ribbon's Yields view
+  (trade routes, always 0/0 for the Observer, are dropped).
+- **New: Resources & Trade, Legacies, Government and Great Works screens for
+  any leader** — the Observer picks a leader from a portrait row under each
+  screen's title (read-only), and the open tab is kept when switching leaders:
+  slotted resources, trade routes, empire resources, Triumph progress, civ
+  unlocks, policies and traditions, slotted great works.
+- **New: ribbon highlights** — allied leaders share a hex-border colour; any
+  leader at war glows red; every glow (war and celebration) is stronger, with
+  a tight glow on the hex border itself.
+- **New: Observer camera and notifications** — one zoom range from 25% closer
+  to 50% further out than the game's, in half-size steps for a smoother scroll
+  (past the game's limits the field of view changes, the core of the Zoom+
+  mod's technique; skipped when Zoom+ is installed); the notification bar is
+  25% smaller.
+- **New: the top yield bar follows the leader panel** — while a leader panel
+  is open it shows that leader's yields, food, production and settlement limit.
+- **Fix: the Competitive timer stood still for the Observer** — the clock is
+  held for players without a settlement, which the Observer never has.
+- **Fix: the Competitive timer reached 0 without ending the turn** when the
+  only human was the Observer: Observers now count toward
+  `minPlayersToEnforce` (they still do not add time).
+- **Fix: the Competitive timer kept counting while paused** (when a pause
+  event was missed) — the clock now reads the game's paused state directly,
+  and also stands still from the moment an Age is complete until the next Age
+  starts.
+- **New: the Observer always continues into the next Age** — the end-of-Age
+  turns end automatically (Auto End Turn on or off) and the end-of-Age screens
+  are skipped; the final Age's results still show.
+- **Fix: the Observer could rearrange a viewed leader's policies** on the
+  Government screen (only on its own screen; nothing reached the game) — the
+  screen is read-only for a viewed leader.
+- **Fix: the End Turn button sometimes showed with Auto End Turn on** — it is
+  now hidden by a stylesheet rule that also covers a rebuilt button.
+- The leader picker row sits on a dark plate so it reads over the map (Great
+  Works).
+- **Fix: Observer civilizations listed in Civ Unlocks** — and offered as an
+  Age-transition choice; they are now hidden from every real leader.
+- **Performance:** the Observer's ribbon caches military strength and the
+  war/alliance state and repaints meters at most every 2 s; the Competitive
+  timer retries an expired turn once a second instead of five times; the pause
+  manager re-scans players once a turn; lobby tooltips no longer rebuild the
+  civilization data on every refresh; Observer-only listeners are not
+  registered for other players.
+- **Fix: the Age-transition script override was out of date** — re-copied
+  from the game's 2026-09-30 build (it was undoing that patch's map fixes); the
+  start-position wrapper can no longer be applied twice.
+- **Fix: the game waited on the Observer forever after a pause** — a turn
+  ended while paused is dropped by the game; the Observer now re-sends it after
+  the unpause.
+- **Fix: the Observer could complete Triumphs** (e.g. claim "First to
+  Circumnavigate" in Exploration); it now completes none.
+- **Fix: the Religion button after Antiquity** opened the pantheon list,
+  which showed only each religion's name and icon; from Exploration on it
+  opens the game's own Religion screen with the leader picker (read-only),
+  while Antiquity keeps the every-leader pantheon list.
 
 ### 0.6.00
 

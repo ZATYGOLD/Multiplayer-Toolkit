@@ -35,6 +35,7 @@ import { ComponentID } from 'fs://game/core/ui/utilities/utilities-component-id.
 import { Icon } from 'fs://game/core/ui/utilities/utilities-image.js';
 import { createLogger, wrapMethod } from '../mpt-shared/mpt-util.js';
 import { CONFIG } from './mp-observer-config.js';
+import { meleeStrength, rangedStrength } from './mp-observer-core.js';
 import { inspectableUnits, isForeign } from './mp-observer-units.js';
 
 const log = createLogger('observer-combat');
@@ -46,8 +47,6 @@ const HP_PER_STRENGTH = 10;
 
 // ============================ Estimate ============================
 
-const meleeStrength = (unit) => unit?.Combat?.getMeleeStrength?.(false) ?? 0;
-const rangedStrength = (unit) => Math.max(unit?.Combat?.rangedStrength ?? 0, unit?.Combat?.bombardStrength ?? 0);
 const isRangedAttacker = (unit) => rangedStrength(unit) > meleeStrength(unit);
 
 /** One side of the fight in the shape of a simulation result. */

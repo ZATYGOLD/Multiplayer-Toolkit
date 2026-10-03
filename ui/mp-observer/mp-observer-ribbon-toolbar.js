@@ -23,12 +23,19 @@
  *
  * The Observer's own card has no stats; its stat area holds round buttons
  * (the game's mini-map lens button with its own yield glyphs) that switch
- * every other card between Yields | Production, Research and Victories.
+ * every other card between Yields | Production, Research and Victories. The
+ * card's banner, between the portrait and the civ symbol, holds the Auto End
+ * Turn toggle (mp-observer-turn.js).
  */
 import { OBSERVER_VIEW } from './mp-observer-config.js';
+import { isAutoEndTurn, setAutoEndTurn } from './mp-observer-turn.js';
 
 const BUTTONS_CLASS = 'mpt-observer-view-buttons';
-const BUTTON_SIZE = '1.6rem';
+const AUTO_END_CLASS = 'mpt-observer-auto-end';
+const BUTTON_SIZE_REM = 1.6;
+const BUTTON_SIZE = `${BUTTON_SIZE_REM}rem`;
+const DOUBLE_ACTIVATION_MS = 150;   // a click fires both action-activate and click
+const AUTO_END_TOP = '3.05rem';   // centred between the portrait hex (bottom ~2.7rem) and the civ symbol (top 5rem, the base mt-20)
 const GLYPH_INSET = '0.2rem';   // same glyph area on every button (the lens button's own inset is larger)
 
 const ICON = {
@@ -40,7 +47,8 @@ const ICON = {
   production: 'blp:fi_Yield_Production_64',
   tech: 'blp:fi_radial_tech_64',
   civic: 'blp:fi_radial_civics_64',
-  victories: 'blp:radial_victories'
+  victories: 'blp:radial_victories',
+  endTurn: 'blp:fi_next_turn_64'
 };
 
 function iconDiv(url, cssText) {
@@ -75,11 +83,12 @@ const BUTTON_ROWS = [
   [[OBSERVER_VIEW.SCORE, 'LOC_PEDIA_VICTORIES_TITLE']]
 ];
 
-function makeButton(view, labelLoc, currentView, onSelect) {
+/** A round lens-style button; drawGlyph fills its icon. */
+function roundButton(tooltip, pressed, drawGlyph, onActivate) {
   const btn = document.createElement('fxs-activatable');
   btn.classList.add('mini-map__lens-button', 'pointer-events-auto');
-  btn.classList.toggle('pressed', view === currentView);
-  btn.setAttribute('data-tooltip-content', Locale.compose(labelLoc));
+  btn.classList.toggle('pressed', pressed);
+  btn.setAttribute('data-tooltip-content', tooltip);
   btn.style.cssText = `width: ${BUTTON_SIZE}; height: ${BUTTON_SIZE}; margin: 0.3rem 0.25rem;`;
   const bg = document.createElement('div');
   bg.classList.add('mini-map__lens-button__bg');
@@ -87,13 +96,47 @@ function makeButton(view, labelLoc, currentView, onSelect) {
   icon.classList.add('mini-map__lens-button__icon');
   icon.style.backgroundImage = 'none';
   for (const side of ['top', 'left', 'right', 'bottom']) icon.style[side] = GLYPH_INSET;
-  GLYPHS[view](icon);
+  drawGlyph(icon);
   btn.append(bg, icon);
-  for (const event of ['action-activate', 'click']) btn.addEventListener(event, () => onSelect(view));
+  let lastActivation = 0;
+  const activate = () => {
+    const now = Date.now();
+    if (now - lastActivation < DOUBLE_ACTIVATION_MS) return;
+    lastActivation = now;
+    onActivate(btn);
+  };
+  for (const event of ['action-activate', 'click']) btn.addEventListener(event, activate);
   return btn;
 }
 
-/** Fill the Observer's own stat area with the view buttons and centre its eye portrait in the hex. */
+function viewButton(view, labelLoc, currentView, onSelect) {
+  return roundButton(Locale.compose(labelLoc), view === currentView, GLYPHS[view], () => onSelect(view));
+}
+
+const autoEndTooltip = () => Locale.compose(isAutoEndTurn() ? 'LOC_MPT_OBSERVER_AUTO_END_TURN_ON' : 'LOC_MPT_OBSERVER_AUTO_END_TURN_OFF');
+
+/** Toggles the Observer's auto end turn; pressed while on. */
+function autoEndTurnButton() {
+  const glyph = (icon) => { icon.style.backgroundImage = `url("${ICON.endTurn}")`; };
+  const btn = roundButton(autoEndTooltip(), isAutoEndTurn(), glyph, () => {
+    setAutoEndTurn(!isAutoEndTurn());
+    btn.classList.toggle('pressed', isAutoEndTurn());
+    btn.setAttribute('data-tooltip-content', autoEndTooltip());
+  });
+  btn.classList.add(AUTO_END_CLASS);
+  return btn;
+}
+
+/** The toggle on the card's white banner, below the portrait hex and above the civ symbol. */
+function placeAutoEndButton(card) {
+  const banner = card?.querySelector('.diplo-ribbon__upper-bg');
+  if (!banner || banner.querySelector('.' + AUTO_END_CLASS)) return;
+  const btn = autoEndTurnButton();
+  btn.style.cssText = `position: absolute; width: ${BUTTON_SIZE}; height: ${BUTTON_SIZE}; left: calc(50% - ${BUTTON_SIZE_REM / 2}rem); top: ${AUTO_END_TOP}; margin: 0; z-index: 10;`;
+  banner.appendChild(btn);
+}
+
+/** Fill the Observer's own stat area with the view buttons, centre its eye portrait in the hex and add the toggle. */
 function placeViewButtons(panel, currentView, onSelect) {
   const own = panel.querySelector(`.diplo-ribbon__yields[data-leader-id="${GameContext.localPlayerID}"]`);
   if (!own) return;
@@ -105,13 +148,15 @@ function placeViewButtons(panel, currentView, onSelect) {
     for (const row of BUTTON_ROWS) {
       const line = document.createElement('div');
       line.style.cssText = 'display: flex; flex-direction: row; justify-content: center;';
-      for (const [view, loc] of row) line.appendChild(makeButton(view, loc, currentView, onSelect));
+      for (const [view, loc] of row) line.appendChild(viewButton(view, loc, currentView, onSelect));
       box.appendChild(line);
     }
     own.appendChild(box);
   }
-  const portrait = own.closest?.('.diplo-ribbon-outer')?.querySelector('.diplo-ribbon__portrait-image');
+  const card = own.closest?.('.diplo-ribbon-outer');
+  const portrait = card?.querySelector('.diplo-ribbon__portrait-image');
   if (portrait) Object.assign(portrait.style, { top: '0', left: '0', width: '100%', height: '100%' });
+  placeAutoEndButton(card);
 }
 
 export { placeViewButtons };

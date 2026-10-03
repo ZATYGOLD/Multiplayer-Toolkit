@@ -26,8 +26,10 @@
  *   - blocked: the advisor screens (there is no empire to advise) and the
  *     Age-start dedication / advanced-start screens (mp-observer-prompts.js
  *     completes that step for the Observer);
- *   - redirected: religion screens open every leader's pantheon
- *     (mp-observer-overview.js).
+ *   - redirected: the Antiquity pantheon screens open every leader's
+ *     pantheons (mp-observer-overview.js); the religion picker opens the
+ *     game's religion and belief screen, where the Observer picks a leader
+ *     (mp-observer-leader-view.js).
  */
 import { ContextManager } from 'fs://game/core/ui/context-manager/context-manager.js';
 import PopupSequencer from 'fs://game/base-standard/ui/popup-sequencer/popup-sequencer.js';
@@ -36,19 +38,22 @@ import { isObserverSeat } from './mp-observer-core.js';
 import { OVERVIEW_PANEL_TAG, setOverviewSource } from './mp-observer-overview.js';
 
 const BLOCKED = new Set(['screen-advisor-council', 'advisor-council-popup', 'screen-dedication-selection', 'screen-advanced-start']);
+const OVERVIEW_PROPS = { singleton: true, createMouseGuard: true };
+/** Screen -> what opens instead: an overview source, or another screen. */
 const REDIRECTS = {
-  'screen-pantheon-chooser': 'pantheons',
-  'panel-pantheon-complete': 'pantheons',
-  'panel-religion-picker': 'pantheons',
-  'panel-belief-picker': 'pantheons'
+  'screen-pantheon-chooser': { overview: 'pantheons' },
+  'panel-pantheon-complete': { overview: 'pantheons' },
+  'panel-religion-picker': { screen: 'panel-belief-picker' }
 };
 
 wrapMethod(ContextManager, 'push', (base, target, ...rest) => {
   if (typeof target !== 'string' || !isObserverSeat()) return base(target, ...rest);
   if (BLOCKED.has(target)) return null;
-  if (!REDIRECTS[target]) return base(target, ...rest);
-  setOverviewSource(REDIRECTS[target]);
-  return base(OVERVIEW_PANEL_TAG, { singleton: true, createMouseGuard: true });
+  const redirect = REDIRECTS[target];
+  if (!redirect) return base(target, ...rest);
+  if (redirect.screen) return base(redirect.screen, ...rest);
+  setOverviewSource(redirect.overview);
+  return base(OVERVIEW_PANEL_TAG, OVERVIEW_PROPS);
 });
 
 // Blocked popups never enter the queue, so nothing waits on a screen that will not open.

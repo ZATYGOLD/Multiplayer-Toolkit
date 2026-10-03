@@ -26,6 +26,10 @@
  * whose leader is LEADER_MPT_OBSERVER).
  */
 const OBSERVER_LEADER = 'LEADER_MPT_OBSERVER';
+const OBSERVER_CIV_PREFIX = 'CIVILIZATION_MPT_OBSERVER_';
+
+/** True for any Age's Observer civilization type name. */
+function isObserverCiv(civType) { return typeof civType === 'string' && civType.startsWith(OBSERVER_CIV_PREFIX); }
 
 /** Logger that reaches UI.log (console.log output does not). */
 function createLogger(tag) {
@@ -65,6 +69,20 @@ function clearChildren(el) {
   while (el?.firstChild) el.removeChild(el.firstChild);
 }
 
+/**
+ * True from the moment a non-final Age is complete (its progress is full, the
+ * HUD's action turns into the Age transition) until the next Age loads.
+ */
+function isAgeEnding() {
+  try {
+    if (Modding.getTransitionInProgress?.() === TransitionType.Age) return true;
+    const ages = Game.AgeProgressManager;
+    if (!ages || ages.isFinalAge || ages.isExtendedGame) return false;
+    const max = ages.getMaxAgeProgressionPoints();
+    return !!ages.isAgeOver || (max > 0 && ages.getCurrentAgeProgressionPoints() >= max);
+  } catch (e) { return false; }
+}
+
 /** Observer by leader; cached per player id (a player's leader is fixed for the life of the UI). */
 const observerById = new Map();
 function isObserverPlayer(playerId) {
@@ -78,4 +96,4 @@ function isObserverPlayer(playerId) {
   } catch (e) { return false; }
 }
 
-export { OBSERVER_LEADER, clearChildren, createLogger, findAncestor, isObserverPlayer, whenDefined, wrapMethod };
+export { OBSERVER_CIV_PREFIX, OBSERVER_LEADER, clearChildren, createLogger, findAncestor, isAgeEnding, isObserverCiv, isObserverPlayer, whenDefined, wrapMethod };

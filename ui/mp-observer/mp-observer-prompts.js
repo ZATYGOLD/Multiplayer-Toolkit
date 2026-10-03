@@ -29,7 +29,8 @@
  *     end until they are);
  *   - diplomacy dialogs addressed to the Observer never open; their session
  *     is closed, as the dialog's own buttons do;
- *   - the end-of-age countdown popup never opens, and each Age's start step
+ *   - the end-of-age countdown popup and the end-of-Age screens never open
+ *     (the Observer always continues, see mp-observer-turn.js), and each Age's start step
  *     (dedications, capital) is completed with nothing chosen - the Observer
  *     has no settlement and no legacies;
  *   - crisis, age-progress, "player met" and agenda notifications are dismissed.
@@ -38,6 +39,7 @@ import { DisplayQueueManager } from 'fs://game/core/ui/context-manager/display-q
 import AgeProgressionPopupManager from 'fs://game/base-standard/ui/age-progression-warning-popup/age-progression-warning-popup-manager.js';
 import { NarrativePopupManager } from 'fs://game/base-standard/ui/narrative-event/narrative-popup-manager.js';
 import { DiplomacyDialogManagerImpl } from 'fs://game/base-standard/ui/diplomacy/diplomacy-manager.js';
+import EndGameScreenManager from 'fs://game/base-standard/ui/endgame/screen-endgame.js';
 import { createLogger, wrapMethod } from '../mpt-shared/mpt-util.js';
 import { CONFIG } from './mp-observer-config.js';
 import { isObserverSeat } from './mp-observer-core.js';
@@ -155,6 +157,11 @@ function patchPopups() {
     if (!isObserverSeat()) return base(request, ...rest);
     skipDisplay(request);
   });
+  // The game's final results still show; a non-final Age end goes straight on.
+  wrapMethod(EndGameScreenManager, 'show', (base, request, ...rest) => {
+    if (!isObserverSeat() || Game.AgeProgressManager.isFinalAge) return base(request, ...rest);
+    skipDisplay(request);
+  });
   wrapMethod(DiplomacyDialogManagerImpl.prototype, 'show', (base, request, ...rest) => {
     if (!isObserverSeat()) return base(request, ...rest);
     answerFirstMeets();
@@ -165,6 +172,6 @@ function patchPopups() {
 }
 
 patchPopups();
-engine.on('NotificationAdded', (data) => { if (data?.id?.owner == GameContext.localPlayerID) queueSweep(); });
+engine.on('NotificationAdded', (data) => { if (data?.id?.owner == GameContext.localPlayerID && isObserverSeat()) queueSweep(); });
 engine.on('LocalPlayerTurnBegin', () => { answerPendingStory(); queueSweep(); });
 engine.whenReady.then(() => { answerPendingStory(); queueSweep(); });

@@ -14,14 +14,16 @@ import { createObserverEye, isObserverPlayerId, observerPlots } from './mpt-obse
  * ./mpt-observer-eye.js, and the Observer's Eye is created there.
  */
 (function mptObserverStartPositions() {
-  const usedPlots = new Set();
   const log = (m) => console.log('[MPT observer-start] ' + m);
   try {
+    StartPositioner.mptObserverPlots = new Set();      // plots used this map generation (the latest load wins)
+    if (StartPositioner.mptObserverWrapped) return;   // a reloaded script must not wrap twice
+    StartPositioner.mptObserverWrapped = true;
     const base = StartPositioner.setStartPosition.bind(StartPositioner);
     StartPositioner.setStartPosition = (plotIndex, playerId) => {
       if (!isObserverPlayerId(playerId)) return base(plotIndex, playerId);
       let plots = null;
-      try { plots = observerPlots(usedPlots); }
+      try { plots = observerPlots(StartPositioner.mptObserverPlots); }
       catch (e) { log(`observer start failed for ${playerId}: ${e}`); }
       const result = base(plots ? plots.start.index : plotIndex, playerId);
       try {

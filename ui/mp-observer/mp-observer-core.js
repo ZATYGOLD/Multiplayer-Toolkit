@@ -38,18 +38,58 @@ function watchedPlayers() {
   catch (e) { return []; }
 }
 
-/** Every pair of watched leaders at war with each other, as [idA, idB] with idA < idB. */
-function warPairs() {
+// ============================ Diplomacy snapshot ============================
+
+const SNAPSHOT_TTL_MS = 1000;
+let snapshot = null;
+let snapshotAt = 0;
+
+/** Groups of ids linked by alliances (union of allied pairs), only groups of two or more. */
+function allianceGroups(players, allied) {
+  const parent = new Map(players.map((p) => [p.id, p.id]));
+  const root = (id) => (parent.get(id) === id ? id : root(parent.get(id)));
+  for (const [a, b] of allied) parent.set(root(a), root(b));
+  const groups = new Map();
+  for (const p of players) {
+    const r = root(p.id);
+    if (!groups.has(r)) groups.set(r, []);
+    groups.get(r).push(p.id);
+  }
+  return [...groups.values()].filter((g) => g.length > 1).map((g) => g.sort((a, b) => a - b)).sort((a, b) => a[0] - b[0]);
+}
+
+/**
+ * Wars and alliances between watched leaders, recomputed at most once a
+ * second (or right after a war or peace): { wars: [[idA, idB]], alliances: [[ids]] },
+ * pairs with idA < idB.
+ */
+function diplomacySnapshot() {
+  const now = Date.now();
+  if (snapshot && now - snapshotAt < SNAPSHOT_TTL_MS) return snapshot;
   const players = watchedPlayers();
-  const pairs = [];
+  const wars = [];
+  const allied = [];
   for (let i = 0; i < players.length; i++) {
     for (let j = i + 1; j < players.length; j++) {
-      try { if (players[i].Diplomacy?.isAtWarWith?.(players[j].id)) pairs.push([players[i].id, players[j].id].sort((a, b) => a - b)); }
-      catch (e) { /* skip pair */ }
+      const [a, b] = [players[i], players[j]];
+      const pair = [a.id, b.id].sort((x, y) => x - y);
+      try {
+        if (a.Diplomacy?.isAtWarWith?.(b.id)) wars.push(pair);
+        else if (a.Diplomacy?.hasAllied?.(b.id)) allied.push(pair);
+      } catch (e) { /* skip pair */ }
     }
   }
-  return pairs;
+  snapshot = { wars, alliances: allianceGroups(players, allied) };
+  snapshotAt = now;
+  return snapshot;
 }
+
+for (const event of ['DiplomacyDeclareWar', 'DiplomacyMakePeace', 'DiplomacyRelationshipStatusChanged']) engine.on(event, () => { snapshot = null; });
+
+/** A unit's current base strengths (0 when it has none). */
+const meleeStrength = (unit) => unit?.Combat?.getMeleeStrength?.(false) ?? 0;
+const rangedStrength = (unit) => Math.max(unit?.Combat?.rangedStrength ?? 0, unit?.Combat?.bombardStrength ?? 0);
+const unitStrength = (unit) => Math.max(meleeStrength(unit), rangedStrength(unit));
 
 /** True in any diplomacy screen (leader panel, dialogs, call to arms, peace deal). */
 function inDiplomacyMode() {
@@ -61,4 +101,4 @@ function inLeaderPanel() {
   try { return /DIPLOMACY_HUB/.test(InterfaceMode.getCurrent() ?? ''); } catch (e) { return false; }
 }
 
-export { isObserverPlayer, isObserverSeat, watchedPlayers, warPairs, inDiplomacyMode, inLeaderPanel };
+export { isObserverPlayer, isObserverSeat, watchedPlayers, diplomacySnapshot, meleeStrength, rangedStrength, unitStrength, inDiplomacyMode, inLeaderPanel };

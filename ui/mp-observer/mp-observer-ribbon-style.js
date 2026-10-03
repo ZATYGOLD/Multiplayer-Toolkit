@@ -24,19 +24,22 @@
  * One injected stylesheet for the Observer's ribbon:
  *   - fixed card size: every view renders into the stat-area size the Yields
  *     view uses, so switching views never re-lays out the ribbon;
- *   - highlights: a celebrating leader's portrait and civ banner glow gold;
- *     leaders at war with each other share a portrait colour (one per war
- *     pair, kept until peace) and a coloured pip per war under the portrait;
+ *   - highlights: allied leaders share a portrait hex-border colour (one per
+ *     alliance); a leader at war glows red, a celebrating leader's portrait
+ *     and civ banner glow gold (war wins on the portrait); a coloured pip per
+ *     war under the portrait shows who fights whom (one colour per war pair,
+ *     kept until peace);
  *   - the leader panel shows no ribbon.
  */
 import { HIGHLIGHT } from './mp-observer-config.js';
-import { warPairs } from './mp-observer-core.js';
+import { diplomacySnapshot } from './mp-observer-core.js';
 
 const STYLE_ID = 'mpt-observer-ribbon-style';
 const SIZED_CLASS = 'mpt-observer-ribbon';
 const HIDDEN_CLASS = 'mpt-observer-hub-hidden';
 const CELEBRATING_CLASS = 'mpt-celebrating';
-const WAR_CLASS_PREFIX = 'mpt-war-';
+const AT_WAR_CLASS = 'mpt-at-war';
+const ALLY_CLASS_PREFIX = 'mpt-ally-';
 const PIPS_CLASS = 'mpt-war-pips';
 const SIGNATURE_ATTR = 'data-mpt-highlight';
 const CONTENT_WIDTH = '4.7222222222rem';   // .diplo-ribbon_content-container in the base stylesheet
@@ -46,24 +49,28 @@ let writtenCss = '';
 
 // ============================ Stylesheet ============================
 
-/** Portrait glow and hex-frame tint; a celebration also tints and glows the civ banner. */
-function highlightRules(selector, color, banner) {
-  const card = `.${SIZED_CLASS} ${selector}`;
-  const glow = `filter: drop-shadow(0 0 0.35rem ${color});`;
-  const rules = [
-    `${card} .diplo-ribbon__portrait-hex-bg-frame { fxs-background-image-tint: ${color}; }`,
-    `${card} .diplo-ribbon__portrait { ${glow} }`
+const card = (selector) => `.${SIZED_CLASS} ${selector}`;
+const glow = (color, size = HIGHLIGHT.glowSize) => `filter: drop-shadow(0 0 ${size} ${color});`;
+const hexBorder = (selector, color) => `${card(selector)} .diplo-ribbon__portrait-hex-bg-frame { fxs-background-image-tint: ${color}; }`;
+
+/** Glow around the whole portrait hex, plus a tight glow on the hex border itself so the edge reads clearly. */
+const portraitGlow = (selector, color) => [
+  `${card(selector)} .diplo-ribbon__portrait { ${glow(color)} }`,
+  `${card(selector)} .diplo-ribbon__portrait-hex-bg-frame { ${glow(color, HIGHLIGHT.borderGlowSize)} }`
+];
+
+/** A celebration tints the hex border and civ banner and glows both gold. */
+function celebrationRules() {
+  const selector = '.' + CELEBRATING_CLASS;
+  return [
+    hexBorder(selector, HIGHLIGHT.celebration),
+    ...portraitGlow(selector, HIGHLIGHT.celebration),
+    `${card(selector)} .diplo-ribbon__front-banner-shadow { fxs-border-image-tint: ${HIGHLIGHT.celebration}; }`,
+    `${card(selector)} .diplo-ribbon__upper-bg { ${glow(HIGHLIGHT.celebration)} }`
   ];
-  if (banner) {
-    rules.push(
-      `${card} .diplo-ribbon__front-banner-shadow { fxs-border-image-tint: ${color}; }`,
-      `${card} .diplo-ribbon__upper-bg { ${glow} }`
-    );
-  }
-  return rules;
 }
 
-/** (Re)write the stylesheet only when its content changes. War rules come last so they win on the portrait. */
+/** (Re)write the stylesheet only when its content changes. Later rules win: alliance border, then war glow. */
 function writeStyle() {
   const fixed = (prop) => `${prop}: ${CONTENT_WIDTH} !important; min-${prop}: ${CONTENT_WIDTH} !important; max-${prop}: ${CONTENT_WIDTH} !important;`;
   const height = statHeightPx > 0 ? `height: ${statHeightPx}px !important; min-height: ${statHeightPx}px !important; max-height: ${statHeightPx}px !important;` : '';
@@ -72,8 +79,9 @@ function writeStyle() {
     `.${SIZED_CLASS} .diplo-ribbon_content-container { ${fixed('width')} }`,
     `.${SIZED_CLASS} .relationship-icon, .${SIZED_CLASS} .diplo-ribbon__war-support-count { display: none; }`,
     `.${HIDDEN_CLASS} { display: none !important; }`,
-    ...highlightRules('.' + CELEBRATING_CLASS, HIGHLIGHT.celebration, true),
-    ...HIGHLIGHT.wars.flatMap((color, i) => highlightRules('.' + WAR_CLASS_PREFIX + i, color, false))
+    ...celebrationRules(),
+    ...HIGHLIGHT.alliances.map((color, i) => hexBorder('.' + ALLY_CLASS_PREFIX + i, color)),
+    ...portraitGlow('.' + AT_WAR_CLASS, HIGHLIGHT.atWar)
   ].join('\n');
   if (css === writtenCss && document.getElementById(STYLE_ID)) return;
   let el = document.getElementById(STYLE_ID);
@@ -103,9 +111,8 @@ function setRibbonHidden(panel, hidden) {
 const warColorByPair = new Map();
 const pairKey = ([a, b]) => `${a}-${b}`;
 
-/** Current wars as [{ a, b, color }]; a pair keeps its colour until peace. */
-function coloredWars() {
-  const pairs = warPairs();
+/** Current wars as [{ a, b, color }]; a pair keeps its pip colour until peace. */
+function coloredWars(pairs) {
   const live = new Set(pairs.map(pairKey));
   for (const key of [...warColorByPair.keys()]) if (!live.has(key)) warColorByPair.delete(key);
   for (const pair of pairs) {
@@ -118,8 +125,15 @@ function coloredWars() {
   return pairs.map((pair) => ({ a: pair[0], b: pair[1], color: warColorByPair.get(pairKey(pair)) }));
 }
 
-function warPips(card, wars, playerId) {
-  card.querySelector('.' + PIPS_CLASS)?.remove();
+/** Alliance colour index per leader id (alliances in a stable order). */
+function allianceColors(alliances) {
+  const colors = new Map();
+  alliances.forEach((group, i) => { for (const id of group) colors.set(id, i % HIGHLIGHT.alliances.length); });
+  return colors;
+}
+
+function warPips(cardEl, wars, playerId) {
+  cardEl.querySelector('.' + PIPS_CLASS)?.remove();
   if (wars.length === 0) return;
   const pips = document.createElement('div');
   pips.classList.add(PIPS_CLASS);
@@ -132,24 +146,28 @@ function warPips(card, wars, playerId) {
     if (enemy) pip.setAttribute('data-tooltip-content', Locale.compose('LOC_MPT_OBSERVER_AT_WAR_WITH', enemy.name));
     pips.appendChild(pip);
   }
-  (card.querySelector('.diplo-ribbon__relation-container') ?? card).appendChild(pips);
+  (cardEl.querySelector('.diplo-ribbon__relation-container') ?? cardEl).appendChild(pips);
 }
 
-/** Celebration and war highlights on every leader card; cards whose state is unchanged are left alone. */
+/** Alliance, war and celebration highlights on every leader card; cards whose state is unchanged are left alone. */
 function markCards(panel, isCelebrating) {
   if (!panel) return;
-  const wars = coloredWars();
-  for (const card of panel.querySelectorAll('.diplo-ribbon-outer[data-player-id]')) {
-    const id = parseInt(card.getAttribute('data-player-id'), 10);
+  const { wars: pairs, alliances } = diplomacySnapshot();
+  const wars = coloredWars(pairs);
+  const allyColor = allianceColors(alliances);
+  for (const cardEl of panel.querySelectorAll('.diplo-ribbon-outer[data-player-id]')) {
+    const id = parseInt(cardEl.getAttribute('data-player-id'), 10);
     const player = Players.get(id);
     const own = wars.filter((w) => w.a === id || w.b === id).sort((x, y) => x.color - y.color);
     const celebrating = !!player && isCelebrating(player);
-    const signature = `${celebrating}|${own.map((w) => `${w.a}-${w.b}:${w.color}`).join(',')}`;
-    if (card.getAttribute(SIGNATURE_ATTR) === signature) continue;
-    card.setAttribute(SIGNATURE_ATTR, signature);
-    card.classList.toggle(CELEBRATING_CLASS, celebrating);
-    HIGHLIGHT.wars.forEach((_, i) => card.classList.toggle(WAR_CLASS_PREFIX + i, own[0]?.color === i));
-    warPips(card, own, id);
+    const ally = allyColor.get(id);
+    const signature = `${celebrating}|${ally ?? ''}|${own.map((w) => `${w.a}-${w.b}:${w.color}`).join(',')}`;
+    if (cardEl.getAttribute(SIGNATURE_ATTR) === signature) continue;
+    cardEl.setAttribute(SIGNATURE_ATTR, signature);
+    cardEl.classList.toggle(CELEBRATING_CLASS, celebrating);
+    cardEl.classList.toggle(AT_WAR_CLASS, own.length > 0);
+    HIGHLIGHT.alliances.forEach((_, i) => cardEl.classList.toggle(ALLY_CLASS_PREFIX + i, ally === i));
+    warPips(cardEl, own, id);
   }
 }
 

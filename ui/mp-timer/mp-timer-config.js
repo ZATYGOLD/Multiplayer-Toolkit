@@ -28,7 +28,7 @@ const TIMER_TYPE = "MPT_TURNTIMER_COMPETITIVE";
 /** Tunable timings / thresholds. */
 const CONFIG = {
   firstTimedTurn: 2,        // grace: the first (firstTimedTurn - 1) turn(s) of each session are untimed (found capital, pick research)
-  minPlayersToEnforce: 1,   // only force-end turns with at least this many living human players, Observers excluded (2 = never in solo games)
+  minPlayersToEnforce: 1,   // only force-end turns with at least this many living human players, Observers included (2 = never in solo games)
   roundToNearest: 1,        // round the computed total to the nearest multiple (1 = whole seconds)
   orangeStart: 30,          // orange tier begins at this many seconds remaining
   flashStart: 15,           // red flash + per-second beeps begin here
@@ -37,6 +37,7 @@ const CONFIG = {
   steadyFlash: true,        // keep the flash colour on odd seconds (no white blink)
   engineFlashHide: 21,      // perceived remaining while muzzling the engine (<20 triggers it)
   guardianMs: 200,          // enforcement sweep interval
+  endRetryMs: 1000,         // gap between attempts to end an expired turn
   staleEventMs: 1200,       // timer events silent this long (a panel is open): the sweep takes over the beeps
   maxUnitSkips: 40,         // units skipped per sweep when idle units block the end of the turn
   maxProxyLimit: 600,       // pass through bigger phases (age transition = 3000s)
