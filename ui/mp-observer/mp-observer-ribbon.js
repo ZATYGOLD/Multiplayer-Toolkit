@@ -24,7 +24,8 @@
  * The base ribbon lists only leaders the local player has met, and an empire
  * with no units meets no one. For the Observer seat the ribbon model is
  * rebuilt from every living major (the Observer's own card last, at the right
- * edge), stats are pinned open, and the Observer's card switches what every
+ * edge), stats follow the game's "Always Show Ribbon Yields" option (toggled
+ * by right-clicking the Observer's portrait), and the Observer's card switches what every
  * card shows (see mp-observer-ribbon-toolbar.js). Portraits show each leader's
  * mood (angry at war, else happy while celebrating); look and highlights are
  * in mp-observer-ribbon-style.js.
@@ -37,9 +38,9 @@ import { DiploRibbonData } from 'fs://game/base-standard/ui/diplo-ribbon/model-d
 import { PanelDiploRibbon } from 'fs://game/base-standard/ui/diplo-ribbon/panel-diplo-ribbon.js';
 import { createLogger, wrapMethod } from '../mpt-shared/mpt-util.js';
 import { CONFIG, OBSERVER_VIEW } from './mp-observer-config.js';
-import { inDiplomacyMode, inLeaderPanel, isObserverSeat } from './mp-observer-core.js';
-import { productionItems, researchItems, scoreItems, yieldsItems } from './mp-observer-ribbon-data.js';
-import { lockCardSize, markCards, setRibbonHidden } from './mp-observer-ribbon-style.js';
+import { inDiplomacyMode, inLeaderPanel, isObserverSeat, watchedPlayers } from './mp-observer-core.js';
+import { bestByType, pantheonBadge, productionItems, researchItems, scoreItems, yieldsItems } from './mp-observer-ribbon-data.js';
+import { DETAILS_CHANGED_EVENT, isDetailsHidden, lockCardSize, markCards, markRows, setRibbonHidden } from './mp-observer-ribbon-style.js';
 import { placeViewButtons } from './mp-observer-ribbon-toolbar.js';
 
 const log = createLogger('observer-ribbon');
@@ -89,6 +90,15 @@ function decorateRibbon(panel) {
     placeViewButtons(panel, viewMode, setView);
   }
   markCards(panel, isCelebrating);
+  markBest(panel);
+}
+
+const BEST_VIEWS = new Set([OBSERVER_VIEW.YIELDS, OBSERVER_VIEW.SCORE]);
+
+/** Best-in-category rows (Yields and Victories views) and negative numbers. */
+function markBest(panel) {
+  const best = BEST_VIEWS.has(viewMode) ? bestByType(watchedPlayers().map((p) => p.id)) : null;
+  markRows(panel, best);
 }
 
 /** Full rebuild of the HUD ribbon, keeping its scroll position (never in diplomacy screens). */
@@ -142,15 +152,23 @@ function patchModel() {
     try { return VIEW_ITEMS[viewMode](player, () => base(player, ...rest)); }
     catch (e) { return base(player, ...rest); }
   });
+  // No religion yet (Antiquity): the pantheon fills the card's religion slot.
+  wrapMethod(DiploRibbonData, 'createPlayerData', (base, player, ...rest) => {
+    const data = base(player, ...rest);
+    if (isObserverSeat() && data && !data.religionIdeology && player) {
+      try { data.religionIdeology = pantheonBadge(player) ?? undefined; } catch (e) { /* no badge */ }
+    }
+    return data;
+  });
   wrapMethod(DiploRibbonData, 'createPlayerSizeData', (base, player, ...rest) =>
     (isObserverSeat() && player?.id === GameContext.localPlayerID ? [] : base(player, ...rest)));
 
-  // Stats pinned open on the map (the user's own toggle is untouched); diplomacy screens stay compact.
+  // On the map stats follow the game's option (live, toggled from the Observer's card); diplomacy screens stay compact.
   const baseStuck = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(DiploRibbonData), 'areRibbonYieldsStuckOnScreen')?.get;
   Object.defineProperty(DiploRibbonData, 'areRibbonYieldsStuckOnScreen', {
     configurable: true,
     get() {
-      if (isObserverSeat() && !inDiplomacyMode()) return true;
+      if (isObserverSeat() && !inDiplomacyMode()) return !isDetailsHidden() || this._userDiploRibbonsToggled === 1;
       return baseStuck ? baseStuck.call(this) : (this._alwaysShowYields === 1 || this._userDiploRibbonsToggled === 1);
     }
   });
@@ -173,7 +191,7 @@ function patchModel() {
       this._playerData = cards;
       this.onUpdate?.(this);
       this._eventNotificationRefresh?.trigger?.();
-      for (const panel of document.querySelectorAll('panel-diplo-ribbon')) markCards(panel, isCelebrating);
+      for (const panel of document.querySelectorAll('panel-diplo-ribbon')) { markCards(panel, isCelebrating); markBest(panel); }
       if (!inDiplomacyMode()) refreshMeters();
     } catch (e) {
       log(`observer update failed (${e}); using the base ribbon`);
@@ -208,5 +226,6 @@ if (CONFIG.enabled) {
   patchModel();
   patchPanel();
   for (const event of ['DiplomacyDeclareWar', 'DiplomacyMakePeace']) engine.on(event, refreshRibbon);
+  window.addEventListener(DETAILS_CHANGED_EVENT, refreshRibbon);
   engine.whenReady.then(() => seedRibbon(CONFIG.ribbonSeedAttempts));
 }

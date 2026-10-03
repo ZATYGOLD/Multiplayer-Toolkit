@@ -61,8 +61,29 @@
     <Row Tag="LOC_MPT_OBSERVER_NO_PANTHEON">
       <Text>No Pantheon yet.</Text>
     </Row>
+    <Row Tag="LOC_MPT_OBSERVER_CITIZENS">
+      <Text>Citizens</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_TECHS_COMPLETED">
+      <Text>Technologies Completed</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_CIVICS_COMPLETED">
+      <Text>Civics Completed</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_WONDERS_BUILT">
+      <Text>Wonders Built</Text>
+    </Row>
     <Row Tag="LOC_MPT_OBSERVER_MILITARY_STRENGTH">
       <Text>Military Strength</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_HIDE_DETAILS">
+      <Text>Hide Leader Details</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_SHOW_DETAILS">
+      <Text>Show Leader Details</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_PORTRAIT_TT">
+      <Text>{1_Leader}[N]Right-click: {2_Action}</Text>
     </Row>
     <Row Tag="LOC_MPT_OBSERVER_AUTO_END_TURN_ON">
       <Text>Auto End Turn: On</Text>
@@ -102,6 +123,12 @@
     </Row>
     <Row Tag="LOC_MPT_OBSERVER_NONE">
       <Text>—</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_NO_RELIGION">
+      <Text>{1_Leader} has not founded a religion yet.</Text>
+    </Row>
+    <Row Tag="LOC_MPT_OBSERVER_IN_GAME">
+      <Text>Observer in game</Text>
     </Row>
     <Row Tag="LOC_MPT_TEAM_OBSERVER">
       <Text>Observer</Text>

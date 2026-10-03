@@ -6,7 +6,7 @@
         <Authors>Zatygold</Authors>
         <Package>Mod</Package>
         <AffectsSavedGames>0</AffectsSavedGames>
-        <Version>0.6.01</Version>
+        <Version>0.6.02</Version>
         <LastUpdated>2026-10-03</LastUpdated>
         <ShowInBrowser>1</ShowInBrowser>
     </Properties>
@@ -31,6 +31,23 @@
         </Criteria>
         <Criteria id="modern-age-current">
             <AgeInUse>AGE_MODERN</AgeInUse>
+        </Criteria>
+
+<!--*************************** CRITERIA: OBSERVER ************************************************-->
+
+        <!-- A game with an Observer: a player's leader is the Observer, or the
+             hidden game option the lobby host sets when one is picked. -->
+        <Criteria id="observer-in-game" any="true">
+            <ConfigurationValueContains>
+                <Group>Player</Group>
+                <ConfigurationId>LeaderTypeName</ConfigurationId>
+                <Value>LEADER_MPT_OBSERVER</Value>
+            </ConfigurationValueContains>
+            <ConfigurationValueMatches>
+                <Group>Game</Group>
+                <ConfigurationId>MPT_OBSERVER_IN_GAME</ConfigurationId>
+                <Value>1</Value>
+            </ConfigurationValueMatches>
         </Criteria>
     </ActionCriteria>
 
@@ -114,24 +131,7 @@
             <Properties><LoadOrder>1000</LoadOrder></Properties>
             <Actions>
                 <ImportFiles>
-                    <Item>maps/assign-starting-plots.js</Item>
                     <Item>maps/mpt-observer-eye.js</Item>
-                    <Item>scripts/age-transition-post-load.js</Item>
-                    <Item>ui-next/screens/victories/victories-screen-model.js</Item>
-                    <Item>ui-next/screens/commerce/commerce-screen.js</Item>
-                    <Item>ui-next/screens/commerce/commerce-screen-model.js</Item>
-                    <Item>ui-next/screens/commerce/commerce-screen-empire-tab.js</Item>
-                    <Item>ui-next/screens/commerce/commerce-screen-trade-tab.js</Item>
-                    <Item>ui-next/screens/legacies/legacies-screen.js</Item>
-                    <Item>ui-next/screens/legacies/legacies-model.js</Item>
-                    <Item>ui-next/screens/legacies/dedications-model.js</Item>
-                    <Item>ui/policies/government-hub.js</Item>
-                    <Item>ui/policies/model-government.js</Item>
-                    <Item>ui/policies/model-policies.js</Item>
-                    <Item>ui/policies/policies-support.js</Item>
-                    <Item>ui/great-works/model-great-works.js</Item>
-                    <Item>ui/great-works/screen-great-works.js</Item>
-                    <Item>ui/panel-belief-picker/panel-belief-picker.js</Item>
                 </ImportFiles>
                 <UpdateDatabase>
                     <Item>data/observer/observer-leader.xml</Item>
@@ -164,6 +164,7 @@
                     <Item>ui/mp-observer/mp-observer-overview.js</Item>
                     <Item>ui/mp-observer/mp-observer-screens.js</Item>
                     <Item>ui/mp-observer/mp-observer-leader-view.js</Item>
+                    <Item>ui/mp-observer/mp-observer-leader-screens.js</Item>
                     <Item>ui/mp-observer/mp-observer-civ-lists.js</Item>
                     <Item>ui/mp-observer/mp-observer-ribbon-data.js</Item>
                     <Item>ui/mp-observer/mp-observer-ribbon-style.js</Item>
@@ -180,6 +181,37 @@
                     <Item>ui/mp-observer/mp-observer-eye.js</Item>
                     <Item>ui/mp-observer/mp-observer-prompts.js</Item>
                 </UIScripts>
+            </Actions>
+        </ActionGroup>
+
+<!--*********************** GAME: OBSERVER BASE-GAME OVERRIDES ***********************************-->
+
+        <!-- Copies of base-game files (changes marked "MPT:"), loaded only in a
+             game with an Observer: every other game runs the untouched files,
+             or another mod's versions of them. -->
+        <ActionGroup id="mpt-observer-overrides" scope="game" criteria="observer-in-game">
+            <Properties><LoadOrder>1000</LoadOrder></Properties>
+            <Actions>
+                <ImportFiles>
+                    <Item>maps/assign-starting-plots.js</Item>
+                    <Item>scripts/age-transition-post-load.js</Item>
+                    <Item>ui-next/screens/victories/victories-screen-model.js</Item>
+                    <Item>ui-next/screens/commerce/commerce-screen.js</Item>
+                    <Item>ui-next/screens/commerce/commerce-screen-model.js</Item>
+                    <Item>ui-next/screens/commerce/commerce-screen-empire-tab.js</Item>
+                    <Item>ui-next/screens/commerce/commerce-screen-trade-tab.js</Item>
+                    <Item>ui-next/screens/legacies/legacies-screen.js</Item>
+                    <Item>ui-next/screens/legacies/legacies-model.js</Item>
+                    <Item>ui-next/screens/legacies/dedications-model.js</Item>
+                    <Item>ui/policies/government-hub.js</Item>
+                    <Item>ui/policies/model-government.js</Item>
+                    <Item>ui/policies/model-policies.js</Item>
+                    <Item>ui/policies/policies-support.js</Item>
+                    <Item>ui/great-works/model-great-works.js</Item>
+                    <Item>ui/tech-tree/model-tech-tree.js</Item>
+                    <Item>ui/culture-tree/model-culture-tree.js</Item>
+                    <Item>ui/tree-grid/tree-grid.js</Item>
+                </ImportFiles>
             </Actions>
         </ActionGroup>
 

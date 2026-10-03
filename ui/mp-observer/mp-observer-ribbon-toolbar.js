@@ -25,17 +25,26 @@
  * (the game's mini-map lens button with its own yield glyphs) that switch
  * every other card between Yields | Production, Research and Victories. The
  * card's banner, between the portrait and the civ symbol, holds the Auto End
- * Turn toggle (mp-observer-turn.js).
+ * Turn toggle (mp-observer-turn.js); the civ symbol, smaller, sits under it.
+ * Right-clicking the card's portrait hides or shows every card's details
+ * (mp-observer-navigation.js); its tooltip says so.
  */
 import { OBSERVER_VIEW } from './mp-observer-config.js';
+import { isDetailsHidden, markOwnCard } from './mp-observer-ribbon-style.js';
 import { isAutoEndTurn, setAutoEndTurn } from './mp-observer-turn.js';
 
 const BUTTONS_CLASS = 'mpt-observer-view-buttons';
-const AUTO_END_CLASS = 'mpt-observer-auto-end';
-const BUTTON_SIZE_REM = 1.6;
-const BUTTON_SIZE = `${BUTTON_SIZE_REM}rem`;
+const BANNER_CLASS = 'mpt-observer-banner-toggles';
+const BUTTON_SIZE = '1.6rem';
+const TOGGLE_SIZE_REM = 1.4;
+const TOGGLE_GLYPH_INSET = '0.12rem';
+const SYMBOL_SIZE = '2rem';
+const SYMBOL_GAP_REM = 0.25;
 const DOUBLE_ACTIVATION_MS = 150;   // a click fires both action-activate and click
-const AUTO_END_TOP = '3.05rem';   // centred between the portrait hex (bottom ~2.7rem) and the civ symbol (top 5rem, the base mt-20)
+const COLUMN_TOP_REM = 2.8;   // clear of the portrait hex on the white banner
+const BANNER_TOP = `${COLUMN_TOP_REM}rem`;
+// The civ symbol sits right under the toggle, about where the base places it (mt-20, 5rem).
+const SYMBOL_TOP = `${COLUMN_TOP_REM + TOGGLE_SIZE_REM + SYMBOL_GAP_REM}rem`;
 const GLYPH_INSET = '0.2rem';   // same glyph area on every button (the lens button's own inset is larger)
 
 const ICON = {
@@ -113,27 +122,60 @@ function viewButton(view, labelLoc, currentView, onSelect) {
   return roundButton(Locale.compose(labelLoc), view === currentView, GLYPHS[view], () => onSelect(view));
 }
 
-const autoEndTooltip = () => Locale.compose(isAutoEndTurn() ? 'LOC_MPT_OBSERVER_AUTO_END_TURN_ON' : 'LOC_MPT_OBSERVER_AUTO_END_TURN_OFF');
+/** The banner toggles, top to bottom; each is pressed while on. */
+const BANNER_TOGGLES = [
+  { cls: 'mpt-observer-auto-end', icon: ICON.endTurn, isOn: isAutoEndTurn, set: setAutoEndTurn,
+    tooltip: (on) => (on ? 'LOC_MPT_OBSERVER_AUTO_END_TURN_ON' : 'LOC_MPT_OBSERVER_AUTO_END_TURN_OFF') }
+];
 
-/** Toggles the Observer's auto end turn; pressed while on. */
-function autoEndTurnButton() {
-  const glyph = (icon) => { icon.style.backgroundImage = `url("${ICON.endTurn}")`; };
-  const btn = roundButton(autoEndTooltip(), isAutoEndTurn(), glyph, () => {
-    setAutoEndTurn(!isAutoEndTurn());
-    btn.classList.toggle('pressed', isAutoEndTurn());
-    btn.setAttribute('data-tooltip-content', autoEndTooltip());
+/** Pressed while on; a state can also change by itself (Auto End Turn switches off at the end of an Age). */
+function showToggleState(btn, toggle) {
+  btn.classList.toggle('pressed', toggle.isOn());
+  btn.setAttribute('data-tooltip-content', Locale.compose(toggle.tooltip(toggle.isOn())));
+}
+
+function toggleButton(toggle) {
+  const glyph = (icon) => { icon.style.backgroundImage = `url("${toggle.icon}")`; };
+  const btn = roundButton('', toggle.isOn(), glyph, () => {
+    toggle.set(!toggle.isOn());
+    showToggleState(btn, toggle);
   });
-  btn.classList.add(AUTO_END_CLASS);
+  btn.classList.add(toggle.cls);
+  btn.style.cssText = `width: ${TOGGLE_SIZE_REM}rem; height: ${TOGGLE_SIZE_REM}rem; margin: 0;`;
+  const icon = btn.querySelector('.mini-map__lens-button__icon');
+  if (icon) for (const side of ['top', 'left', 'right', 'bottom']) icon.style[side] = TOGGLE_GLYPH_INSET;
+  showToggleState(btn, toggle);
   return btn;
 }
 
-/** The toggle on the card's white banner, below the portrait hex and above the civ symbol. */
-function placeAutoEndButton(card) {
+/** The toggles on the card's white banner, below the portrait hex and above the civ symbol. */
+function placeBannerToggles(card) {
   const banner = card?.querySelector('.diplo-ribbon__upper-bg');
-  if (!banner || banner.querySelector('.' + AUTO_END_CLASS)) return;
-  const btn = autoEndTurnButton();
-  btn.style.cssText = `position: absolute; width: ${BUTTON_SIZE}; height: ${BUTTON_SIZE}; left: calc(50% - ${BUTTON_SIZE_REM / 2}rem); top: ${AUTO_END_TOP}; margin: 0; z-index: 10;`;
-  banner.appendChild(btn);
+  if (!banner) return;
+  const existing = banner.querySelector('.' + BANNER_CLASS);
+  if (existing) {
+    for (const toggle of BANNER_TOGGLES) {
+      const btn = existing.querySelector('.' + toggle.cls);
+      if (btn) showToggleState(btn, toggle);
+    }
+    return;
+  }
+  const box = document.createElement('div');
+  box.classList.add(BANNER_CLASS, 'pointer-events-auto');
+  box.style.cssText = `position: absolute; left: 0; right: 0; top: ${BANNER_TOP}; display: flex; flex-direction: column; align-items: center; z-index: 10;`;
+  for (const toggle of BANNER_TOGGLES) box.appendChild(toggleButton(toggle));
+  banner.appendChild(box);
+  const symbol = banner.querySelector('.diplo-ribbon__symbol');
+  if (symbol) Object.assign(symbol.style, { marginTop: SYMBOL_TOP, width: SYMBOL_SIZE, height: SYMBOL_SIZE });
+}
+
+/** The portrait's tooltip: the Observer's name and what a right click does now. */
+function setPortraitTooltip(card) {
+  const hitbox = card?.querySelector('.diplo-ribbon__portrait-hitbox');
+  const name = Players.get(GameContext.localPlayerID)?.name;
+  if (!hitbox || !name) return;
+  const action = isDetailsHidden() ? 'LOC_MPT_OBSERVER_SHOW_DETAILS' : 'LOC_MPT_OBSERVER_HIDE_DETAILS';
+  hitbox.setAttribute('data-tooltip-content', Locale.compose('LOC_MPT_OBSERVER_PORTRAIT_TT', Locale.compose(name), Locale.compose(action)));
 }
 
 /** Fill the Observer's own stat area with the view buttons, centre its eye portrait in the hex and add the toggle. */
@@ -156,7 +198,9 @@ function placeViewButtons(panel, currentView, onSelect) {
   const card = own.closest?.('.diplo-ribbon-outer');
   const portrait = card?.querySelector('.diplo-ribbon__portrait-image');
   if (portrait) Object.assign(portrait.style, { top: '0', left: '0', width: '100%', height: '100%' });
-  placeAutoEndButton(card);
+  placeBannerToggles(card);
+  setPortraitTooltip(card);
+  markOwnCard(card);
 }
 
 export { placeViewButtons };

@@ -32,6 +32,7 @@
  *   - the notification bar is drawn at CONFIG.notificationScale.
  */
 import CameraController from 'fs://game/core/ui/camera/camera-controller.js';
+import { ContextManager } from 'fs://game/core/ui/context-manager/context-manager.js';
 import ViewManager from 'fs://game/core/ui/views/view-manager.js';
 import { createLogger, wrapMethod } from '../mpt-shared/mpt-util.js';
 import { CONFIG } from './mp-observer-config.js';
@@ -97,7 +98,10 @@ function currentZoom() {
 }
 
 /** One zoom input along the single axis; true when handled (the base zoom must not run). */
+let reportedInput = false;
+
 function zoomBy(direction, status, x) {
+  if (CONFIG.debug && !reportedInput) { reportedInput = true; log(`first zoom input: world input ${ViewManager.isWorldInputAllowed ? 'allowed' : 'blocked'}, zoom ${Camera.getState().zoomLevel}`); }
   if (!isObserverSeat() || !ViewManager.isWorldInputAllowed) return false;
   if (typeof Camera.setVerticalFoV !== 'function') {
     if (!reportedFov) { reportedFov = true; log('Camera.setVerticalFoV is not available: the game zoom range is kept'); }
@@ -113,10 +117,35 @@ function zoomBy(direction, status, x) {
   return true;
 }
 
-function patchCamera() {
-  if (typeof CameraController.applyZoomTarget === 'function') { log('Zoom+ camera controller found; zoom left to it'); return; }
-  wrapMethod(CameraController, 'cameraZoomOut', (base, status, x) => (zoomBy(1, status, x) ? undefined : base(status, x)));
-  wrapMethod(CameraController, 'cameraZoomIn', (base, status, x) => (zoomBy(-1, status, x) ? undefined : base(status, x)));
+const HOOK_RETRIES = 40;
+const HOOK_RETRY_MS = 250;
+const hookedControllers = new WeakSet();
+
+/**
+ * The camera controllers that receive input: the one registered with the
+ * context manager's input handlers (the HUD's), plus the imported singleton.
+ */
+function cameraControllers() {
+  return [CameraController, ...(ContextManager.engineInputEventHandlers ?? [])]
+    .filter((h, i, all) => typeof h?.cameraZoomIn === 'function' && all.indexOf(h) === i);
+}
+
+function hookController(controller) {
+  if (hookedControllers.has(controller)) return false;
+  hookedControllers.add(controller);
+  wrapMethod(controller, 'cameraZoomOut', (base, status, x) => (zoomBy(1, status, x) ? undefined : base(status, x)));
+  wrapMethod(controller, 'cameraZoomIn', (base, status, x) => (zoomBy(-1, status, x) ? undefined : base(status, x)));
+  return true;
+}
+
+/** Hook every controller found; retry until the HUD's input handler has been registered. */
+function patchCamera(attempts = HOOK_RETRIES) {
+  const controllers = cameraControllers();
+  if (controllers.some((c) => typeof c.applyZoomTarget === 'function')) { log('Zoom+ camera controller found; zoom left to it'); return; }
+  const hooked = controllers.filter(hookController).length;
+  const registered = (ContextManager.engineInputEventHandlers ?? []).some((h) => hookedControllers.has(h));
+  if (hooked && CONFIG.debug) log(`camera zoom hooked (${hooked} controller(s), input handler ${registered ? 'found' : 'not yet found'})`);
+  if (!registered && attempts > 0) setTimeout(() => patchCamera(attempts - 1), HOOK_RETRY_MS);
 }
 
 // ============================ Notification bar ============================
@@ -130,7 +159,7 @@ function scaleNotifications() {
 }
 
 if (CONFIG.enabled) {
-  patchCamera();
+  engine.whenReady.then(() => { if (isObserverSeat()) patchCamera(); });
   engine.whenReady.then(() => {
     if (!isObserverSeat()) return;
     scaleNotifications();

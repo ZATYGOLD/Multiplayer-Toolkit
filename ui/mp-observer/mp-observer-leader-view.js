@@ -23,14 +23,19 @@
  *
  * Empire screens read "the local player" through MPTLeaderView (base-game
  * overrides marked "MPT:" in ui-next/screens/commerce, ui-next/screens/legacies,
- * ui/policies, ui/great-works and ui/panel-belief-picker): Resources & Trade,
- * Legacies, Government, Great Works and Religion. For the Observer that is the leader picked in a row of leader
- * portraits above the screen's tabs, shared by every such screen; picking
- * another leader reopens the screen for that leader on the same tab. The
+ * ui/policies and ui/great-works, plus runtime patches in
+ * mp-observer-leader-screens.js): Resources & Trade, Legacies, Government,
+ * Great Works and Religion. For the Observer that is the leader picked in a
+ * row of leader portraits above the screen's tabs, shared by every such screen; picking
+ * another leader reopens the screen for that leader on the same tab, in place:
+ * its open animation is skipped, so it does not slide or fade back in. A
+ * screen that can rebuild its content itself registers a refresh instead
+ * (setRefresh: the tech and civic trees). The
  * screens stay read-only: game actions are still sent as the Observer, which
  * the game refuses. Other players see the base screens.
  */
 import { ContextManager } from 'fs://game/core/ui/context-manager/context-manager.js';
+import { createLogger } from '../mpt-shared/mpt-util.js';
 import { isObserverSeat, watchedPlayers } from './mp-observer-core.js';
 
 const SCREEN_PROPS = { singleton: true, createMouseGuard: true };
@@ -39,9 +44,19 @@ const OTHER_STYLE = 'border: 0.1666666667rem solid transparent; opacity: 0.65;';
 // A dark plate so the row reads over any background (Great Works sits over the map).
 const BAR_STYLE = 'background-color: rgba(10, 12, 18, 0.88); border: 0.0555555556rem solid rgba(229, 210, 172, 0.55); border-radius: 0.5rem; padding: 0.3rem 0.6rem;';
 
+const BAR_CLASS = 'mpt-leader-bar';
+const SWITCHING_CLASS = 'mpt-leader-switching';
+const STYLE_ID = 'mpt-leader-view-style';
+const SETTLE_MS = 100;   // after two frames: the reopened screen has rendered
+
 let viewedId = null;
+const screenTags = new Set();   // screens that show the picker
 const openTabs = new Map();      // screen tag -> tab last shown to the Observer
 const restoreTabs = new Map();   // screen tag -> tab to show once the screen reopens
+const refreshers = new Map();    // screen tag -> rebuilds the open screen for the viewed leader (true when done)
+
+/** A screen rebuilt in place on a leader switch instead of being reopened. */
+function setRefresh(screenTag, refresh) { refreshers.set(screenTag, refresh); }
 
 /** The leader shown to the Observer (first watched leader by default); undefined for everyone else. */
 function playerID() {
@@ -70,13 +85,28 @@ function restoredTab(screenTag) {
   return restoreTabs.get(screenTag);
 }
 
+/** While a screen is rebuilt for another leader it skips its open animations and transitions. */
+function writeSwitchStyle() {
+  const css = [...screenTags].flatMap((t) => [`.${SWITCHING_CLASS} ${t}`, `.${SWITCHING_CLASS} ${t} *`]).join(', ') +
+    ' { animation: none !important; transition: none !important; }';
+  let el = document.getElementById(STYLE_ID);
+  if (!el) { el = document.createElement('style'); el.id = STYLE_ID; document.head.appendChild(el); }
+  if (el.textContent !== css) el.textContent = css;
+}
+
+const afterFrames = (fn) => requestAnimationFrame(() => requestAnimationFrame(fn));
+
 function reopen(screenTag, id) {
   if (id === viewedId) return;
   viewedId = id;
+  if (refreshers.get(screenTag)?.()) return;   // rebuilt in place
   if (openTabs.has(screenTag)) restoreTabs.set(screenTag, openTabs.get(screenTag));
+  writeSwitchStyle();
+  document.body.classList.add(SWITCHING_CLASS);
   setTimeout(() => {
     ContextManager.pop(screenTag);
     ContextManager.push(screenTag, SCREEN_PROPS);
+    afterFrames(() => setTimeout(() => document.body.classList.remove(SWITCHING_CLASS), SETTLE_MS));
   }, 0);
 }
 
@@ -98,8 +128,9 @@ function portraitButton(screenTag, player, selected) {
 function playerBar(screenTag) {
   const viewed = playerID();
   if (viewed === undefined) return null;
+  screenTags.add(screenTag);
   const bar = document.createElement('div');
-  bar.classList.value = 'flex flex-row flex-wrap justify-center items-center self-center mb-2 pointer-events-auto';
+  bar.classList.value = `${BAR_CLASS} flex flex-row flex-wrap justify-center items-center self-center mb-2 pointer-events-auto`;
   bar.style.cssText = BAR_STYLE;
   for (const player of watchedPlayers()) bar.appendChild(portraitButton(screenTag, player, player.id === viewed));
   return bar;
@@ -107,4 +138,12 @@ function playerBar(screenTag) {
 
 globalThis.MPTLeaderView = { playerID, playerBar, restoredTab, trackTab };
 
-export { playerID as viewedPlayerID };
+// The overrides load only in a game flagged as having an Observer (modinfo criteria); report the flag for diagnosis.
+engine.whenReady.then(() => {
+  if (!isObserverSeat()) return;
+  let flag;
+  try { flag = Configuration.getGame().getValue('MPT_OBSERVER_IN_GAME'); } catch (e) { flag = 'unreadable'; }
+  createLogger('observer-leader-view')(`observer-in-game option: ${flag}`);
+});
+
+export { BAR_CLASS, setRefresh, playerID as viewedPlayerID };

@@ -42,8 +42,8 @@ const CONFIG = {
   ribbonSeedAttempts: 30,               // tries to populate the ribbon once the HUD exists
   ribbonSeedIntervalMs: 500,
   combatPreviewLift: 'translateY(-4.5rem)',  // keeps the combat preview above the unit panel
-  zoomIn: 0.25,                         // closest zoom: 25% less of the map than the game's closest
-  zoomOut: 0.5,                         // furthest zoom: 50% more of the map than the game's furthest
+  zoomIn: 0.3,                          // closest zoom: 30% less of the map than the game's closest
+  zoomOut: 0.55,                        // furthest zoom: 55% more of the map than the game's furthest
   zoomStepScale: 0.5,                   // zoom step per input vs. the game's (smaller = smoother)
   notificationScale: 0.75               // notification bar size
 };
@@ -56,9 +56,23 @@ const HIGHLIGHT = {
   glowSize: '0.7rem',                   // glow around the portrait hex
   borderGlowSize: '0.3rem',             // tight glow on the hex border
   atWar: '#ff2a2a',
+  best: '80, 150, 95',                  // best-in-category row background (r, g, b)
+  negative: '200, 60, 60',              // row background behind a negative number (r, g, b)
   celebration: '#ffc21a',
   alliances: ['#4aa3ff', '#5cd65c', '#b36bff', '#ff8c1a', '#3de0d0', '#ff5fb0', '#f0f0f0'],
   wars: ['#e04848', '#4aa3ff', '#5cd65c', '#b36bff', '#ff8c1a', '#3de0d0', '#ff5fb0', '#f0f0f0']
 };
 
-export { CONFIG, HIGHLIGHT, OBSERVER_VIEW };
+/** Value colour of each Yields row (the base yields keep the game's own colours). */
+const ROW_COLORS = {
+  settlements: '#d9c9a3',
+  food: '#8fd16a',
+  production: '#c08a5a',
+  citizens: '#f2e6c9',
+  military: '#ff5a5a',
+  techs: '#5fb5f0',
+  civics: '#c08fe0',
+  wonders: '#f0c040'
+};
+
+export { CONFIG, HIGHLIGHT, OBSERVER_VIEW, ROW_COLORS };

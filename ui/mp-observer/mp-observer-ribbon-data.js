@@ -22,7 +22,8 @@
  * Multiplayer Toolkit - Observer ribbon stat rows (in-game scope).
  *
  * Builds each leader card's rows for every view in the base ribbon's
- * displayItems shape (the Yields view extends the base rows). Meters and score rows live in the
+ * displayItems shape (the Yields view extends the base rows and remembers the
+ * values for the best-in-category highlight). Meters and score rows live in the
  * item's `img` HTML so they fit the narrow card column; they use only markup
  * the Gameface renderer supports (plain <img>, width-based bars).
  */
@@ -42,9 +43,9 @@ function meterHTML(iconUrl, label, pct, barColor) {
   const p = Math.max(0, Math.min(100, Math.round(pct ?? 0)));
   const icon = iconUrl ? `<img src='${iconUrl}' style='width:1.7rem;height:1.7rem;'>` : '';
   const name = label
-    ? `<div style='font-size:0.66rem;line-height:0.85rem;color:${TEXT_COLOR};text-align:center;margin-top:0.15rem;width:4.2rem;overflow:hidden;'>${label}</div>`
+    ? `<div style='font-size:0.66rem;line-height:0.85rem;color:${TEXT_COLOR};text-align:center;margin-top:0.15rem;width:3.8rem;overflow:hidden;'>${label}</div>`
     : '';
-  return `<div style='display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0.4rem 0.25rem;width:4.4rem;overflow:hidden;'>` +
+  return `<div style='display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0.4rem 0.2rem;width:3.95rem;overflow:hidden;'>` +
     icon + name +
     `<div style='width:2.4rem;height:0.22rem;border-radius:0.11rem;background-color:rgba(255,255,255,0.22);margin-top:0.25rem;'>` +
     `<div style='height:100%;border-radius:0.11rem;background-color:${barColor};width:${p}%;'></div></div></div>`;
@@ -52,22 +53,34 @@ function meterHTML(iconUrl, label, pct, barColor) {
 
 // ============================ Yields ============================
 
-const MILITARY_ICON = 'blp:fi_nar_rew_combat_64';
+const ICON = {
+  military: 'blp:fi_nar_rew_combat_64',
+  techs: 'blp:fi_radial_tech_64',
+  civics: 'blp:fi_radial_civics_64',
+  wonders: 'blp:ntf_wonder_completed'
+};
+const SIGNED_TYPES = new Set(['gold', 'science', 'culture', 'happiness', 'diplomacy', 'food', 'production']);
 
-/** Signed per-turn value, formatted as the base ribbon does. */
-function formatYield(value) {
-  return (value >= 0 ? '+' : '') + (value > 100 ? Math.trunc(value) : Math.trunc(value * 10) / 10);
+/** Short numbers for the narrow card: 9.5, 42, 1.2k, 15k. */
+function formatCompact(value) {
+  const abs = Math.abs(value);
+  const sign = value < 0 ? '-' : '';
+  const oneDecimal = (v) => String(Math.round(v * 10) / 10);
+  if (abs < 10) return sign + oneDecimal(abs);
+  if (abs < 1000) return sign + Math.round(abs);
+  if (abs < 10000) return sign + oneDecimal(abs / 1000) + 'k';
+  return sign + Math.round(abs / 1000) + 'k';
 }
 
+const formatSigned = (value) => (value >= 0 ? '+' : '') + formatCompact(value);
+
 /** A plain value row in the base ribbon's look. */
-function valueRow(type, labelLoc, iconUrl, value, rawValue) {
+function valueRow(type, labelLoc, iconUrl, rawValue) {
+  const value = SIGNED_TYPES.has(type) ? formatSigned(rawValue) : formatCompact(rawValue);
   return { type, label: Locale.compose(labelLoc), value, img: `<img src='${iconUrl}'>`, details: '', rawValue, warningThreshold: Infinity };
 }
 
-function yieldRow(player, yieldType, labelLoc) {
-  const value = player.Stats?.getNetYield?.(YieldTypes[yieldType]) ?? 0;
-  return valueRow(yieldType.toLowerCase(), labelLoc, UI.getIconURL(yieldType, 'YIELD'), formatYield(value), value);
-}
+const yieldValue = (player, yieldType) => player.Stats?.getNetYield?.(YieldTypes[yieldType]) ?? 0;
 
 const strengthCache = new Map();   // player id -> military strength, cleared when units change
 const STRENGTH_EVENTS = ['UnitAddedToMap', 'UnitRemovedFromMap', 'UnitDamageChanged', 'UnitPromoted', 'LocalPlayerTurnBegin'];
@@ -83,18 +96,64 @@ function militaryStrength(player) {
 
 for (const event of STRENGTH_EVENTS) engine.on(event, () => strengthCache.clear());
 
+/** Civics completed, each mastery level counted. */
+function civicsCompleted(player) {
+  return (player.Culture?.getResearched?.() ?? []).reduce((sum, node) => sum + (node?.depth ?? 0), 0);
+}
+
+function wondersBuilt(player) {
+  return (player.Cities?.getCities?.() ?? []).reduce((sum, city) => sum + (city?.Constructibles?.getNumWonders?.() ?? 0), 0);
+}
+
+/** Rows added after the base ones, in card order. */
+const EXTRA_ROWS = [
+  { type: 'food', label: 'LOC_YIELD_FOOD', icon: () => UI.getIconURL('YIELD_FOOD', 'YIELD'), value: (p) => yieldValue(p, 'YIELD_FOOD') },
+  { type: 'production', label: 'LOC_YIELD_PRODUCTION', icon: () => UI.getIconURL('YIELD_PRODUCTION', 'YIELD'), value: (p) => yieldValue(p, 'YIELD_PRODUCTION') },
+  { type: 'citizens', label: 'LOC_MPT_OBSERVER_CITIZENS', icon: () => UI.getIconURL('YIELD_POPULATION', 'YIELD'), value: (p) => p.Stats?.totalPopulation ?? 0 },
+  { type: 'military', label: 'LOC_MPT_OBSERVER_MILITARY_STRENGTH', icon: () => ICON.military, value: militaryStrength },
+  { type: 'techs', label: 'LOC_MPT_OBSERVER_TECHS_COMPLETED', icon: () => ICON.techs, value: (p) => p.Techs?.getNumTechsUnlocked?.() ?? 0 },
+  { type: 'civics', label: 'LOC_MPT_OBSERVER_CIVICS_COMPLETED', icon: () => ICON.civics, value: civicsCompleted },
+  { type: 'wonders', label: 'LOC_MPT_OBSERVER_WONDERS_BUILT', icon: () => ICON.wonders, value: wondersBuilt }
+];
+
+/** Latest value per row type and player, for the best-in-category highlight. */
+const rowValues = new Map();
+
+function recordValues(playerId, items) {
+  for (const item of items) {
+    if (!rowValues.has(item.type)) rowValues.set(item.type, new Map());
+    rowValues.get(item.type).set(playerId, item.rawValue);
+  }
+}
+
 /**
- * The base Yields rows (from baseItems()) without trade routes (always 0/0
- * with the Observer), plus food, production and military strength.
+ * The base Yields rows (from baseItems()) in compact form, without trade
+ * routes (always 0/0 with the Observer), plus food, production, citizens,
+ * military strength and techs / civics / wonders completed.
  */
 function yieldsItems(player, baseItems) {
-  const military = militaryStrength(player);
-  return [
-    ...baseItems().filter((item) => item.type !== 'trade'),
-    yieldRow(player, 'YIELD_FOOD', 'LOC_YIELD_FOOD'),
-    yieldRow(player, 'YIELD_PRODUCTION', 'LOC_YIELD_PRODUCTION'),
-    valueRow('military', 'LOC_MPT_OBSERVER_MILITARY_STRENGTH', MILITARY_ICON, String(military), military)
-  ];
+  const base = baseItems().filter((item) => item.type !== 'trade').map((item) =>
+    (SIGNED_TYPES.has(item.type) ? { ...item, value: formatSigned(item.rawValue ?? 0) } : item));
+  const extra = EXTRA_ROWS.map((row) => {
+    let value = 0;
+    try { value = row.value(player) ?? 0; } catch (e) { value = 0; }
+    return valueRow(row.type, row.label, row.icon(), value);
+  });
+  const items = [...base, ...extra];
+  recordValues(player.id, items);
+  return items;
+}
+
+/** Row type -> ids of the leaders with the highest value (ties included; nothing when the best is 0). */
+function bestByType(playerIds) {
+  const best = new Map();
+  for (const [type, values] of rowValues) {
+    let max = -Infinity;
+    for (const id of playerIds) if (values.has(id)) max = Math.max(max, values.get(id));
+    if (!(max > 0)) continue;
+    best.set(type, new Set(playerIds.filter((id) => values.get(id) === max)));
+  }
+  return best;
 }
 
 // ============================ Research ============================
@@ -196,12 +255,14 @@ function scoreRow(victoryClass, score) {
     : '';
   const name = victoryClass.label ? Locale.compose(victoryClass.label) : '';
   const nameSpan = name
-    ? `<span style='font-size:0.62rem;line-height:0.8rem;color:${TEXT_COLOR};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:4rem;'>${name}</span>`
+    ? `<span style='font-size:0.62rem;line-height:0.8rem;color:${TEXT_COLOR};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:3.6rem;'>${name}</span>`
     : '';
   const img = `<div style='display:flex;flex-direction:row;align-items:center;justify-content:space-between;width:100%;padding:0.2rem 0;'>` +
     `<div style='display:flex;flex-direction:column;align-items:center;min-width:0;'>${icon}${nameSpan}</div>` +
     `<span style='font-size:0.9rem;color:${TEXT_COLOR};margin-left:0.3rem;flex-shrink:0;'>${score}</span></div>`;
-  return displayItem('victory', name, img, name, score);
+  // One row type per victory class, so each class has its own best leader.
+  const type = victoryClass.type ? victoryClass.type.toLowerCase().replace('victory_class_', 'victory-') : 'victory';
+  return displayItem(type, name, img, name, score);
 }
 
 /** Points per victory class from player.Victories (the active Age's definition wins). */
@@ -216,7 +277,26 @@ function scoreItems(player) {
     }
   } catch (e) { /* keep what was read */ }
   const items = VICTORY_CLASSES.filter((c) => points.has(c.type)).map((c) => scoreRow(c, points.get(c.type)));
+  recordValues(player.id, items);
   return items.length ? items : [scoreRow({ label: 'LOC_MPT_OBSERVER_NONE' }, 0)];
 }
 
-export { yieldsItems, researchItems, productionItems, scoreItems };
+// ============================ Pantheon badge ============================
+
+/**
+ * The card's religion slot (base: religion in Exploration, ideology in
+ * Modern) shows the leader's pantheon in Antiquity, same shape as the base
+ * data: { name, type, icon, isIdeology }; null without a pantheon.
+ */
+function pantheonBadge(player) {
+  const beliefs = (player.Religion?.getPantheons?.() ?? []).map((type) => GameInfo.Beliefs.lookup(type)).filter(Boolean);
+  if (beliefs.length === 0) return null;
+  return {
+    name: beliefs.map((b) => Locale.compose(b.Name)).join(', '),
+    type: beliefs[0].BeliefType,
+    icon: UI.getIconURL(beliefs[0].BeliefType, 'PANTHEONS'),
+    isIdeology: false
+  };
+}
+
+export { bestByType, pantheonBadge, yieldsItems, researchItems, productionItems, scoreItems };

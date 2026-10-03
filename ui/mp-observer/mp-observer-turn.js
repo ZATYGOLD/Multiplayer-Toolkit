@@ -27,14 +27,15 @@
  * game's own Auto End Turn option). Switching it off un-readies an ended turn
  * while the game still allows it.
  *
- * Age end (always, toggle on or off): the Observer always continues into the
- * next Age, so the turn that completes an Age and the one after the Age ends
- * are ended automatically (mp-observer-prompts.js skips the end-of-Age
+ * Age end: when an Age is complete, Auto End Turn switches off so the HUD's
+ * Age transition action shows on the last turn and the Observer starts the
+ * transition. Once the Age has ended the Observer always continues: those
+ * turns end automatically (mp-observer-prompts.js skips the end-of-Age
  * screens).
  *
  * While the turn is ended for the Observer and the game is not paused, the
- * HUD's End Turn button (panel-action) is hidden by a stylesheet rule, which
- * also covers a button the HUD rebuilds.
+ * HUD's End Turn button (panel-action) slides down out of sight (and back up
+ * when shown) by a stylesheet rule, which also covers a rebuilt button.
  *
  * Pause recovery (always on): the engine ignores a turn completion sent while
  * the game is paused, yet the client still counts the turn as ended, so the
@@ -48,6 +49,7 @@ import { isObserverSeat } from './mp-observer-core.js';
 const log = createLogger('observer-turn');
 const HIDE_CLASS = 'mpt-observer-auto-turn';
 const STYLE_ID = 'mpt-observer-turn-style';
+const SLIDE = '0.35s ease';
 
 let autoEnd = CONFIG.autoEndTurn;
 let retryTimer = null;
@@ -55,7 +57,16 @@ let retryTimer = null;
 const isPaused = () => !!Configuration.getGame().isPaused;
 const turnActive = () => !!Players.get(GameContext.localPlayerID)?.isTurnActive;
 const blocked = () => Game.Notifications.getEndTurnBlockingType(GameContext.localPlayerID) !== EndTurnBlockingTypes.NONE;
-const endsAutomatically = () => autoEnd || isAgeEnding();
+/** The Age has ended (after its last turn) and the next one has not begun. */
+function ageOver() {
+  try {
+    if (Modding.getTransitionInProgress?.() === TransitionType.Age) return true;
+    const ages = Game.AgeProgressManager;
+    return !!ages?.isAgeOver && !ages.isFinalAge && !ages.isExtendedGame;
+  } catch (e) { return false; }
+}
+
+const endsAutomatically = () => (autoEnd && !isAgeEnding()) || ageOver();
 
 function sendTurnComplete() {
   UI.Player.deselectAllUnits();
@@ -90,17 +101,25 @@ const later = (fn) => () => setTimeout(fn, CONFIG.autoEndTurnDelayMs);
 
 /** Hide the End Turn button while the turn ends automatically (shown again when paused or off). */
 function updateEndTurnButton() {
+  if (!isObserverSeat()) return;
   if (!document.getElementById(STYLE_ID)) {
     const style = document.createElement('style');
     style.id = STYLE_ID;
-    style.textContent = `.${HIDE_CLASS} panel-action { display: none !important; }`;
+    style.textContent = [
+      `panel-action { transition: transform ${SLIDE}, opacity ${SLIDE}; }`,
+      `.${HIDE_CLASS} panel-action { transform: translateY(120%); opacity: 0; pointer-events: none; }`
+    ].join('\n');
     document.head.appendChild(style);
   }
-  document.body.classList.toggle(HIDE_CLASS, endsAutomatically() && isObserverSeat() && !isPaused());
+  document.body.classList.toggle(HIDE_CLASS, endsAutomatically() && !isPaused());
 }
 
 /** Turn start / Age end: refresh the button, then end the turn if it ends automatically. */
 function onTurnState() {
+  if (autoEnd && isObserverSeat() && isAgeEnding() && !ageOver()) {
+    autoEnd = false;   // the last turn of the Age: the Observer starts the transition from the HUD
+    log('age complete: auto end turn switched off');
+  }
   updateEndTurnButton();
   tryEndTurn();
 }

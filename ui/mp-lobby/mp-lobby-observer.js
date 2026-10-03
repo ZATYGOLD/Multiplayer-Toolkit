@@ -30,6 +30,9 @@
  *   - While observing, the civilization and team dropdowns are locked and the
  *     team column shows the eye badge. The leader dropdown stays open so the
  *     player can switch back.
+ *   - The host keeps the hidden game option MPTObserverInGame set while any
+ *     player is the Observer; the modinfo loads the Observer's base-game
+ *     overrides only in such a game.
  *   - The Observer is multiplayer-only: single-player game setup never lists
  *     it (it has no leader or banner 3D art, and picking it there crashed the
  *     game), and a remembered Observer pick is reset to Random.
@@ -152,6 +155,37 @@ function shapeTeamDropdown(dropdown, playerID) {
 
 // ============================ Selection sync ============================
 
+// ============================ Observer-in-game flag ============================
+
+const PARAM_OBSERVER_IN_GAME = 'MPTObserverInGame';
+let flagQueued = false;
+
+function isHost() {
+  try { return Network.getHostPlayerId() === GameContext.localPlayerID; } catch (e) { return false; }
+}
+
+/** Host only: the hidden game option follows whether any player is the Observer. */
+function syncObserverFlag() {
+  flagQueued = false;
+  if (!isHost()) return;
+  try {
+    const slots = Configuration.getMap().maxMajorPlayers ?? 0;
+    let anyObserver = false;
+    for (let id = 0; id < slots && !anyObserver; id++) anyObserver = playerLeader(id) === OBSERVER_LEADER;
+    const current = !!GameSetup.findGameParameter(PARAM_OBSERVER_IN_GAME)?.value?.value;
+    if (current !== anyObserver) {
+      GameSetup.setGameParameterValue(PARAM_OBSERVER_IN_GAME, anyObserver);
+      log(`observer-in-game flag -> ${anyObserver}`);
+    }
+  } catch (e) { log(`observer flag sync failed: ${e}`); }
+}
+
+function queueObserverFlag() {
+  if (flagQueued) return;
+  flagQueued = true;
+  setTimeout(syncObserverFlag, 0);
+}
+
 /** Leader and civ move together: Observer leader <-> Observer civ, team cleared. */
 function syncSelection(playerID, param, value) {
   const civ = observerCivForStartAge();
@@ -213,7 +247,7 @@ function install() {
     const dropdown = base(playerID, dropID, type, dropLabel, dropDesc, paramNameHandle, ...rest);
     try {
       if (dropdown && paramNameHandle === this.PlayerCivilizationStringHandle) shapeCivDropdown(dropdown, playerID);
-      else if (dropdown && paramNameHandle === this.PlayerLeaderStringHandle) shapeLeaderDropdown(dropdown, playerID);
+      else if (dropdown && paramNameHandle === this.PlayerLeaderStringHandle) { shapeLeaderDropdown(dropdown, playerID); queueObserverFlag(); }
     } catch (e) { log(`dropdown shaping failed: ${e}`); }
     return dropdown;
   });

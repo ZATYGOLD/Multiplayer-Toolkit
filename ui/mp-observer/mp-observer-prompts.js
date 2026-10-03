@@ -30,17 +30,20 @@
  *   - diplomacy dialogs addressed to the Observer never open; their session
  *     is closed, as the dialog's own buttons do;
  *   - the end-of-age countdown popup and the end-of-Age screens never open
- *     (the Observer always continues, see mp-observer-turn.js), and each Age's start step
+ *     (the Observer always continues, see mp-observer-turn.js); the Age
+ *     transition choice never opens either - the next Age's Observer
+ *     civilization is chosen and the choice confirmed; each Age's start step
  *     (dedications, capital) is completed with nothing chosen - the Observer
  *     has no settlement and no legacies;
  *   - crisis, age-progress, "player met" and agenda notifications are dismissed.
  */
 import { DisplayQueueManager } from 'fs://game/core/ui/context-manager/display-queue-manager.js';
+import { InterfaceMode } from 'fs://game/core/ui/interface-modes/interface-modes.js';
 import AgeProgressionPopupManager from 'fs://game/base-standard/ui/age-progression-warning-popup/age-progression-warning-popup-manager.js';
 import { NarrativePopupManager } from 'fs://game/base-standard/ui/narrative-event/narrative-popup-manager.js';
 import { DiplomacyDialogManagerImpl } from 'fs://game/base-standard/ui/diplomacy/diplomacy-manager.js';
 import EndGameScreenManager from 'fs://game/base-standard/ui/endgame/screen-endgame.js';
-import { createLogger, wrapMethod } from '../mpt-shared/mpt-util.js';
+import { createLogger, OBSERVER_CIV_PREFIX, wrapMethod } from '../mpt-shared/mpt-util.js';
 import { CONFIG } from './mp-observer-config.js';
 import { isObserverSeat } from './mp-observer-core.js';
 
@@ -48,6 +51,8 @@ const log = createLogger('observer-prompts');
 const debug = CONFIG.debug ? log : () => {};
 const SILENCED_NOTIFICATIONS = /^NOTIFICATION_(CRISIS|AGE_(EARLY|LATE|VERY_LATE)_PROGRESS|AGE_PROGRESSION_|AGE_EXTENDED|PLAYER_MET|DIPLOMATIC_ACTION_AGENDA)/;
 const STORY_NOTIFICATIONS = /STORY_DIRECTION$/;
+const CHOOSE_CIV_NOTIFICATION = 'NOTIFICATION_CHOOSE_CIVILIZATION';
+const AGE_TRANSITION_MODE = 'INTERFACEMODE_AGE_TRANSITION';
 const STORY_RETRY_MS = 1500;
 const SWEEP_DELAY_MS = 500;
 
@@ -117,6 +122,29 @@ function completeAgeStart() {
   } catch (e) { log(`age start completion failed: ${e}`); }
 }
 
+// ============================ Age transition choice ============================
+
+let transitionChoiceSent = false;
+
+/** The Observer civilization of the Age after the current one, or null in the last Age. */
+function nextObserverCiv() {
+  const current = GameInfo.Ages.lookup(Game.age);
+  const next = GameInfo.Ages.filter((a) => a.ChronologyIndex > (current?.ChronologyIndex ?? Infinity))
+    .sort((a, b) => a.ChronologyIndex - b.ChronologyIndex)[0];
+  return next ? OBSERVER_CIV_PREFIX + next.AgeType.replace(/^AGE_/, '') : null;
+}
+
+/** Pick the next Age's Observer civilization and confirm the transition choices (once per Age). */
+function completeAgeTransitionChoice() {
+  if (transitionChoiceSent) return;
+  try {
+    const civ = nextObserverCiv();
+    if (civ) GameSetup.setPlayerParameterValue(GameContext.localPlayerID, 'AgeTransitionPlayerCivilization', civ);
+    transitionChoiceSent = tryOperation(PlayerOperationTypes.SET_AGE_TRANSITION_DATA, { Finished: true });
+    debug(`age transition choice ${transitionChoiceSent ? 'confirmed' : 'not accepted yet'} (${civ})`);
+  } catch (e) { log(`age transition choice failed: ${e}`); }
+}
+
 // ============================ Notifications ============================
 
 function notificationType(id) {
@@ -133,6 +161,7 @@ function sweep() {
     try {
       const type = notificationType(id);
       if (STORY_NOTIFICATIONS.test(type)) answerPendingStory();
+      else if (type === CHOOSE_CIV_NOTIFICATION) completeAgeTransitionChoice();
       else if (SILENCED_NOTIFICATIONS.test(type) && Game.Notifications.canUserDismissNotification(id)) Game.Notifications.dismiss(id);
     } catch (e) { log(`notification handling failed: ${e}`); }
   }
@@ -156,6 +185,13 @@ function patchPopups() {
   wrapMethod(AgeProgressionPopupManager, 'show', (base, request, ...rest) => {
     if (!isObserverSeat()) return base(request, ...rest);
     skipDisplay(request);
+  });
+  // The Age transition choice (civilization, mementos) is made for the Observer instead.
+  wrapMethod(InterfaceMode, 'switchTo', (base, mode, ...rest) => {
+    if (mode !== AGE_TRANSITION_MODE || !isObserverSeat()) return base(mode, ...rest);
+    completeAgeTransitionChoice();
+    DisplayQueueManager.resume();   // the notification suspended the queue for the screen
+    return false;
   });
   // The game's final results still show; a non-final Age end goes straight on.
   wrapMethod(EndGameScreenManager, 'show', (base, request, ...rest) => {

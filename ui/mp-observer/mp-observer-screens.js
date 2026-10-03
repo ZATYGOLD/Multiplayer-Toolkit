@@ -29,12 +29,14 @@
  *   - redirected: the Antiquity pantheon screens open every leader's
  *     pantheons (mp-observer-overview.js); the religion picker opens the
  *     game's religion and belief screen, where the Observer picks a leader
- *     (mp-observer-leader-view.js).
+ *     (mp-observer-leader-view.js); the tech and civic choosers open the
+ *     full trees (mp-observer-leader-screens.js).
  */
 import { ContextManager } from 'fs://game/core/ui/context-manager/context-manager.js';
 import PopupSequencer from 'fs://game/base-standard/ui/popup-sequencer/popup-sequencer.js';
 import { wrapMethod } from '../mpt-shared/mpt-util.js';
 import { isObserverSeat } from './mp-observer-core.js';
+import { CHOOSER_TAGS, openFullTree } from './mp-observer-leader-screens.js';
 import { OVERVIEW_PANEL_TAG, setOverviewSource } from './mp-observer-overview.js';
 
 const BLOCKED = new Set(['screen-advisor-council', 'advisor-council-popup', 'screen-dedication-selection', 'screen-advanced-start']);
@@ -49,6 +51,7 @@ const REDIRECTS = {
 wrapMethod(ContextManager, 'push', (base, target, ...rest) => {
   if (typeof target !== 'string' || !isObserverSeat()) return base(target, ...rest);
   if (BLOCKED.has(target)) return null;
+  if (CHOOSER_TAGS.has(target) && openFullTree(target)) return null;
   const redirect = REDIRECTS[target];
   if (!redirect) return base(target, ...rest);
   if (redirect.screen) return base(redirect.screen, ...rest);

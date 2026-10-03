@@ -23,8 +23,9 @@
  *
  * For the Observer seat:
  *   - leader portraits on the ribbon: left click moves the camera to that
- *     leader's capital, right click also opens their leader panel; the
- *     Observer's own portrait moves the camera to the Observer's Eye;
+ *     leader's capital, right click also opens their leader panel; a left
+ *     click on the Observer's own portrait moves the camera to the Observer's
+ *     Eye, a right click hides or shows every card's details;
  *   - a settlement banner or city-center tile opens its owner's leader panel
  *     (the base game refuses unmet leaders, and the Observer meets no one).
  */
@@ -33,6 +34,7 @@ import WorldInput from 'fs://game/base-standard/ui/world-input/world-input.js';
 import { createLogger, findAncestor, isObserverPlayer, wrapMethod } from '../mpt-shared/mpt-util.js';
 import { CONFIG } from './mp-observer-config.js';
 import { isObserverSeat, watchedPlayers } from './mp-observer-core.js';
+import { isDetailsHidden, setDetailsHidden } from './mp-observer-ribbon-style.js';
 
 const log = createLogger('observer-navigation');
 
@@ -76,6 +78,7 @@ function onEngineInput(ev) {
     ev.preventDefault();
     if (d.status !== InputActionStatuses.FINISH) return;
     if (bannerOwner != null) { openLeaderPanel(bannerOwner); return; }
+    if (d.name === 'mousebutton-right' && portraitId === GameContext.localPlayerID) { setDetailsHidden(!isDetailsHidden()); return; }
     lookAtPlayer(portraitId);
     if (d.name === 'mousebutton-right' && !isObserverPlayer(portraitId)) openLeaderPanel(portraitId);
   } catch (e) { log(`click failed: ${e}`); }
