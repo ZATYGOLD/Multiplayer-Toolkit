@@ -7,7 +7,7 @@ import { LayoutModel } from '../../../../core/ui-next/utilities/layout-utilities
 import { addAvailableCard, removeAvailableCard, getLegacyCardStyling, parseCardText, getLegacyTypeFromCardID, isCrisis, getStylingFromTag, selectCapital, markCompletedDeck } from './legacies-support.js';
 
 /*
- * Multiplayer Toolkit - base-game override.
+ * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/ui-next/screens/legacies/dedications-model.js
  * (build dated 2026-09-16). The only changes are marked "MPT:": for the
  * Observer the dedications shown are the viewed leader's; game actions keep the

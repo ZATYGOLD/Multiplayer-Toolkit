@@ -21,7 +21,7 @@ import { useCommerceScreenContext, TradeRouteSortType } from './commerce-screen-
 import { TRADE_ROUTE_CARD_MARGIN_RIGHT, TradeRouteCard } from './trade-route-card.js';
 
 /*
- * Multiplayer Toolkit - base-game override.
+ * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/ui-next/screens/commerce/commerce-screen-trade-tab.js
  * (build dated 2026-09-16). The only changes are marked "MPT:", plus every
  * GameContext.localPlayerID read as mptLocalPlayerID(): for the Observer the

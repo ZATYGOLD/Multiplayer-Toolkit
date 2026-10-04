@@ -15,7 +15,7 @@ import { ScreenFrame } from '../../ui-next/components/screen-frame.js';
 import style from './screen-policies.scss.js';
 
 /*
- * Multiplayer Toolkit - base-game override.
+ * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/ui/policies/government-hub.js
  * (build dated 2026-09-16). The only changes are marked "MPT:": for the
  * Observer, a row of leader portraits above the tabs picks the leader shown,

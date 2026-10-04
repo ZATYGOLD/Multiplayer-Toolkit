@@ -1,5 +1,5 @@
 /*
- * Multiplayer Toolkit - multiplayer quality-of-life features for Civilization VII.
+ * Zatygold's Observer Mode - a playable Observer for multiplayer Civilization VII.
  * Copyright (C) 2026  Zatygold
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,14 +19,12 @@
  */
 
 /**
- * Multiplayer Toolkit - Lobby UI fixes configuration & constants.
+ * Zatygold's Observer Mode - Observer lobby configuration & constants.
  */
 
 /** Tunable settings. */
 const CONFIG = {
   observerRole: true,               // Observer leader/civ act as one locked role in the lobby
-  titleStyle: "text-negative-light", // engine text style for ability title lines
-  startCountdownSeconds: 5,          // all-ready lobby countdown before the game starts (stock: 10)
   debug: true
 };
 

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Multiplayer Toolkit - Observer civilizations (gameplay database, every Age).
+  Zatygold's Observer Mode - Observer civilizations (gameplay database, every Age).
 
   One Observer civilization per Age, mirroring how the base game defines its
   civilizations in the always-loaded civilizations-shared.xml files. None has

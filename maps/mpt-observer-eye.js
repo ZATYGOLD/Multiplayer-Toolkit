@@ -1,5 +1,5 @@
 /*
- * Multiplayer Toolkit - multiplayer quality-of-life features for Civilization VII.
+ * Zatygold's Observer Mode - a playable Observer for multiplayer Civilization VII.
  * Copyright (C) 2026  Zatygold
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@
  */
 
 /**
- * Multiplayer Toolkit - Observer's Eye placement (gameplay scripts).
+ * Zatygold's Observer Mode - Observer's Eye placement (gameplay scripts).
  *
  * Shared by the two base-script overrides that run in the gameplay context:
  * maps/assign-starting-plots.js (new game) and

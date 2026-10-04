@@ -1,4 +1,4 @@
--- Multiplayer Toolkit - the Observer earns no Triumphs (gameplay database, every Age).
+-- Zatygold's Observer Mode - the Observer earns no Triumphs (gameplay database, every Age).
 --
 -- The Observer's Eye sees the whole map, which can complete Triumphs such as
 -- "First to Circumnavigate" and take a first-player-only Triumph from a real

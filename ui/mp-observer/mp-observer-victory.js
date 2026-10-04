@@ -1,5 +1,5 @@
 /*
- * Multiplayer Toolkit - multiplayer quality-of-life features for Civilization VII.
+ * Zatygold's Observer Mode - a playable Observer for multiplayer Civilization VII.
  * Copyright (C) 2026  Zatygold
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@
  */
 
 /**
- * Multiplayer Toolkit - Observer victory lists (in-game scope, every client).
+ * Zatygold's Observer Mode - Observer victory lists (in-game scope, every client).
  *
  * Observers are never listed on the Victories screens (Summary, each victory
  * path, Score) or in the age rankings: the base VictoryManager's results are

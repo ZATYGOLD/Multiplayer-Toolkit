@@ -1,5 +1,5 @@
 /*
- * Multiplayer Toolkit - multiplayer quality-of-life features for Civilization VII.
+ * Zatygold's Observer Mode - a playable Observer for multiplayer Civilization VII.
  * Copyright (C) 2026  Zatygold
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@
  */
 
 /**
- * Multiplayer Toolkit - Observer top yield bar (in-game scope).
+ * Zatygold's Observer Mode - Observer top yield bar (in-game scope).
  *
  * For the Observer seat the HUD's yield bar (panel-yield-banner) also shows
  * food and production, and while a leader panel is open it shows that

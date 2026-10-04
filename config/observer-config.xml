@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Multiplayer Toolkit - Observer leader and civilizations (setup/lobby database).
+  Zatygold's Observer Mode - Observer leader and civilizations (setup/lobby database).
   Makes "Observer" selectable in the Leader and Civilization dropdowns of game
   setup and the multiplayer lobby, one civilization entry per Age domain.
 -->

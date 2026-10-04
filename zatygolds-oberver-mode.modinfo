@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Mod id="multiplayer-toolkit" version="00601" xmlns="ModInfo">
+<Mod id="zatygolds-oberver-mode" version="1" xmlns="ModInfo">
     <Properties>
-        <Name>LOC_MOD_MPT_NAME</Name>
-        <Description>LOC_MOD_MPT_DESCRIPTION</Description>
+        <Name>LOC_MOD_ZOM_NAME</Name>
+        <Description>LOC_MOD_ZOM_DESCRIPTION</Description>
         <Authors>Zatygold</Authors>
         <Package>Mod</Package>
         <AffectsSavedGames>0</AffectsSavedGames>
@@ -20,18 +20,6 @@
 
     <ActionCriteria>
         <Criteria id="always"><AlwaysMet/></Criteria>
-
-<!--*************************** CRITERIA: COMPETITIVE TIMER ****************************************-->
-
-        <Criteria id="antiquity-age-current">
-            <AgeInUse>AGE_ANTIQUITY</AgeInUse>
-        </Criteria>
-        <Criteria id="exploration-age-current">
-            <AgeInUse>AGE_EXPLORATION</AgeInUse>
-        </Criteria>
-        <Criteria id="modern-age-current">
-            <AgeInUse>AGE_MODERN</AgeInUse>
-        </Criteria>
 
 <!--*************************** CRITERIA: OBSERVER ************************************************-->
 
@@ -51,7 +39,7 @@
         </Criteria>
     </ActionCriteria>
 
-<!--*************************** SHELL: TEXT/SETTINGS ***********************************************-->
+<!--*************************** SHELL: LOBBY, TEXT & SETUP ***********************************************-->
 
     <ActionGroups>
         <ActionGroup id="mpt-shell" scope="shell" criteria="always">
@@ -62,7 +50,6 @@
                 </UpdateText>
                 <UpdateDatabase>
                     <Item>config/SetupParameters.sql</Item>
-                    <Item>config/mpt-input.sql</Item>
                     <Item>config/observer-config.xml</Item>
                 </UpdateDatabase>
                 <ImportFiles>
@@ -87,8 +74,6 @@
                     <Item>ui/mpt-shared/mpt-util.js</Item>
                     <Item>ui/mp-lobby/mp-lobby-config.js</Item>
                     <Item>ui/mp-lobby/mp-lobby-observer.js</Item>
-                    <Item>ui/mp-lobby/mp-lobby-tooltips.js</Item>
-                    <Item>ui/mp-keybind/mp-keybind.js</Item>
                 </UIScripts>
             </Actions>
         </ActionGroup>
@@ -106,24 +91,6 @@
                 </UIScripts>
             </Actions>
         </ActionGroup>
-
-<!--*************************** GAME: PAUSE BUTTON ***********************************************-->
-
-        <ActionGroup id="mpt-pause-button" scope="game" criteria="always">
-            <Properties><LoadOrder>1000</LoadOrder></Properties>
-            <Actions>
-                <UIScripts>
-                    <Item>ui/mp-pause/mp-pause-config.js</Item>
-                    <Item>ui/mp-pause/mp-pause.scss.js</Item>
-                    <Item>ui/mp-pause/mp-pause-overlay.js</Item>
-                    <Item>ui/mp-pause/mp-pause-net.js</Item>
-                    <Item>ui/mp-pause/mp-pause-mgr.js</Item>
-                    <Item>ui/mp-keybind/mp-keybind.js</Item>
-                </UIScripts>
-            </Actions>
-        </ActionGroup>
-
-
 
 <!--*********************** GAME: OBSERVER LEADER & CIVILIZATIONS ******************************-->
 
@@ -217,57 +184,6 @@
             </Actions>
         </ActionGroup>
 
-<!--*********************** GAME: COMPETITIVE TIMER SCRIPT ***************************************-->
-
-        <ActionGroup id="mpt-competitive-timer-script" scope="game" criteria="always">
-            <Properties><LoadOrder>1000</LoadOrder></Properties>
-            <Actions>
-                <UIScripts>
-                    <Item>ui/mp-timer/mp-timer-config.js</Item>
-                    <Item>ui/mp-timer/mp-timer.js</Item>
-                </UIScripts>
-            </Actions>
-        </ActionGroup>
-
-<!--**************************** GAME: TURN TIMER ************************************************-->
-
-        <ActionGroup id="mpt-turn-timer-schema" scope="game" criteria="always">
-            <Properties><LoadOrder>900</LoadOrder></Properties>
-            <Actions>
-                <UpdateDatabase>
-                    <Item>data/timers/TimerScaling.sql</Item>
-                </UpdateDatabase>
-            </Actions>
-        </ActionGroup>
-
-    <!--**************************** TURN TIMER: COMPETITIVE *************************************-->
-
-        <ActionGroup id="mpt-turn-timer-antiquity" scope="game" criteria="antiquity-age-current">
-            <Properties><LoadOrder>1000</LoadOrder></Properties>
-            <Actions>
-                <UpdateDatabase>
-                    <Item>data/timers/antiquity/CompetitiveTimer.sql</Item>
-                </UpdateDatabase>
-            </Actions>
-        </ActionGroup>
-
-        <ActionGroup id="mpt-turn-timer-exploration" scope="game" criteria="exploration-age-current">
-            <Properties><LoadOrder>1000</LoadOrder></Properties>
-            <Actions>
-                <UpdateDatabase>
-                    <Item>data/timers/exploration/CompetitiveTimer.sql</Item>
-                </UpdateDatabase>
-            </Actions>
-        </ActionGroup>
-
-        <ActionGroup id="mpt-turn-timer-modern" scope="game" criteria="modern-age-current">
-            <Properties><LoadOrder>1000</LoadOrder></Properties>
-            <Actions>
-                <UpdateDatabase>
-                    <Item>data/timers/modern/CompetitiveTimer.sql</Item>
-                </UpdateDatabase>
-            </Actions>
-        </ActionGroup>
     </ActionGroups>
 
 <!--************************* LOCALIZED TEXT ************************************************-->

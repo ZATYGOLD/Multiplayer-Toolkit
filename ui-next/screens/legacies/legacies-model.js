@@ -5,7 +5,7 @@ import { getQuestTracker } from '../../../ui/quest-tracker/quest-tracker.js';
 import { getLegacyCardStyling } from './legacies-support.js';
 
 /*
- * Multiplayer Toolkit - base-game override.
+ * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/ui-next/screens/legacies/legacies-model.js
  * (build dated 2026-09-16). The only changes are marked "MPT:", plus every
  * GameContext.localPlayerID read as mptLocalPlayerID(): for the Observer the

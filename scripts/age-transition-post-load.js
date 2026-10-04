@@ -8,7 +8,7 @@ import { RandomImpl } from './random-pcg-32.js';
 import { placeObserverEyes } from '../maps/mpt-observer-eye.js';   // MPT
 
 /*
- * Multiplayer Toolkit - base-game override.
+ * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/scripts/age-transition-post-load.js
  * (build dated 2026-09-30); the ONLY changes are the "MPT:" import and the call
  * at the end of generateTransition. Re-apply after game updates.

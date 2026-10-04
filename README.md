@@ -1,74 +1,18 @@
-# Multiplayer Toolkit
+# Zatygold's Observer Mode
 
-Multiplayer quality-of-life features for **Sid Meier's Civilization VII**,
-built on the game's own UI components. Current version: **0.6.04**.
+A playable **Observer** for multiplayer **Sid Meier's Civilization VII**, built
+on the game's own UI components. Current version: **0.6.04**.
 
-- **Competitive turn timer** — a Turn Timer option that scales with cities,
-  units, human players and the turn number, with urgency tiers and sounds.
-- **Synchronized pause** — anyone can pause; everyone readies up (or the host
-  resumes) and a shared countdown restarts the game. Disconnects, host
-  changes and rejoins pause automatically.
-- **Observer** *(experimental)* — watch a multiplayer game as a real player
-  with no empire: whole-map vision, every leader's stats and screens.
-- **Lobby fixes** — ability names in civ / leader tooltips; a 5-second start
-  countdown.
+Pick **Observer** as your leader to watch a game as a real player with no
+empire: whole-map vision, every leader's stats, screens and yield graphs, the
+normal HUD and End Turn, through every Age, and you are never eliminated.
 
 ## Installation
 
-1. Copy the folder to `…\Sid Meier's Civilization VII\Mods\Multiplayer-Toolkit\`.
-2. Enable **Multiplayer Toolkit** in **Main Menu → Additional Content**.
-3. **Every player needs the mod** (menus, timer enforcement and the Observer
-   run per client). It is dormant in single-player.
-
----
-
-## Competitive Turn Timer
-
-Set **Turn Timer** to **Competitive** in multiplayer setup (Simultaneous
-turns). Each turn's clock, per Age:
-
-```
-seconds = Base + PerCity × (most cities any civ has) + PerUnit × (most units any civ has)
-        + PerHuman × (living humans, Observers excluded) + PerTurn × (turn number)
-```
-
-Every player gets the same clock. At zero the turn ends automatically. Below
-30s the display turns orange with warning beeps; below 15s it turns red with a
-beep per second. The clock holds until you found a settlement and stands still
-while paused or while an Age is ending.
-
-| Tune | Where |
-|---|---|
-| Per-Age `Base` / `PerCity` / `PerUnit` (and overrides) | `data/timers/<age>/CompetitiveTimer.sql` |
-| Default `PerHuman` / `PerTurn` | `data/timers/TimerScaling.sql` |
-| Tiers, colours, sounds, debug | `ui/mp-timer/mp-timer-config.js` |
-
-The engine only enforces its built-in timers, so the mod registers a subclass
-of the game's action panel (only when Competitive is chosen) that draws the
-native text and ring from the synchronized phase clock and ends the turn
-itself. Its numbers live in mod-owned tables; the Dynamic timer is untouched.
-Known cosmetic: the lobby **Rules** popup shows a debug string for the timer.
-
----
-
-## Synchronized Pause
-
-- **Pause:** **Pause Game** in the Esc menu, or the **P** key (rebindable in
-  keyboard mapping). The pause menu opens for everyone.
-- **While paused:** **Ready** (or **Resume (All Players)** for the host) and
-  **View Map** to look around (Esc returns to the menu). A "Ready X / N" tally
-  counts connected players. Game-advancing actions (end turn, unit orders,
-  quick load) are blocked; camera, selection and panels are not.
-- **Resume:** when every connected player is ready, or the host resumes for
-  all, a 5-second **UNPAUSING…** countdown runs (still paused) and play resumes
-  together.
-- **Disconnects:** a dropped player pauses the game before the AI takes over
-  (disconnect event, connection polling and a turn-start guard). The host gets
-  **Drop Disconnected & Resume** to continue without them. Host changes and
-  rejoin resyncs also pause, with a notice in the menu.
-
-Settings: `ui/mp-pause/mp-pause-config.js`. The engine exposes only a total
-"want pause" count, so host resume uses hidden chat commands between clients.
+1. Copy the mod folder into your mods folder:
+   `…\Sid Meier's Civilization VII\Mods\`
+2. Enable **Zatygold's Observer Mode** in **Main Menu → Additional Content**.
+3. **Every player must install and enable the mod** (it changes gameplay data).
 
 ---
 
@@ -81,7 +25,7 @@ the Observer civilization is picked automatically.
 **Playing:** you are a normal player who never settles and is never
 eliminated. Press **End Turn** or turn on **Auto End Turn** (the button on
 your ribbon card; it switches off when an Age completes so the Age transition
-action shows). Pause, chat and every screen work. Your Founder is replaced by
+action shows). Chat and every screen work. Your Founder is replaced by
 the hidden **Observer's Eye**, whose sight shows every unit live.
 
 **Ribbon:** every living leader, your card at the right edge.
@@ -140,11 +84,9 @@ rankings, Civ Unlocks or Age-transition choices, and complete no Triumphs.
 ## Project structure
 
 ```
-Multiplayer-Toolkit/
-├─ multiplayer-toolkit.modinfo   # manifest, per-Age data, observer-in-game criteria
-├─ config/                       # lobby DB: Competitive option, pause keybind, Observer setup
+zatygolds-oberver-mode.modinfo   # manifest, observer-in-game criteria
+├─ config/                       # lobby DB: Observer leader / civs, hidden "Observer in game" option
 ├─ data/observer/                # gameplay DB: Observer leader, civs, Eye, Triumph / defeat exemptions
-├─ data/timers/                  # Competitive timer numbers (default + per Age)
 ├─ icons/                        # Observer art
 ├─ maps/, scripts/               # base-game overrides: Observer start and Eye each Age
 ├─ ui-next/screens/, ui/policies/, ui/great-works/,
@@ -152,10 +94,7 @@ Multiplayer-Toolkit/
 ├─ text/en_us/                   # mod info and in-game strings
 └─ ui/
    ├─ mpt-shared/                # logger, method wrapping, deferred patching, Observer identity
-   ├─ mp-keybind/                # pause action in keyboard mapping
-   ├─ mp-lobby/                  # tooltips, countdown, Observer lobby role
-   ├─ mp-pause/                  # pause manager, overlay, chat commands
-   ├─ mp-timer/                  # Competitive timer
+   ├─ mp-lobby/                  # Observer lobby role
    └─ mp-observer/               # in-game Observer (no-op for other players)
 ```
 
@@ -171,6 +110,10 @@ they load only in a game with an Observer (modinfo criteria
 
 ### 0.6.04
 
+- **Split from Multiplayer Toolkit** — the Observer is now its own mod
+  (`zatygolds-oberver-mode`); the pause, Competitive timer and lobby tooltip
+  features stay in Multiplayer Toolkit. Earlier entries are the Observer's
+  history inside Multiplayer Toolkit.
 - **Yield Graphs redesign** — built from the Victories screen's own parts
   like its Economic tab: the ornate frame and tab bar, Rank / Leader / Per
   Turn rows with each leader's banner, portrait and line colour (click a row
@@ -214,18 +157,15 @@ they load only in a game with an Observer (modinfo criteria
 - **New:** alliance and war highlights; wider zoom; smaller notifications;
   top yield bar follows the leader panel.
 - **New:** the Observer continues into the next Age automatically.
-- **Fix:** Competitive timer frozen for the Observer, not ending at 0, and
-  counting while paused.
 - **Fix:** the game waiting on the Observer after a pause; Observer
   completing Triumphs; Observer civs in Civ Unlocks; editable policies; End
   Turn showing under Auto End Turn; outdated Age-transition override.
 - **Fix:** Religion button after Antiquity opens the game's Religion screen.
-- **Performance:** cached ribbon data, fewer timer retries and rescans.
+- **Performance:** cached ribbon data.
 
 ### 0.6.00
 
-- Shared helpers and split Observer modules; Observers excluded from timer and
-  disconnect counts; quieter chat commands.
+- Shared helpers and split Observer modules.
 - **Fix:** Observer Age transitions (new Eye, no dedication prompt); portrait
   clicks; single-player Observer crash (now multiplayer only).
 
@@ -233,45 +173,6 @@ they load only in a game with an Observer (modinfo criteria
 
 - **New:** Observer leader & civilization as game data, replacing the old
   observer slot and dashboard.
-- **Fix:** Competitive timer ending opening turns; timer-ended turns no longer
-  cancel unit orders.
-
-### 0.5.8
-
-- Pause: consensus of connected players or host **Resume (All Players)**;
-  **Drop Disconnected & Resume**; cross-client chat commands.
-
-### 0.5.7
-
-- Observer slot fixes (pause menu, ribbons, view as player); timer retuned.
-
-### 0.5.6
-
-- Observer "view as player" (experimental).
-
-### 0.5.5
-
-- Rebindable pause key; timer fixes (capital turn, stalls, strict expiry,
-  starts turn 2); retuned timings.
-
-### 0.5.4
-
-- Observer dashboard; 5-second lobby countdown.
-
-### 0.5.3
-
-- Observer lobby role; lobby tooltip ability names; timer as an action-panel
-  subclass with its own tables and a synced ring. More than 8 players is not
-  moddable (engine limit).
-
-### 0.5.2
-
-- Decimal timer weights; vote resume off by default; disconnect, host-change
-  and rejoin pauses.
-
-### 0.5.1
-
-- Competitive turn timer; config / logic split.
 
 ---
 

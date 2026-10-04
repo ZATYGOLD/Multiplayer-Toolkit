@@ -1,5 +1,5 @@
 /*
- * Multiplayer Toolkit - multiplayer quality-of-life features for Civilization VII.
+ * Zatygold's Observer Mode - a playable Observer for multiplayer Civilization VII.
  * Copyright (C) 2026  Zatygold
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@
  */
 
 /**
- * Multiplayer Toolkit - Observer overview panel (in-game scope).
+ * Zatygold's Observer Mode - Observer overview panel (in-game scope).
  *
  * One reusable screen that lists something for every watched leader: a leader
  * header, then that leader's entries (icon, title, description), in the base
@@ -158,7 +158,7 @@ function emptyLine(loc) {
 
 Controls.define(PANEL_TAG, {
   createInstance: ObserverOverviewPanel,
-  description: 'Multiplayer Toolkit observer overview (every leader).',
+  description: 'Observer Mode overview (every leader).',
   classNames: ['screen-pantheon-complete', 'absolute', 'pointer-events-none', 'flex'],
   innerHTML: [CONTENT],
   styles: [PANTHEON_STYLES],

@@ -1,62 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Database>
   <EnglishText>
-  <!-- MPT Pause -->
-    <Row Tag="LOC_MPT_PAUSE_GAME">
-      <Text>Pause Game</Text>
-    </Row>
-    <Row Tag="LOC_MPT_READY">
-      <Text>Ready</Text>
-    </Row>
-    <Row Tag="LOC_MPT_CANCEL_READY">
-      <Text>Cancel Ready</Text>
-    </Row>
-    <Row Tag="LOC_MPT_RESUME_HOST">
-      <Text>Resume (Host)</Text>
-    </Row>
-    <Row Tag="LOC_MPT_RESUME_ALL">
-      <Text>Resume (All Players)</Text>
-    </Row>
-    <Row Tag="LOC_MPT_DROP_RESUME">
-      <Text>Drop Disconnected &amp; Resume</Text>
-    </Row>
-    <Row Tag="LOC_MPT_PAUSE_READY_TALLY">
-      <Text>Ready: {1_Ready} / {2_Total}</Text>
-    </Row>
-    <Row Tag="LOC_MPT_PAUSE_HINT_HOST">
-      <Text>You are the host. Resume when ready.</Text>
-    </Row>
-    <Row Tag="LOC_MPT_PAUSE_HINT_READY">
-      <Text>You are ready. Waiting for the host to resume.</Text>
-    </Row>
-    <Row Tag="LOC_MPT_PAUSE_HINT_WAITING">
-      <Text>Waiting for the host to resume.</Text>
-    </Row>
-    <Row Tag="LOC_MPT_PAUSE_A_PLAYER">
-      <Text>A player</Text>
-    </Row>
-    <Row Tag="LOC_MPT_PAUSE_PLAYER_DISCONNECTED">
-      <Text>{1_Name} disconnected.</Text>
-    </Row>
-    <Row Tag="LOC_MPT_PAUSE_PLAYER_IS_DISCONNECTED">
-      <Text>A player is disconnected.</Text>
-    </Row>
-    <Row Tag="LOC_MPT_PAUSE_PLAYER_RECONNECTING">
-      <Text>{1_Name} is reconnecting - resyncing.</Text>
-    </Row>
-    <Row Tag="LOC_MPT_PAUSE_HOST_CHANGED">
-      <Text>The host changed.</Text>
-    </Row>
-    <Row Tag="LOC_MPT_PAUSE_UNPAUSING">
-      <Text>Unpausing...</Text>
-    </Row>
-    <Row Tag="LOC_MPT_PAUSE_KEYBIND">
-      <Text>Pause Game (Multiplayer)</Text>
-    </Row>
-    <Row Tag="LOC_MPT_PAUSE_KEYBIND_TT">
-      <Text>Pauses the multiplayer game, or toggles your readiness while it is paused. Added by Multiplayer Toolkit.</Text>
-    </Row>
-
     <!-- MPT Observer leader & civilizations -->
     <Row Tag="LOC_MPT_OBSERVER_NO_PANTHEON">
       <Text>No Pantheon yet.</Text>
@@ -188,7 +132,7 @@
       <Text>"To see everything, hold nothing."</Text>
     </Row>
     <Row Tag="LOC_LOADING_LEADER_INTRO_TEXT_MPT_OBSERVER">
-      <Text>You are here to watch. Added by Multiplayer Toolkit.</Text>
+      <Text>You are here to watch. Added by Zatygold's Observer Mode.</Text>
     </Row>
     <Row Tag="LOC_TRAIT_MPT_OBSERVER_LEADER_NAME">
       <Text>All-Seeing</Text>
@@ -206,7 +150,7 @@
       <Text>Observer</Text>
     </Row>
     <Row Tag="LOC_CIVILIZATION_MPT_OBSERVER_DESCRIPTION">
-      <Text>A civilization that never settles. In place of a Founder it starts with the Observer's Eye, which sees every plot and every unit. Added by Multiplayer Toolkit.</Text>
+      <Text>A civilization that never settles. In place of a Founder it starts with the Observer's Eye, which sees every plot and every unit. Added by Zatygold's Observer Mode.</Text>
     </Row>
     <Row Tag="LOC_LOADING_CIV_INTRO_TEXT_MPT_OBSERVER">
       <Text>No cities, no score - only the view.</Text>
@@ -231,22 +175,6 @@
     </Row>
     <Row Tag="LOC_UNLOCK_PLAY_AS_MPT_OBSERVER_TOOLTIP">
       <Text>The [B]Observer[/B] watches as the [B]Observer[/B] civilization in every Age.</Text>
-    </Row>
-
-    <!-- MPT Timers -->
-    <Replace Tag="LOC_GAME_TURNTIMER_DESC">  <!-- Override the base Turn Timer parameter description -->
-      <Text>
-        Determines how long Players have to take their Turn.
-        [n]None - Players take Turns without time constraints.[n]Standard - Turn time is based on the Turn Time option (in seconds).
-        [n]Dynamic - Turn time is dynamically scaled based on the number of Cities and Units in play.
-        [n]Competitive - Turn time scales with Cities, Units, human Players and the current Turn, tuned per Age. Warning tones begin at 30 seconds; the Turn ends automatically at zero.
-      </Text>
-    </Replace>
-    <Row Tag="LOC_MPT_TURNTIMER_COMPETITIVE">
-      <Text>Competitive</Text>
-    </Row>
-    <Row Tag="LOC_MPT_TURNTIMER_COMPETITIVE_DESC">
-      <Text>Turn time scales with the Cities and Units in play, the number of human Players, and the current Turn, tuned per Age.</Text>
     </Row>
   </EnglishText>
 </Database>

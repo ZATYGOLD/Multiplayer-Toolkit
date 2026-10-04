@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Multiplayer Toolkit - Observer's Eye unit ability modifiers (GameEffects, see observer-units.xml). -->
+<!-- Zatygold's Observer Mode - Observer's Eye unit ability modifiers (GameEffects, see observer-units.xml). -->
 <GameEffects xmlns="GameEffects">
   <!-- Same effect as the Squadron "Spotting" promotion, without its range and enemy limits: every unit's plot stays visible. -->
   <Modifier id="MPT_OBSERVER_MOD_SEE_ALL_UNITS" collection="COLLECTION_ALL_UNITS" effect="EFFECT_REVEAL_UNIT_PLOT_FOR_PLAYER" permanent="true"/>

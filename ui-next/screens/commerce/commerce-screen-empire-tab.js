@@ -20,7 +20,7 @@ import { CommerceScreenBaseTabContent } from './commerce-screen-base-tab-content
 import { useCommerceScreenContext } from './commerce-screen-model.js';
 
 /*
- * Multiplayer Toolkit - base-game override.
+ * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/ui-next/screens/commerce/commerce-screen-empire-tab.js
  * (build dated 2026-09-16). The only changes are marked "MPT:", plus every
  * GameContext.localPlayerID read as mptLocalPlayerID(): for the Observer the

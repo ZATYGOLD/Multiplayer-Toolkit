@@ -1,5 +1,5 @@
 /*
- * Multiplayer Toolkit - multiplayer quality-of-life features for Civilization VII.
+ * Zatygold's Observer Mode - a playable Observer for multiplayer Civilization VII.
  * Copyright (C) 2026  Zatygold
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@
  */
 
 /**
- * Multiplayer Toolkit - Observer turn ending (in-game scope).
+ * Zatygold's Observer Mode - Observer turn ending (in-game scope).
  *
  * Auto End Turn (off by default, toggled from the Observer's ribbon card):
  * the Observer's turn ends as soon as nothing blocks it, never while the game

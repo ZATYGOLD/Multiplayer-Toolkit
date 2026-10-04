@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Multiplayer Toolkit - Observer leader (gameplay database, loaded in every Age).
+  Zatygold's Observer Mode - Observer leader (gameplay database, loaded in every Age).
 
   LEADER_MPT_OBSERVER is a real major leader with no abilities. A player who
   picks it exists in-game like any other player (valid player id, full HUD,

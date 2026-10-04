@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Multiplayer Toolkit - Observer's Eye unit (gameplay database, every Age).
+  Zatygold's Observer Mode - Observer's Eye unit (gameplay database, every Age).
 
   The Observer's only unit and its vision: a player sees units only on plots
   in its sight (revealing the map is not enough), so the Eye

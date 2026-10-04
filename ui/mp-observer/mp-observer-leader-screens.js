@@ -1,5 +1,5 @@
 /*
- * Multiplayer Toolkit - multiplayer quality-of-life features for Civilization VII.
+ * Zatygold's Observer Mode - a playable Observer for multiplayer Civilization VII.
  * Copyright (C) 2026  Zatygold
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@
  */
 
 /**
- * Multiplayer Toolkit - Observer leader view on the older screens (in-game scope).
+ * Zatygold's Observer Mode - Observer leader view on the older screens (in-game scope).
  *
  * Runtime patches (no base-file copies) giving the Religion, Great Works and
  * tech / civic tree screens the leader picker of mp-observer-leader-view.js:

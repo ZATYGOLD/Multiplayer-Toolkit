@@ -8,7 +8,7 @@ import { LayoutModel } from '../../../core/ui-next/utilities/layout-utilities.js
 import { activeTraditionCards, activePolicyCards, activeCrisisCards, availablePolicyCards, setAvailablePolicyCards, setActivePolicyCards, setActiveTraditionCards, availableTraditionCards, setAvailableTraditionCards, availableCrisisCards, setAvailableCrisisCards, setActiveCrisisCards } from './policies-support.js';
 
 /*
- * Multiplayer Toolkit - base-game override.
+ * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/ui/policies/model-policies.js
  * (build dated 2026-09-16). The only changes are marked "MPT:", plus every
  * GameContext.localPlayerID read as mptLocalPlayerID(): for the Observer the

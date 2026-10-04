@@ -5,7 +5,7 @@ import { TreeGridSourceType, TreeGrid } from '../tree-grid/tree-grid.js';
 import { TreeGridDirection } from '../tree-grid/tree-support.js';
 
 /*
- * Multiplayer Toolkit - base-game override.
+ * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/ui/culture-tree/model-culture-tree.js
  * (build dated 2026-09-16). The only changes are marked "MPT:", plus every
  * GameContext.localPlayerID read as mptLocalPlayerID(): for the Observer the

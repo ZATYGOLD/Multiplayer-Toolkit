@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Database>
 	<EnglishText>
-		<Row Tag="LOC_MOD_MPT_NAME">
-			<Text>Multiplayer Toolkit</Text>
+		<Row Tag="LOC_MOD_ZOM_NAME">
+			<Text>Zatygold's Observer Mode</Text>
 		</Row>
-		<Row Tag="LOC_MOD_MPT_DESCRIPTION">
-			<Text>A toolkit of multiplayer quality-of-life features for Civilization VII: a fully synchronized pause (any player pauses, everyone readies or the host resumes for all, with a countdown and an automatic pause when a player disconnects), a Competitive turn timer that scales with each empire, and a playable Observer that watches the whole game.</Text>
+		<Row Tag="LOC_MOD_ZOM_DESCRIPTION">
+			<Text>A playable Observer for multiplayer Civilization VII: pick the Observer leader to watch the whole game as a real player with no empire - whole-map vision, every leader's stats, screens and yield graphs, and every Age.</Text>
 		</Row>
 	</EnglishText>
-</Database> 
+</Database>

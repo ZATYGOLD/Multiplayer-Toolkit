@@ -7,7 +7,7 @@ import { getUnlockTargetName, getUnlockTargetDescriptions } from '../utilities/u
 import { getUnlockTargetIconUrl } from '../../ui-next/screens/choosers/helpers.js';
 
 /*
- * Multiplayer Toolkit - base-game override.
+ * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/ui/tree-grid/tree-grid.js
  * (build dated 2026-09-16). The only changes are marked "MPT:", plus every
  * GameContext.localPlayerID read as mptLocalPlayerID(): for the Observer the

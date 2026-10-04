@@ -1,5 +1,5 @@
 /*
- * Multiplayer Toolkit - multiplayer quality-of-life features for Civilization VII.
+ * Zatygold's Observer Mode - a playable Observer for multiplayer Civilization VII.
  * Copyright (C) 2026  Zatygold
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@
  */
 
 /**
- * Multiplayer Toolkit - Observer ribbon look (in-game scope).
+ * Zatygold's Observer Mode - Observer ribbon look (in-game scope).
  *
  * One injected stylesheet for the Observer's ribbon:
  *   - fixed card size: every view renders into the stat-area size the Yields

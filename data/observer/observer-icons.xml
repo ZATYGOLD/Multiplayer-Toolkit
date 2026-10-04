@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Multiplayer Toolkit - Observer icons (UpdateIcons, game and shell).
+  Zatygold's Observer Mode - Observer icons (UpdateIcons, game and shell).
   The leader portrait is the eye badge, padded so it sits inside the frames the
   UI draws around portraits; the civilization symbol is the eye in white.
   Files come from ImportFiles (icons/*.png) and are served under fs://game/icons/.

@@ -6,7 +6,7 @@ import { ModelRegistry, ModelLifecycle } from '../../../core/ui-next/services/mo
 import { isMobile } from '../../../core/ui-next/services/view-experience.js';
 
 /*
- * Multiplayer Toolkit - base-game override.
+ * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/ui/policies/model-government.js
  * (build dated 2026-09-16). The only changes are marked "MPT:", plus every
  * GameContext.localPlayerID read as mptLocalPlayerID(): for the Observer the

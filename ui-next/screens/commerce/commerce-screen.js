@@ -15,7 +15,7 @@ import { TreasureResourceContainer } from './commerce-screen-treasure-tab.js';
 import style from './commerce-screen.scss.js';
 
 /*
- * Multiplayer Toolkit - base-game override.
+ * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/ui-next/screens/commerce/commerce-screen.js
  * (build dated 2026-09-16). The only changes are marked "MPT:": for the
  * Observer, a row of leader portraits above the tabs picks the leader shown,
