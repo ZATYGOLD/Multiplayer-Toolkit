@@ -28,7 +28,7 @@
  *   seconds = Base + PerCity*cities + PerUnit*units
  *           + PerHuman*humanPlayers + PerTurn*turnNumber
  *
- * Human players never include Observers.
+ * Human players never include a companion mod's Observer (isObserverPlayer).
  *
  * Architecture: instead of proxying the action panel's event listener, the
  * panel COMPONENT itself is replaced. Controls.define supports priority-based
@@ -231,7 +231,7 @@ let settlementFounded = false;
 
 /**
  * True while the local player's countdown is held at full: no settlement
- * founded yet. The Observer never founds one, so its clock always runs.
+ * founded yet. An Observer never founds one, so its clock always runs.
  * Latched once a settlement exists.
  */
 function clockHeld() {

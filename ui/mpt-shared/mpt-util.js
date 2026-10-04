@@ -21,15 +21,9 @@
 /**
  * Multiplayer Toolkit - shared helpers (shell and game scope).
  *
- * Logging, method wrapping, deferred component patching and DOM lookups used
- * by every feature, plus Observer identity (the Observer is a real player
- * whose leader is LEADER_MPT_OBSERVER).
+ * Logging, method wrapping and deferred component patching used
+ * by every feature, plus recognising a companion mod's Observer.
  */
-const OBSERVER_LEADER = 'LEADER_MPT_OBSERVER';
-const OBSERVER_CIV_PREFIX = 'CIVILIZATION_MPT_OBSERVER_';
-
-/** True for any Age's Observer civilization type name. */
-function isObserverCiv(civType) { return typeof civType === 'string' && civType.startsWith(OBSERVER_CIV_PREFIX); }
 
 /** Logger that reaches UI.log (console.log output does not). */
 function createLogger(tag) {
@@ -57,18 +51,6 @@ function whenDefined(tag, callback, { retries = 50, intervalMs = 200, log = null
   else log?.(`${tag} was never defined`);
 }
 
-/** The nearest element from el upwards (el included) that matches the test, or null. */
-function findAncestor(el, test) {
-  for (let node = el; node && typeof node.getAttribute === 'function'; node = node.parentElement) {
-    if (test(node)) return node;
-  }
-  return null;
-}
-
-function clearChildren(el) {
-  while (el?.firstChild) el.removeChild(el.firstChild);
-}
-
 /**
  * True from the moment a non-final Age is complete (its progress is full, the
  * HUD's action turns into the Age transition) until the next Age loads.
@@ -83,17 +65,23 @@ function isAgeEnding() {
   } catch (e) { return false; }
 }
 
-/** Observer by leader; cached per player id (a player's leader is fixed for the life of the UI). */
+/**
+ * Observer leaders of companion mods (Zatygold's Observer Mode): real players
+ * who watch instead of play, so the timer and the pause treat them apart.
+ */
+const OBSERVER_LEADERS = new Set(['LEADER_ZOM_OBSERVER']);
+
+/** True for a companion mod's Observer; cached per player id (a player's leader is fixed for the life of the UI). */
 const observerById = new Map();
 function isObserverPlayer(playerId) {
   if (observerById.has(playerId)) return observerById.get(playerId);
   try {
     const leader = GameInfo.Leaders.lookup(Players.get(playerId)?.leaderType);
     if (!leader) return false;   // not resolvable yet: ask again next time
-    const observer = leader.LeaderType === OBSERVER_LEADER;
+    const observer = OBSERVER_LEADERS.has(leader.LeaderType);
     observerById.set(playerId, observer);
     return observer;
   } catch (e) { return false; }
 }
 
-export { OBSERVER_CIV_PREFIX, OBSERVER_LEADER, clearChildren, createLogger, findAncestor, isAgeEnding, isObserverCiv, isObserverPlayer, whenDefined, wrapMethod };
+export { createLogger, isAgeEnding, isObserverPlayer, whenDefined, wrapMethod };

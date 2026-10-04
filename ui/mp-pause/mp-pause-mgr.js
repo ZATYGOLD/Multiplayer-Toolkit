@@ -57,9 +57,10 @@ function isConnected(id) {
 }
 
 /**
- * Living human major players (engine observer slots excluded). The Observer
- * leader holds a pause flag like everyone else, so it counts toward the ready
- * tally, but its disconnect never pauses the game (includeObservers = false).
+ * Living human major players (engine observer slots excluded). A companion
+ * mod's Observer holds a pause flag like everyone else, so it counts toward
+ * the ready tally, but its disconnect never pauses the game
+ * (includeObservers = false).
  */
 function humanParticipantIds(includeObservers = false) {
   try {
