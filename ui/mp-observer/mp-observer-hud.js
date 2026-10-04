@@ -34,7 +34,7 @@
 import CameraController from 'fs://game/core/ui/camera/camera-controller.js';
 import { ContextManager } from 'fs://game/core/ui/context-manager/context-manager.js';
 import ViewManager from 'fs://game/core/ui/views/view-manager.js';
-import { createLogger, wrapMethod } from '../mpt-shared/mpt-util.js';
+import { createLogger, wrapMethod } from '../zom-shared/zom-util.js';
 import { CONFIG } from './mp-observer-config.js';
 import { isObserverSeat } from './mp-observer-core.js';
 
@@ -43,7 +43,7 @@ const ZOOM_RATE = 0.3;              // camera-controller.js zoomRate
 const DEFAULT_FOV = 45;             // degrees, if the camera does not report its own
 const FOV_KEYS = ['verticalFoV', 'verticalFov', 'fov', 'FoV', 'fieldOfView'];
 const FOV_HOLD_MS = 250;            // re-apply interval while the view is widened or narrowed
-const STYLE_ID = 'mpt-observer-hud-style';
+const STYLE_ID = 'zom-observer-hud-style';
 
 // ============================ Camera ============================
 

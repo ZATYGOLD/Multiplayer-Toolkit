@@ -8,13 +8,13 @@ import { isMobile } from '../../../core/ui-next/services/view-experience.js';
 /*
  * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/ui/policies/model-government.js
- * (build dated 2026-09-16). The only changes are marked "MPT:", plus every
- * GameContext.localPlayerID read as mptLocalPlayerID(): for the Observer the
+ * (build dated 2026-09-16). The only changes are marked "ZOM:", plus every
+ * GameContext.localPlayerID read as zomLocalPlayerID(): for the Observer the
  * leader picked in the screen's leader row. Game actions keep the real local
  * player.
  * Re-apply after game updates; see ui/mp-observer/mp-observer-leader-view.js.
  */
-const mptLocalPlayerID = () => globalThis.MPTLeaderView?.playerID() ?? GameContext.localPlayerID;   // MPT: the leader the Observer views (everyone else: the local player)
+const zomLocalPlayerID = () => globalThis.ZOMLeaderView?.playerID() ?? GameContext.localPlayerID;   // ZOM: the leader the Observer views (everyone else: the local player)
 
 const [activePolicyTab, setActivePolicyTab] = createSignal("gov-overview");
 function createGovtScreenModel() {
@@ -59,7 +59,7 @@ function createGovtScreenModel() {
       timelinePlacement: Game.CrisisManager.getCrisisStageTriggerPercent(0, 3) / 100
     }
   ];
-  const localPlayer = Players.get(mptLocalPlayerID());
+  const localPlayer = Players.get(zomLocalPlayerID());
   if (localPlayer != null) {
     const civDefinition = GameInfo.Civilizations.lookup(localPlayer.civilizationType);
     if (civDefinition) {
@@ -238,7 +238,7 @@ function createGovtScreenModel() {
         happinessRange: getHappinessRangeString(row)
       });
     });
-    const localPlayer2 = Players.get(mptLocalPlayerID());
+    const localPlayer2 = Players.get(zomLocalPlayerID());
     localPlayer2?.Cities?.getCities().forEach((city) => {
       const cityHappiness = city.Happiness?.netHappinessPerTurn;
       if (cityHappiness) {

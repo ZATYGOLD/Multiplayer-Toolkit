@@ -31,7 +31,7 @@
  */
 import { CivUnlocksModel, createCivUnlocksModel } from 'fs://game/core/ui-next/screens/unlocks/civ-unlocks-model.js';
 import { ModelRegistry, ModelLifecycle } from 'fs://game/core/ui-next/services/model-registry.js';
-import { createLogger, isObserverCiv, OBSERVER_LEADER, wrapMethod } from '../mpt-shared/mpt-util.js';
+import { createLogger, isObserverCiv, OBSERVER_LEADER, wrapMethod } from '../zom-shared/zom-util.js';
 import { viewedPlayerID } from './mp-observer-leader-view.js';
 
 const log = createLogger('observer-civ-lists');

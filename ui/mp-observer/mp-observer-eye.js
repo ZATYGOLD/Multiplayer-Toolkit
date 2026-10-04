@@ -29,7 +29,7 @@
  * (mp-observer-units.js ignores the Observer's own units).
  */
 import { GenericUnitFlag } from 'fs://game/base-standard/ui/unit-flags/unit-flags.js';
-import { createLogger, isObserverPlayer, wrapMethod } from '../mpt-shared/mpt-util.js';
+import { createLogger, isObserverPlayer, wrapMethod } from '../zom-shared/zom-util.js';
 import { CONFIG } from './mp-observer-config.js';
 import { isObserverSeat } from './mp-observer-core.js';
 

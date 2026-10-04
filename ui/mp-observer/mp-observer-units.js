@@ -41,7 +41,7 @@ import { UnitMapDecorationSupport } from 'fs://game/base-standard/ui/interface-m
 import { InterfaceMode } from 'fs://game/core/ui/interface-modes/interface-modes.js';
 import { InputHandlerState } from 'fs://game/core/ui/input/input-support.js';
 import { ComponentID } from 'fs://game/core/ui/utilities/utilities-component-id.js';
-import { createLogger, findAncestor, isObserverPlayer, wrapMethod } from '../mpt-shared/mpt-util.js';
+import { createLogger, findAncestor, isObserverPlayer, wrapMethod } from '../zom-shared/zom-util.js';
 import { isObserverSeat } from './mp-observer-core.js';
 
 const log = createLogger('observer-units');

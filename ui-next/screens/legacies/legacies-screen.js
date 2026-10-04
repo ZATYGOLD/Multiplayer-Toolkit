@@ -14,7 +14,7 @@ import { LegaciesTriumphTab } from './legacies-triumphs-tab.js';
 /*
  * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/ui-next/screens/legacies/legacies-screen.js
- * (build dated 2026-09-16). The only changes are marked "MPT:": for the
+ * (build dated 2026-09-16). The only changes are marked "ZOM:": for the
  * Observer, a row of leader portraits above the tabs picks the leader shown,
  * and the open tab is kept when another leader is picked.
  * Re-apply after game updates; see ui/mp-observer/mp-observer-leader-view.js.
@@ -54,10 +54,10 @@ const LegaciesScreenComponent = (_props) => {
         onClosing: handleOnClosing,
         isFullscreen: isMobile,
         get children() {
-          return [globalThis.MPTLeaderView?.playerBar('screen-legacies') ?? null, createComponent(Tab, {   // MPT: the Observer's leader picker
+          return [globalThis.ZOMLeaderView?.playerBar('screen-legacies') ?? null, createComponent(Tab, {   // ZOM: the Observer's leader picker
             "class": "w-full flex flex-col flex-auto pointer-events-auto relative",
-            onTabChanged: globalThis.MPTLeaderView?.trackTab('screen-legacies'),   // MPT: remember the open tab
-            get defaultTab() { return globalThis.MPTLeaderView?.restoredTab('screen-legacies'); },   // MPT: same tab after a leader switch
+            onTabChanged: globalThis.ZOMLeaderView?.trackTab('screen-legacies'),   // ZOM: remember the open tab
+            get defaultTab() { return globalThis.ZOMLeaderView?.restoredTab('screen-legacies'); },   // ZOM: same tab after a leader switch
             get children() {
               return [createComponent(Tab.TabList, {
                 "class": `${isMobile ? "w-192" : "w-187"} self-center text-base font-base mb-2`,

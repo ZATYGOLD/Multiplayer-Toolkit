@@ -21,8 +21,8 @@
 /**
  * Zatygold's Observer Mode - Observer leader view (in-game scope).
  *
- * Empire screens read "the local player" through MPTLeaderView (base-game
- * overrides marked "MPT:" in ui-next/screens/commerce, ui-next/screens/legacies,
+ * Empire screens read "the local player" through ZOMLeaderView (base-game
+ * overrides marked "ZOM:" in ui-next/screens/commerce, ui-next/screens/legacies,
  * ui/policies and ui/great-works, plus runtime patches in
  * mp-observer-leader-screens.js): Resources & Trade, Legacies, Government,
  * Great Works and Religion. For the Observer that is the leader picked in a
@@ -35,7 +35,7 @@
  * the game refuses. Other players see the base screens.
  */
 import { ContextManager } from 'fs://game/core/ui/context-manager/context-manager.js';
-import { createLogger } from '../mpt-shared/mpt-util.js';
+import { createLogger } from '../zom-shared/zom-util.js';
 import { isObserverSeat, watchedPlayers } from './mp-observer-core.js';
 
 const SCREEN_PROPS = { singleton: true, createMouseGuard: true };
@@ -44,9 +44,9 @@ const OTHER_STYLE = 'border: 0.1666666667rem solid transparent; opacity: 0.65;';
 // A dark plate so the row reads over any background (Great Works sits over the map).
 const BAR_STYLE = 'background-color: rgba(10, 12, 18, 0.88); border: 0.0555555556rem solid rgba(229, 210, 172, 0.55); border-radius: 0.5rem; padding: 0.3rem 0.6rem;';
 
-const BAR_CLASS = 'mpt-leader-bar';
-const SWITCHING_CLASS = 'mpt-leader-switching';
-const STYLE_ID = 'mpt-leader-view-style';
+const BAR_CLASS = 'zom-leader-bar';
+const SWITCHING_CLASS = 'zom-leader-switching';
+const STYLE_ID = 'zom-leader-view-style';
 const SETTLE_MS = 100;   // after two frames: the reopened screen has rendered
 
 let viewedId = null;
@@ -136,13 +136,13 @@ function playerBar(screenTag) {
   return bar;
 }
 
-globalThis.MPTLeaderView = { playerID, playerBar, restoredTab, trackTab };
+globalThis.ZOMLeaderView = { playerID, playerBar, restoredTab, trackTab };
 
 // The overrides load only in a game flagged as having an Observer (modinfo criteria); report the flag for diagnosis.
 engine.whenReady.then(() => {
   if (!isObserverSeat()) return;
   let flag;
-  try { flag = Configuration.getGame().getValue('MPT_OBSERVER_IN_GAME'); } catch (e) { flag = 'unreadable'; }
+  try { flag = Configuration.getGame().getValue('ZOM_OBSERVER_IN_GAME'); } catch (e) { flag = 'unreadable'; }
   createLogger('observer-leader-view')(`observer-in-game option: ${flag}`);
 });
 

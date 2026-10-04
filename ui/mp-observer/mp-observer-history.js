@@ -30,26 +30,26 @@
  *
  * Sample text: "<age chronology>|<turn>|<playerId>:<v1>,<v2>,...;<playerId>:...".
  */
-import { createLogger } from '../mpt-shared/mpt-util.js';
+import { createLogger } from '../zom-shared/zom-util.js';
 import { CONFIG } from './mp-observer-config.js';
 import { isObserverSeat, watchedPlayers } from './mp-observer-core.js';
 
 const log = createLogger('observer-history');
-const KEY_PREFIX = 'MPT_YIELD_HISTORY_';
+const KEY_PREFIX = 'ZOM_YIELD_HISTORY_';
 const COUNT_KEY = `${KEY_PREFIX}COUNT`;
-const HISTORY_EVENT = 'mpt-yield-history-changed';
+const HISTORY_EVENT = 'zom-yield-history-changed';
 
 /**
  * Recorded yields in display order; `slot` is the value's position in a
  * sample (new yields take the next slot, so older samples stay readable).
  */
 const HISTORY_YIELDS = [
-  { id: 'science', slot: 0, yieldType: 'YIELD_SCIENCE', label: 'LOC_MPT_GRAPH_SCIENCE' },
-  { id: 'culture', slot: 1, yieldType: 'YIELD_CULTURE', label: 'LOC_MPT_GRAPH_CULTURE' },
-  { id: 'gold', slot: 2, yieldType: 'YIELD_GOLD', label: 'LOC_MPT_GRAPH_GOLD' },
-  { id: 'influence', slot: 5, yieldType: 'YIELD_DIPLOMACY', label: 'LOC_MPT_GRAPH_INFLUENCE' },
-  { id: 'food', slot: 3, yieldType: 'YIELD_FOOD', label: 'LOC_MPT_GRAPH_FOOD' },
-  { id: 'production', slot: 4, yieldType: 'YIELD_PRODUCTION', label: 'LOC_MPT_GRAPH_PRODUCTION' }
+  { id: 'science', slot: 0, yieldType: 'YIELD_SCIENCE', label: 'LOC_ZOM_GRAPH_SCIENCE' },
+  { id: 'culture', slot: 1, yieldType: 'YIELD_CULTURE', label: 'LOC_ZOM_GRAPH_CULTURE' },
+  { id: 'gold', slot: 2, yieldType: 'YIELD_GOLD', label: 'LOC_ZOM_GRAPH_GOLD' },
+  { id: 'influence', slot: 5, yieldType: 'YIELD_DIPLOMACY', label: 'LOC_ZOM_GRAPH_INFLUENCE' },
+  { id: 'food', slot: 3, yieldType: 'YIELD_FOOD', label: 'LOC_ZOM_GRAPH_FOOD' },
+  { id: 'production', slot: 4, yieldType: 'YIELD_PRODUCTION', label: 'LOC_ZOM_GRAPH_PRODUCTION' }
 ];
 const SLOT_ORDER = [...HISTORY_YIELDS].sort((a, b) => a.slot - b.slot);
 

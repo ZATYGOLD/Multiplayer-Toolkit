@@ -25,7 +25,7 @@
  * unless isObserverSeat() - other players are untouched.
  */
 import { InterfaceMode } from 'fs://game/core/ui/interface-modes/interface-modes.js';
-import { isObserverPlayer } from '../mpt-shared/mpt-util.js';
+import { isObserverPlayer } from '../zom-shared/zom-util.js';
 
 /** True when this client plays the Observer. */
 function isObserverSeat() {

@@ -6,13 +6,13 @@ import UpdateGate from '../../../core/ui/utilities/utilities-update-gate.js';
 /*
  * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/ui/great-works/model-great-works.js
- * (build dated 2026-09-16). The only changes are marked "MPT:", plus every
- * GameContext.localPlayerID read as mptLocalPlayerID(): for the Observer the
+ * (build dated 2026-09-16). The only changes are marked "ZOM:", plus every
+ * GameContext.localPlayerID read as zomLocalPlayerID(): for the Observer the
  * leader picked in the screen's leader row. Game actions keep the real local
  * player.
  * Re-apply after game updates; see ui/mp-observer/mp-observer-leader-view.js.
  */
-const mptLocalPlayerID = () => globalThis.MPTLeaderView?.playerID() ?? GameContext.localPlayerID;   // MPT: the leader the Observer views (everyone else: the local player)
+const zomLocalPlayerID = () => globalThis.ZOMLeaderView?.playerID() ?? GameContext.localPlayerID;   // ZOM: the leader the Observer views (everyone else: the local player)
 
 class GreatWorksModel {
   onUpdate;
@@ -66,7 +66,7 @@ class GreatWorksModel {
       this.greatWorkSlotCreatedListener();
     });
     window.addEventListener("hotkey-open-greatworks", this.greatWorksHotkeyListener);
-    const localPlayerID = mptLocalPlayerID();
+    const localPlayerID = zomLocalPlayerID();
     this.LocalPlayer = Players.get(localPlayerID);
     if (!this.LocalPlayer) {
       return;
@@ -76,7 +76,7 @@ class GreatWorksModel {
     this.onUpdate = callback;
   }
   get playerId() {
-    return mptLocalPlayerID();
+    return zomLocalPlayerID();
   }
   get allGreatWorks() {
     return this.GreatWorks;
@@ -120,7 +120,7 @@ class GreatWorksModel {
     this.YieldTotals.push({ type: YieldTypes.YIELD_SCIENCE, amount: 0 });
     this.YieldTotals.push({ type: YieldTypes.YIELD_HAPPINESS, amount: 0 });
     const nextGreatWorks = [];
-    const localPlayerID = mptLocalPlayerID();
+    const localPlayerID = zomLocalPlayerID();
     this.LocalPlayer = Players.get(localPlayerID);
     if (!this.LocalPlayer) {
       console.error("model-great-works: update() - no local player found!");

@@ -7,13 +7,13 @@ import { TreeGridDirection } from '../tree-grid/tree-support.js';
 /*
  * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/ui/culture-tree/model-culture-tree.js
- * (build dated 2026-09-16). The only changes are marked "MPT:", plus every
- * GameContext.localPlayerID read as mptLocalPlayerID(): for the Observer the
+ * (build dated 2026-09-16). The only changes are marked "ZOM:", plus every
+ * GameContext.localPlayerID read as zomLocalPlayerID(): for the Observer the
  * leader picked in the screen's leader row. Game actions keep the real local
  * player.
  * Re-apply after game updates; see ui/mp-observer/mp-observer-leader-view.js.
  */
-const mptLocalPlayerID = () => globalThis.MPTLeaderView?.playerID() ?? GameContext.localPlayerID;   // MPT: the leader the Observer views (everyone else: the local player)
+const zomLocalPlayerID = () => globalThis.ZOMLeaderView?.playerID() ?? GameContext.localPlayerID;   // ZOM: the leader the Observer views (everyone else: the local player)
 
 class CultureTreeModel {
   onUpdate;
@@ -37,7 +37,7 @@ class CultureTreeModel {
     this.onUpdate = callback;
   }
   get playerId() {
-    return mptLocalPlayerID();
+    return zomLocalPlayerID();
   }
   get trees() {
     return this._trees;
@@ -80,7 +80,7 @@ class CultureTreeModel {
   }
   update() {
     this._trees = [];
-    const localPlayerID = mptLocalPlayerID();
+    const localPlayerID = zomLocalPlayerID();
     const localPlayer = Players.get(localPlayerID);
     if (!localPlayer) {
       return;
@@ -101,7 +101,7 @@ class CultureTreeModel {
         continue;
       }
       const turnsCallback = (nodeType) => {
-        const player = Players.get(mptLocalPlayerID());
+        const player = Players.get(zomLocalPlayerID());
         const turnsLeft = player ? player.Culture ? player.Culture.getTurnsForNode(nodeType) : 0 : 0;
         return turnsLeft;
       };

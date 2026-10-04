@@ -9,13 +9,13 @@ import { getUnlockTargetIconUrl } from '../../ui-next/screens/choosers/helpers.j
 /*
  * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/ui/tree-grid/tree-grid.js
- * (build dated 2026-09-16). The only changes are marked "MPT:", plus every
- * GameContext.localPlayerID read as mptLocalPlayerID(): for the Observer the
+ * (build dated 2026-09-16). The only changes are marked "ZOM:", plus every
+ * GameContext.localPlayerID read as zomLocalPlayerID(): for the Observer the
  * leader picked in the screen's leader row. Game actions keep the real local
  * player.
  * Re-apply after game updates; see ui/mp-observer/mp-observer-leader-view.js.
  */
-const mptLocalPlayerID = () => globalThis.MPTLeaderView?.playerID() ?? GameContext.localPlayerID;   // MPT: the leader the Observer views (everyone else: the local player)
+const zomLocalPlayerID = () => globalThis.ZOMLeaderView?.playerID() ?? GameContext.localPlayerID;   // ZOM: the leader the Observer views (everyone else: the local player)
 
 var TreeGridSourceType = /* @__PURE__ */ ((TreeGridSourceType2) => {
   TreeGridSourceType2[TreeGridSourceType2["ATTRIBUTES"] = 0] = "ATTRIBUTES";
@@ -66,7 +66,7 @@ class TreeGrid {
       this.flipRows = configuration.flipRows;
       this.treeType = configuration.treeType ?? 0 /* ATTRIBUTES */;
     }
-    this._player = mptLocalPlayerID();
+    this._player = zomLocalPlayerID();
     this._treeData = {
       rows: 0,
       columns: 0,
@@ -146,8 +146,8 @@ class TreeGrid {
     graph.setDefaultEdgeLabel(function() {
       return {};
     });
-    const localPlayerID = mptLocalPlayerID();
-    const treeObject = Game.ProgressionTrees.getTree(mptLocalPlayerID(), this._sourceProgressionTree);
+    const localPlayerID = zomLocalPlayerID();
+    const treeObject = Game.ProgressionTrees.getTree(zomLocalPlayerID(), this._sourceProgressionTree);
     if (!treeObject) {
       console.warn("tree-grid: No tree-object for tree with id: ", this._sourceProgressionTree);
     }
@@ -271,7 +271,7 @@ class TreeGrid {
           const unlockInfo = GameInfo.ProgressionTreeNodeUnlocks[i];
           if (unlockInfo && !unlockInfo.Hidden) {
             if (unlockInfo.TargetKind == "KIND_UNIT") {
-              const player = Players.get(mptLocalPlayerID());
+              const player = Players.get(zomLocalPlayerID());
               if (player && player.Units?.isBuildPermanentlyDisabled(unlockInfo.TargetType)) {
                 continue;
               }
@@ -778,7 +778,7 @@ class TreeGrid {
     this.activateQueueItems();
   }
   setHoverItem(nodeIndex) {
-    const player = Players.get(mptLocalPlayerID());
+    const player = Players.get(zomLocalPlayerID());
     const AI = player?.AI;
     let highlightNodes;
     if (!AI) {
@@ -827,7 +827,7 @@ class TreeGrid {
   queueItems(nodeIndex) {
     this.prerequisiteQueue.length = 0;
     this.queuedElements = 0;
-    const player = Players.get(mptLocalPlayerID());
+    const player = Players.get(zomLocalPlayerID());
     const AI = player?.AI;
     if (!AI) {
       console.error(`model-rectangular-grid: Can't get AI for player ${player?.id}`);
@@ -893,7 +893,7 @@ class TreeGrid {
    *  If true notifications for ChooseTech handler can be added and not automatically dismissed
    */
   canAddChooseNotification() {
-    const player = mptLocalPlayerID();
+    const player = zomLocalPlayerID();
     if (this.currentResearching) {
       const nodeState = Game.ProgressionTrees.getNodeState(
         player,

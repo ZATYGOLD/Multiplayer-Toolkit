@@ -33,8 +33,8 @@ import { OBSERVER_VIEW } from './mp-observer-config.js';
 import { isDetailsHidden, markOwnCard } from './mp-observer-ribbon-style.js';
 import { isAutoEndTurn, setAutoEndTurn } from './mp-observer-turn.js';
 
-const BUTTONS_CLASS = 'mpt-observer-view-buttons';
-const BANNER_CLASS = 'mpt-observer-banner-toggles';
+const BUTTONS_CLASS = 'zom-observer-view-buttons';
+const BANNER_CLASS = 'zom-observer-banner-toggles';
 const BUTTON_SIZE = '1.6rem';
 const TOGGLE_SIZE_REM = 1.4;
 const TOGGLE_GLYPH_INSET = '0.12rem';
@@ -88,8 +88,8 @@ const GLYPHS = {
 
 /** View buttons by row. */
 const BUTTON_ROWS = [
-  [{ view: OBSERVER_VIEW.YIELDS, loc: 'LOC_MPT_OBSERVER_YIELDS' }, { view: OBSERVER_VIEW.PRODUCTION, loc: 'LOC_MPT_OBSERVER_PRODUCTION' }],
-  [{ view: OBSERVER_VIEW.RESEARCH, loc: 'LOC_MPT_OBSERVER_TECHS_CIVICS' }],
+  [{ view: OBSERVER_VIEW.YIELDS, loc: 'LOC_ZOM_OBSERVER_YIELDS' }, { view: OBSERVER_VIEW.PRODUCTION, loc: 'LOC_ZOM_OBSERVER_PRODUCTION' }],
+  [{ view: OBSERVER_VIEW.RESEARCH, loc: 'LOC_ZOM_OBSERVER_TECHS_CIVICS' }],
   [{ view: OBSERVER_VIEW.SCORE, loc: 'LOC_PEDIA_VICTORIES_TITLE' }]
 ];
 
@@ -125,8 +125,8 @@ function viewButton(item, currentView, onSelect) {
 
 /** The banner toggles, top to bottom; each is pressed while on. */
 const BANNER_TOGGLES = [
-  { cls: 'mpt-observer-auto-end', icon: ICON.endTurn, isOn: isAutoEndTurn, set: setAutoEndTurn,
-    tooltip: (on) => (on ? 'LOC_MPT_OBSERVER_AUTO_END_TURN_ON' : 'LOC_MPT_OBSERVER_AUTO_END_TURN_OFF') }
+  { cls: 'zom-observer-auto-end', icon: ICON.endTurn, isOn: isAutoEndTurn, set: setAutoEndTurn,
+    tooltip: (on) => (on ? 'LOC_ZOM_OBSERVER_AUTO_END_TURN_ON' : 'LOC_ZOM_OBSERVER_AUTO_END_TURN_OFF') }
 ];
 
 /** Pressed while on; a state can also change by itself (Auto End Turn switches off at the end of an Age). */
@@ -175,8 +175,8 @@ function setPortraitTooltip(card) {
   const hitbox = card?.querySelector('.diplo-ribbon__portrait-hitbox');
   const name = Players.get(GameContext.localPlayerID)?.name;
   if (!hitbox || !name) return;
-  const action = isDetailsHidden() ? 'LOC_MPT_OBSERVER_SHOW_DETAILS' : 'LOC_MPT_OBSERVER_HIDE_DETAILS';
-  hitbox.setAttribute('data-tooltip-content', Locale.compose('LOC_MPT_OBSERVER_PORTRAIT_TT', Locale.compose(name), Locale.compose(action)));
+  const action = isDetailsHidden() ? 'LOC_ZOM_OBSERVER_SHOW_DETAILS' : 'LOC_ZOM_OBSERVER_HIDE_DETAILS';
+  hitbox.setAttribute('data-tooltip-content', Locale.compose('LOC_ZOM_OBSERVER_PORTRAIT_TT', Locale.compose(name), Locale.compose(action)));
 }
 
 /** Fill the Observer's own stat area with the view buttons, centre its eye portrait in the hex and add the toggle. */

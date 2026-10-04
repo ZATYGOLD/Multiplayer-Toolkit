@@ -9,7 +9,7 @@ import { addAvailableCard, removeAvailableCard, getLegacyCardStyling, parseCardT
 /*
  * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/ui-next/screens/legacies/dedications-model.js
- * (build dated 2026-09-16). The only changes are marked "MPT:": for the
+ * (build dated 2026-09-16). The only changes are marked "ZOM:": for the
  * Observer the dedications shown are the viewed leader's; game actions keep the
  * real local player.
  * Re-apply after game updates; see ui/mp-observer/mp-observer-leader-view.js.
@@ -38,7 +38,7 @@ const CreateDedicationsModel = () => {
     return isMobileViewExperience || layoutModel.screenHeight() <= Layout.pixelsToScreenPixels(SMALL_SCREEN_MODE_MAX_HEIGHT) || layoutModel.screenWidth() <= Layout.pixelsToScreenPixels(SMALL_SCREEN_MODE_MAX_WIDTH);
   });
   const realLocalPlayerID = useLocalPlayerId();
-  const localPlayerID = () => globalThis.MPTLeaderView?.playerID() ?? realLocalPlayerID();   // MPT: the viewed leader
+  const localPlayerID = () => globalThis.ZOMLeaderView?.playerID() ?? realLocalPlayerID();   // ZOM: the viewed leader
   const playerLegacyCompleted = createEngineEvent("PlayerLegacyCompleted");
   const [selectedDedicationFilter, setSelectedDedicationFilter] = createSignal(
     "ALL" /* ALL */
@@ -407,14 +407,14 @@ const CreateDedicationsModel = () => {
         for (let i = 0; i < effect.amount; i++) {
           const args = { ID: effect.id };
           const result = Game.PlayerOperations.canStart(
-            realLocalPlayerID() /* MPT: real local player */,
+            realLocalPlayerID() /* ZOM: real local player */,
             PlayerOperationTypes.ADVANCED_START_USE_EFFECT,
             args,
             false
           );
           if (result.Success) {
             Game.PlayerOperations.sendRequest(
-              realLocalPlayerID() /* MPT: real local player */,
+              realLocalPlayerID() /* ZOM: real local player */,
               PlayerOperationTypes.ADVANCED_START_USE_EFFECT,
               args
             );

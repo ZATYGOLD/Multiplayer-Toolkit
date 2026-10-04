@@ -42,13 +42,13 @@
  * game would wait on the Observer forever. After every unpause the Observer's
  * still-active, "ended" turn is sent again.
  */
-import { createLogger, isAgeEnding } from '../mpt-shared/mpt-util.js';
+import { createLogger, isAgeEnding } from '../zom-shared/zom-util.js';
 import { CONFIG } from './mp-observer-config.js';
 import { isObserverSeat } from './mp-observer-core.js';
 
 const log = createLogger('observer-turn');
-const HIDE_CLASS = 'mpt-observer-auto-turn';
-const STYLE_ID = 'mpt-observer-turn-style';
+const HIDE_CLASS = 'zom-observer-auto-turn';
+const STYLE_ID = 'zom-observer-turn-style';
 const SLIDE = '0.35s ease';
 
 let autoEnd = CONFIG.autoEndTurn;

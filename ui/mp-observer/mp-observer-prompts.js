@@ -43,7 +43,7 @@ import AgeProgressionPopupManager from 'fs://game/base-standard/ui/age-progressi
 import { NarrativePopupManager } from 'fs://game/base-standard/ui/narrative-event/narrative-popup-manager.js';
 import { DiplomacyDialogManagerImpl } from 'fs://game/base-standard/ui/diplomacy/diplomacy-manager.js';
 import EndGameScreenManager from 'fs://game/base-standard/ui/endgame/screen-endgame.js';
-import { createLogger, OBSERVER_CIV_PREFIX, wrapMethod } from '../mpt-shared/mpt-util.js';
+import { createLogger, OBSERVER_CIV_PREFIX, wrapMethod } from '../zom-shared/zom-util.js';
 import { CONFIG } from './mp-observer-config.js';
 import { isObserverSeat } from './mp-observer-core.js';
 

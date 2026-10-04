@@ -22,13 +22,13 @@ import { useCommerceScreenContext } from './commerce-screen-model.js';
 /*
  * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/ui-next/screens/commerce/commerce-screen-empire-tab.js
- * (build dated 2026-09-16). The only changes are marked "MPT:", plus every
- * GameContext.localPlayerID read as mptLocalPlayerID(): for the Observer the
+ * (build dated 2026-09-16). The only changes are marked "ZOM:", plus every
+ * GameContext.localPlayerID read as zomLocalPlayerID(): for the Observer the
  * leader picked in the screen's leader row. Game actions keep the real local
  * player.
  * Re-apply after game updates; see ui/mp-observer/mp-observer-leader-view.js.
  */
-const mptLocalPlayerID = () => globalThis.MPTLeaderView?.playerID() ?? GameContext.localPlayerID;   // MPT: the leader the Observer views (everyone else: the local player)
+const zomLocalPlayerID = () => globalThis.ZOMLeaderView?.playerID() ?? GameContext.localPlayerID;   // ZOM: the leader the Observer views (everyone else: the local player)
 
 var _tmpl$ = /* @__PURE__ */ template(`<div class="text-secondary self-center text-center text-accent-2"></div>`), _tmpl$2 = /* @__PURE__ */ template(`<div></div>`), _tmpl$3 = /* @__PURE__ */ template(`<div class="ml-1 text-white"></div>`), _tmpl$4 = /* @__PURE__ */ template(`<div class="flex flex-col w-full grow items-center mt-8"><div class="mb-2 w-full"></div><div class="w-full text-center items-center flex-col px-2"></div></div>`), _tmpl$5 = /* @__PURE__ */ template(`<div class="flex flex-col w-full justify-center items-center mt-1 mb-1"><div class="flex flex-row flex-wrap"></div></div>`), _tmpl$6 = /* @__PURE__ */ template(`<div class="mx-2 h-10 w-0\\.5 bg-accent"></div>`), _tmpl$7 = /* @__PURE__ */ template(`<div class="flex flex-row items-center mb-1 px-2"></div>`);
 const EmpireResourceContainer = (props) => {
@@ -142,7 +142,7 @@ const EmpireResourceContainer = (props) => {
     return focusedResourceCard() === resourceValue;
   }
   function getResourceDefinitonFromResourceValue(resourceValue) {
-    const uniqueResource = Players.get(mptLocalPlayerID())?.Resources?.getResources().find((uniqueResourceValue) => {
+    const uniqueResource = Players.get(zomLocalPlayerID())?.Resources?.getResources().find((uniqueResourceValue) => {
       return uniqueResourceValue.value === resourceValue;
     });
     if (!uniqueResource) {

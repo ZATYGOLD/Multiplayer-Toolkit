@@ -25,15 +25,15 @@
 
         <!-- A game with an Observer: a player's leader is the Observer, or the
              hidden game option the lobby host sets when one is picked. -->
-        <Criteria id="observer-in-game" any="true">
+        <Criteria id="zom-observer-in-game" any="true">
             <ConfigurationValueContains>
                 <Group>Player</Group>
                 <ConfigurationId>LeaderTypeName</ConfigurationId>
-                <Value>LEADER_MPT_OBSERVER</Value>
+                <Value>LEADER_ZOM_OBSERVER</Value>
             </ConfigurationValueContains>
             <ConfigurationValueMatches>
                 <Group>Game</Group>
-                <ConfigurationId>MPT_OBSERVER_IN_GAME</ConfigurationId>
+                <ConfigurationId>ZOM_OBSERVER_IN_GAME</ConfigurationId>
                 <Value>1</Value>
             </ConfigurationValueMatches>
         </Criteria>
@@ -42,27 +42,27 @@
 <!--*************************** SHELL: LOBBY, TEXT & SETUP ***********************************************-->
 
     <ActionGroups>
-        <ActionGroup id="mpt-shell" scope="shell" criteria="always">
+        <ActionGroup id="zom-shell" scope="shell" criteria="always">
             <Properties><LoadOrder>1000</LoadOrder></Properties>
             <Actions>
                 <UpdateText>
-                    <Item>text/en_us/mpt-text.xml</Item>
+                    <Item>text/en_us/zom-text.xml</Item>
                 </UpdateText>
                 <UpdateDatabase>
                     <Item>config/SetupParameters.sql</Item>
                     <Item>config/observer-config.xml</Item>
                 </UpdateDatabase>
                 <ImportFiles>
-                    <Item>icons/mpt_observer.png</Item>
-                    <Item>icons/mpt_observer_civ.png</Item>
-                    <Item>icons/mpt_observer_leader_256.png</Item>
-                    <Item>icons/mpt_observer_leader_140.png</Item>
-                    <Item>icons/mpt_observer_leader_128.png</Item>
-                    <Item>icons/mpt_observer_leader_64.png</Item>
-                    <Item>icons/mpt_observer_circle_256.png</Item>
-                    <Item>icons/mpt_observer_circle_140.png</Item>
-                    <Item>icons/mpt_observer_circle_128.png</Item>
-                    <Item>icons/mpt_observer_circle_64.png</Item>
+                    <Item>icons/zom_observer.png</Item>
+                    <Item>icons/zom_observer_civ.png</Item>
+                    <Item>icons/zom_observer_leader_256.png</Item>
+                    <Item>icons/zom_observer_leader_140.png</Item>
+                    <Item>icons/zom_observer_leader_128.png</Item>
+                    <Item>icons/zom_observer_leader_64.png</Item>
+                    <Item>icons/zom_observer_circle_256.png</Item>
+                    <Item>icons/zom_observer_circle_140.png</Item>
+                    <Item>icons/zom_observer_circle_128.png</Item>
+                    <Item>icons/zom_observer_circle_64.png</Item>
                 </ImportFiles>
                 <UpdateIcons>
                     <Item>data/observer/observer-icons.xml</Item>
@@ -71,7 +71,7 @@
                     <Item>data/observer/observer-colors.xml</Item>
                 </UpdateColors>
                 <UIScripts>
-                    <Item>ui/mpt-shared/mpt-util.js</Item>
+                    <Item>ui/zom-shared/zom-util.js</Item>
                     <Item>ui/mp-lobby/mp-lobby-config.js</Item>
                     <Item>ui/mp-lobby/mp-lobby-observer.js</Item>
                 </UIScripts>
@@ -80,25 +80,25 @@
 
 <!--***************************** GAME: TEXT & SHARED HELPERS *************************************-->
 
-        <ActionGroup id="mpt-game-text" scope="game" criteria="always">
+        <ActionGroup id="zom-game-text" scope="game" criteria="always">
             <Properties><LoadOrder>500</LoadOrder></Properties>
             <Actions>
                 <UpdateText>
-                    <Item>text/en_us/mpt-text.xml</Item>
+                    <Item>text/en_us/zom-text.xml</Item>
                 </UpdateText>
                 <UIScripts>
-                    <Item>ui/mpt-shared/mpt-util.js</Item>
+                    <Item>ui/zom-shared/zom-util.js</Item>
                 </UIScripts>
             </Actions>
         </ActionGroup>
 
 <!--*********************** GAME: OBSERVER LEADER & CIVILIZATIONS ******************************-->
 
-        <ActionGroup id="mpt-observer" scope="game" criteria="always">
+        <ActionGroup id="zom-observer" scope="game" criteria="always">
             <Properties><LoadOrder>1000</LoadOrder></Properties>
             <Actions>
                 <ImportFiles>
-                    <Item>maps/mpt-observer-eye.js</Item>
+                    <Item>maps/zom-observer-eye.js</Item>
                 </ImportFiles>
                 <UpdateDatabase>
                     <Item>data/observer/observer-leader.xml</Item>
@@ -108,16 +108,16 @@
                     <Item>data/observer/observer-legacies.sql</Item>
                 </UpdateDatabase>
                 <ImportFiles>
-                    <Item>icons/mpt_observer.png</Item>
-                    <Item>icons/mpt_observer_civ.png</Item>
-                    <Item>icons/mpt_observer_leader_256.png</Item>
-                    <Item>icons/mpt_observer_leader_140.png</Item>
-                    <Item>icons/mpt_observer_leader_128.png</Item>
-                    <Item>icons/mpt_observer_leader_64.png</Item>
-                    <Item>icons/mpt_observer_circle_256.png</Item>
-                    <Item>icons/mpt_observer_circle_140.png</Item>
-                    <Item>icons/mpt_observer_circle_128.png</Item>
-                    <Item>icons/mpt_observer_circle_64.png</Item>
+                    <Item>icons/zom_observer.png</Item>
+                    <Item>icons/zom_observer_civ.png</Item>
+                    <Item>icons/zom_observer_leader_256.png</Item>
+                    <Item>icons/zom_observer_leader_140.png</Item>
+                    <Item>icons/zom_observer_leader_128.png</Item>
+                    <Item>icons/zom_observer_leader_64.png</Item>
+                    <Item>icons/zom_observer_circle_256.png</Item>
+                    <Item>icons/zom_observer_circle_140.png</Item>
+                    <Item>icons/zom_observer_circle_128.png</Item>
+                    <Item>icons/zom_observer_circle_64.png</Item>
                 </ImportFiles>
                 <UpdateIcons>
                     <Item>data/observer/observer-icons.xml</Item>
@@ -155,11 +155,12 @@
 
 <!--*********************** GAME: OBSERVER BASE-GAME OVERRIDES ***********************************-->
 
-        <!-- Copies of base-game files (changes marked "MPT:"), loaded only in a
+        <!-- Copies of base-game files (changes marked "ZOM:"), loaded only in a
              game with an Observer: every other game runs the untouched files,
-             or another mod's versions of them. -->
-        <ActionGroup id="mpt-observer-overrides" scope="game" criteria="observer-in-game">
-            <Properties><LoadOrder>1000</LoadOrder></Properties>
+             or another mod's versions of them. Loaded after Multiplayer
+             Toolkit's copies (LoadOrder), so these win in this mod's games. -->
+        <ActionGroup id="zom-observer-overrides" scope="game" criteria="zom-observer-in-game">
+            <Properties><LoadOrder>1100</LoadOrder></Properties>
             <Actions>
                 <ImportFiles>
                     <Item>maps/assign-starting-plots.js</Item>

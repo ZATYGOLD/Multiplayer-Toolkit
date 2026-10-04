@@ -8,13 +8,13 @@
 -- every Triumph defined by then (DLC included).
 
 INSERT OR IGNORE INTO Requirements (RequirementId, RequirementType, Inverse, ProgressWeight)
-VALUES ('REQ_MPT_LEGACY_NOT_OBSERVER', 'REQUIREMENT_PLAYER_LEADER_TYPE_MATCHES', 1, 0);
+VALUES ('REQ_ZOM_LEGACY_NOT_OBSERVER', 'REQUIREMENT_PLAYER_LEADER_TYPE_MATCHES', 1, 0);
 
 INSERT OR IGNORE INTO RequirementArguments (RequirementId, Name, Value)
-VALUES ('REQ_MPT_LEGACY_NOT_OBSERVER', 'LeaderType', 'LEADER_MPT_OBSERVER');
+VALUES ('REQ_ZOM_LEGACY_NOT_OBSERVER', 'LeaderType', 'LEADER_ZOM_OBSERVER');
 
 INSERT OR IGNORE INTO RequirementSetRequirements (RequirementSetId, RequirementId)
-SELECT DISTINCT lm.RequirementSetId, 'REQ_MPT_LEGACY_NOT_OBSERVER'
+SELECT DISTINCT lm.RequirementSetId, 'REQ_ZOM_LEGACY_NOT_OBSERVER'
 FROM LegacyModifiers lm
 JOIN RequirementSets rs ON rs.RequirementSetId = lm.RequirementSetId
 WHERE rs.RequirementSetType = 'REQUIREMENTSET_TEST_ALL';

@@ -38,7 +38,7 @@
  */
 import { ContextManager } from 'fs://game/core/ui/context-manager/context-manager.js';
 import { Icon } from 'fs://game/core/ui/utilities/utilities-image.js';
-import { createLogger, whenDefined, wrapMethod } from '../mpt-shared/mpt-util.js';
+import { createLogger, whenDefined, wrapMethod } from '../zom-shared/zom-util.js';
 import { CONFIG } from './mp-observer-config.js';
 import { BAR_CLASS, setRefresh, viewedPlayerID } from './mp-observer-leader-view.js';
 
@@ -79,7 +79,7 @@ const TREES = [
 ];
 const TREE_SCREEN_PROPS = { singleton: true, createMouseGuard: true };
 const CHOOSER_TAGS = new Set(TREES.map((t) => t.chooser));
-const NOTE_CLASS = 'mpt-observer-no-religion';
+const NOTE_CLASS = 'zom-observer-no-religion';
 const GREAT_WORKS_BAR_STYLE = { marginTop: '-1rem', marginBottom: '1.5rem' };   // clear of the frame's top border
 
 const viewedPlayer = () => {
@@ -88,7 +88,7 @@ const viewedPlayer = () => {
 };
 
 function insertBar(anchor, screenTag, before = true) {
-  const bar = globalThis.MPTLeaderView?.playerBar(screenTag);
+  const bar = globalThis.ZOMLeaderView?.playerBar(screenTag);
   if (!bar || !anchor?.parentElement) return null;
   anchor.parentElement.insertBefore(bar, before ? anchor : anchor.nextSibling);
   return bar;
@@ -104,7 +104,7 @@ function showNoReligion(root, player) {
   if (root.querySelector('.' + NOTE_CLASS)) return;
   const note = document.createElement('p');
   note.classList.value = `${NOTE_CLASS} font-body-base text-accent-2 text-center self-center mt-6`;
-  note.textContent = Locale.compose('LOC_MPT_OBSERVER_NO_RELIGION', player.name);
+  note.textContent = Locale.compose('LOC_ZOM_OBSERVER_NO_RELIGION', player.name);
   root.querySelector('.belief-picker_belief-choices')?.parentElement?.prepend(note);
 }
 
@@ -162,11 +162,11 @@ const placeTreeBar = (root, screenTag) => insertBar(root?.querySelector('fxs-hea
  * its tab can never be selected.
  */
 function resetTreePanels(screen, treesCSV) {
-  if (screen._mptTreesCSV !== treesCSV && screen.panelContentElements?.size) {
+  if (screen._zomTreesCSV !== treesCSV && screen.panelContentElements?.size) {
     for (const entry of screen.panelContentElements.values()) entry.cardScaling?.removeListeners?.();
     screen.panelContentElements.clear();
   }
-  screen._mptTreesCSV = treesCSV;
+  screen._zomTreesCSV = treesCSV;
 }
 
 /** Opens the screen's tab bar on the tab with this id (the base picks the tree being researched, kept from the last leader or Age). */

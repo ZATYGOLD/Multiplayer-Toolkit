@@ -4,13 +4,13 @@ import { createStore } from '../../../core/vendor/solid-js/store/dist/store.js';
 /*
  * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/ui/policies/policies-support.js
- * (build dated 2026-09-16). The only changes are marked "MPT:", plus every
- * GameContext.localPlayerID read as mptLocalPlayerID(): for the Observer the
+ * (build dated 2026-09-16). The only changes are marked "ZOM:", plus every
+ * GameContext.localPlayerID read as zomLocalPlayerID(): for the Observer the
  * leader picked in the screen's leader row. Game actions keep the real local
  * player.
  * Re-apply after game updates; see ui/mp-observer/mp-observer-leader-view.js.
  */
-const mptLocalPlayerID = () => globalThis.MPTLeaderView?.playerID() ?? GameContext.localPlayerID;   // MPT: the leader the Observer views (everyone else: the local player)
+const zomLocalPlayerID = () => globalThis.ZOMLeaderView?.playerID() ?? GameContext.localPlayerID;   // ZOM: the leader the Observer views (everyone else: the local player)
 
 function getCivIconFromPolicy(card) {
   if (card.TraitType) {
@@ -23,7 +23,7 @@ function getCivIconFromPolicy(card) {
   return "fonticon_tradition";
 }
 function getAdditionalPolicyIcon(card) {
-  const localPlayer = Players.get(mptLocalPlayerID());
+  const localPlayer = Players.get(zomLocalPlayerID());
   const localPlayerCulture = localPlayer.Culture;
   if (!card.TraditionType) {
     return "";

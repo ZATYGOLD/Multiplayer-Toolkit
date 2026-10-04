@@ -7,13 +7,13 @@ import { TreeGridDirection } from '../tree-grid/tree-support.js';
 /*
  * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/ui/tech-tree/model-tech-tree.js
- * (build dated 2026-09-16). The only changes are marked "MPT:", plus every
- * GameContext.localPlayerID read as mptLocalPlayerID(): for the Observer the
+ * (build dated 2026-09-16). The only changes are marked "ZOM:", plus every
+ * GameContext.localPlayerID read as zomLocalPlayerID(): for the Observer the
  * leader picked in the screen's leader row. Game actions keep the real local
  * player.
  * Re-apply after game updates; see ui/mp-observer/mp-observer-leader-view.js.
  */
-const mptLocalPlayerID = () => globalThis.MPTLeaderView?.playerID() ?? GameContext.localPlayerID;   // MPT: the leader the Observer views (everyone else: the local player)
+const zomLocalPlayerID = () => globalThis.ZOMLeaderView?.playerID() ?? GameContext.localPlayerID;   // ZOM: the leader the Observer views (everyone else: the local player)
 
 class TechTreeModel {
   onUpdate;
@@ -36,7 +36,7 @@ class TechTreeModel {
     this.onUpdate = callback;
   }
   get playerId() {
-    return mptLocalPlayerID();
+    return zomLocalPlayerID();
   }
   get tree() {
     return this._tree;
@@ -71,7 +71,7 @@ class TechTreeModel {
   }
   update() {
     this._tree = null;
-    const localPlayerID = mptLocalPlayerID();
+    const localPlayerID = zomLocalPlayerID();
     const localPlayer = Players.get(localPlayerID);
     if (!localPlayer) {
       return;
@@ -88,7 +88,7 @@ class TechTreeModel {
         continue;
       }
       const turnsCallback = (nodeType) => {
-        const player = Players.get(mptLocalPlayerID());
+        const player = Players.get(zomLocalPlayerID());
         const turnsLeft = player ? player.Techs ? player.Techs.getTurnsForNode(nodeType) : 0 : 0;
         return turnsLeft;
       };

@@ -109,11 +109,11 @@ function wondersBuilt(player) {
 const EXTRA_ROWS = [
   { type: 'food', label: 'LOC_YIELD_FOOD', icon: () => UI.getIconURL('YIELD_FOOD', 'YIELD'), value: (p) => yieldValue(p, 'YIELD_FOOD') },
   { type: 'production', label: 'LOC_YIELD_PRODUCTION', icon: () => UI.getIconURL('YIELD_PRODUCTION', 'YIELD'), value: (p) => yieldValue(p, 'YIELD_PRODUCTION') },
-  { type: 'citizens', label: 'LOC_MPT_OBSERVER_CITIZENS', icon: () => UI.getIconURL('YIELD_POPULATION', 'YIELD'), value: (p) => p.Stats?.totalPopulation ?? 0 },
-  { type: 'military', label: 'LOC_MPT_OBSERVER_MILITARY_STRENGTH', icon: () => ICON.military, value: militaryStrength },
-  { type: 'techs', label: 'LOC_MPT_OBSERVER_TECHS_COMPLETED', icon: () => ICON.techs, value: (p) => p.Techs?.getNumTechsUnlocked?.() ?? 0 },
-  { type: 'civics', label: 'LOC_MPT_OBSERVER_CIVICS_COMPLETED', icon: () => ICON.civics, value: civicsCompleted },
-  { type: 'wonders', label: 'LOC_MPT_OBSERVER_WONDERS_BUILT', icon: () => ICON.wonders, value: wondersBuilt }
+  { type: 'citizens', label: 'LOC_ZOM_OBSERVER_CITIZENS', icon: () => UI.getIconURL('YIELD_POPULATION', 'YIELD'), value: (p) => p.Stats?.totalPopulation ?? 0 },
+  { type: 'military', label: 'LOC_ZOM_OBSERVER_MILITARY_STRENGTH', icon: () => ICON.military, value: militaryStrength },
+  { type: 'techs', label: 'LOC_ZOM_OBSERVER_TECHS_COMPLETED', icon: () => ICON.techs, value: (p) => p.Techs?.getNumTechsUnlocked?.() ?? 0 },
+  { type: 'civics', label: 'LOC_ZOM_OBSERVER_CIVICS_COMPLETED', icon: () => ICON.civics, value: civicsCompleted },
+  { type: 'wonders', label: 'LOC_ZOM_OBSERVER_WONDERS_BUILT', icon: () => ICON.wonders, value: wondersBuilt }
 ];
 
 /** Latest value per row type and player, for the best-in-category highlight. */
@@ -191,7 +191,7 @@ function activeResearch(playerID, treeType, tree, isTech) {
 }
 
 function researchRow(type, labelLoc, research, barColor) {
-  if (!research) return displayItem(type, Locale.compose(labelLoc), '', Locale.compose('LOC_MPT_OBSERVER_NONE'), 0);
+  if (!research) return displayItem(type, Locale.compose(labelLoc), '', Locale.compose('LOC_ZOM_OBSERVER_NONE'), 0);
   const details = research.turns > 0 ? `${research.name} (${research.turns})` : research.name;
   return displayItem(type, research.name, meterHTML(research.icon, research.name, research.progress * 100, barColor), details, research.turns);
 }
@@ -202,8 +202,8 @@ function researchItems(player) {
   const tech = busy ? null : activeResearch(player.id, player.Techs?.getTreeType?.(), player.Techs, true);
   const civic = busy ? null : activeResearch(player.id, player.Culture?.getActiveTree?.(), player.Culture, false);
   return [
-    researchRow('science', 'LOC_MPT_OBSERVER_RESEARCH_TECH', tech, BAR_COLOR.tech),
-    researchRow('culture', 'LOC_MPT_OBSERVER_RESEARCH_CIVIC', civic, BAR_COLOR.civic)
+    researchRow('science', 'LOC_ZOM_OBSERVER_RESEARCH_TECH', tech, BAR_COLOR.tech),
+    researchRow('culture', 'LOC_ZOM_OBSERVER_RESEARCH_CIVIC', civic, BAR_COLOR.civic)
   ];
 }
 
@@ -224,7 +224,7 @@ function productionItems(player) {
   try {
     for (const city of player.Cities?.getCities?.() ?? []) {
       if (!city || city.isTown) continue;
-      const cityName = Locale.compose(city.name || 'LOC_MPT_OBSERVER_NONE');
+      const cityName = Locale.compose(city.name || 'LOC_ZOM_OBSERVER_NONE');
       const queue = city.BuildQueue;
       const hash = queue?.currentProductionTypeHash;
       const producing = hash != null && hash !== -1;
@@ -245,7 +245,7 @@ const VICTORY_CLASSES = [
   { type: 'VICTORY_CLASS_ECONOMIC', emblem: 'img-emblem-economic' },
   { type: 'VICTORY_CLASS_MILITARY', emblem: 'img-emblem-military' },
   { type: 'VICTORY_CLASS_SCIENCE', emblem: 'img-emblem-scientific' },
-  { type: 'VICTORY_CLASS_SCORE', label: 'LOC_MPT_OBSERVER_SCORE' }
+  { type: 'VICTORY_CLASS_SCORE', label: 'LOC_ZOM_OBSERVER_SCORE' }
 ];
 
 /** Icon (or name) on the left, score on the right. */
@@ -278,7 +278,7 @@ function scoreItems(player) {
   } catch (e) { /* keep what was read */ }
   const items = VICTORY_CLASSES.filter((c) => points.has(c.type)).map((c) => scoreRow(c, points.get(c.type)));
   recordValues(player.id, items);
-  return items.length ? items : [scoreRow({ label: 'LOC_MPT_OBSERVER_NONE' }, 0)];
+  return items.length ? items : [scoreRow({ label: 'LOC_ZOM_OBSERVER_NONE' }, 0)];
 }
 
 // ============================ Pantheon badge ============================

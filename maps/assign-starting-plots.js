@@ -1,29 +1,29 @@
 import { g_MinLandmassSizeForIslandBias, g_DesiredBufferBetweenMajorStarts, g_RequiredBufferBetweenMajorStarts } from './map-globals.js';
 import { getSectorRegion, shuffle, isOceanAccess } from './map-utilities.js';
 import { profileScope } from '../scripts/profiling.js';
-import { createObserverEye, isObserverPlayerId, observerPlots } from './mpt-observer-eye.js';   // MPT
+import { createObserverEye, isObserverPlayerId, observerPlots } from './zom-observer-eye.js';   // ZOM
 
 /*
  * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/maps/assign-starting-plots.js
- * (build dated 2026-09-16); the ONLY changes are the "MPT:" import and block
+ * (build dated 2026-09-16); the ONLY changes are the "ZOM:" import and block
  * below, which wrap StartPositioner.setStartPosition. Re-apply after game updates.
  *
- * MPT: Observer players (leader LEADER_MPT_OBSERVER) never start on land with
+ * ZOM: Observer players (leader LEADER_ZOM_OBSERVER) never start on land with
  * the other majors: their start plot becomes the marine ice tile chosen by
- * ./mpt-observer-eye.js, and the Observer's Eye is created there.
+ * ./zom-observer-eye.js, and the Observer's Eye is created there.
  */
-(function mptObserverStartPositions() {
-  const log = (m) => console.log('[MPT observer-start] ' + m);
+(function zomObserverStartPositions() {
+  const log = (m) => console.log('[ZOM observer-start] ' + m);
   try {
-    StartPositioner.mptObserverPlots = new Set();      // plots used this map generation (the latest load wins)
-    if (StartPositioner.mptObserverWrapped) return;   // a reloaded script must not wrap twice
-    StartPositioner.mptObserverWrapped = true;
+    StartPositioner.zomObserverPlots = new Set();      // plots used this map generation (the latest load wins)
+    if (StartPositioner.zomObserverWrapped) return;   // a reloaded script must not wrap twice
+    StartPositioner.zomObserverWrapped = true;
     const base = StartPositioner.setStartPosition.bind(StartPositioner);
     StartPositioner.setStartPosition = (plotIndex, playerId) => {
       if (!isObserverPlayerId(playerId)) return base(plotIndex, playerId);
       let plots = null;
-      try { plots = observerPlots(StartPositioner.mptObserverPlots); }
+      try { plots = observerPlots(StartPositioner.zomObserverPlots); }
       catch (e) { log(`observer start failed for ${playerId}: ${e}`); }
       const result = base(plots ? plots.start.index : plotIndex, playerId);
       try {

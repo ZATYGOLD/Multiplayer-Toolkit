@@ -23,13 +23,13 @@ import { TRADE_ROUTE_CARD_MARGIN_RIGHT, TradeRouteCard } from './trade-route-car
 /*
  * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/ui-next/screens/commerce/commerce-screen-trade-tab.js
- * (build dated 2026-09-16). The only changes are marked "MPT:", plus every
- * GameContext.localPlayerID read as mptLocalPlayerID(): for the Observer the
+ * (build dated 2026-09-16). The only changes are marked "ZOM:", plus every
+ * GameContext.localPlayerID read as zomLocalPlayerID(): for the Observer the
  * leader picked in the screen's leader row. Game actions keep the real local
  * player.
  * Re-apply after game updates; see ui/mp-observer/mp-observer-leader-view.js.
  */
-const mptLocalPlayerID = () => globalThis.MPTLeaderView?.playerID() ?? GameContext.localPlayerID;   // MPT: the leader the Observer views (everyone else: the local player)
+const zomLocalPlayerID = () => globalThis.ZOMLeaderView?.playerID() ?? GameContext.localPlayerID;   // ZOM: the leader the Observer views (everyone else: the local player)
 
 var _tmpl$ = /* @__PURE__ */ template(`<div class="flex flex-row flex-wrap flex-auto relative"></div>`), _tmpl$2 = /* @__PURE__ */ template(`<div class="top-0 right-3 flex flex-row items-center"><div class="font-title uppercase text-secondary"></div></div>`), _tmpl$3 = /* @__PURE__ */ template(`<div class="ml-2"></div>`), _tmpl$4 = /* @__PURE__ */ template(`<div class="w-full flex flex-row justify-center items-center mt-2 text-accent-2 p-4"></div>`), _tmpl$5 = /* @__PURE__ */ template(`<div></div>`);
 const TradeRoutesContainer = (props) => {
@@ -189,8 +189,8 @@ const TradeRoutesContainer = (props) => {
       if (leaderA.isMinor && leaderB.isMajor) {
         return 1;
       }
-      const relationshipA = getRelationship(mptLocalPlayerID(), a.leaderId);
-      const relationshipB = getRelationship(mptLocalPlayerID(), b.leaderId);
+      const relationshipA = getRelationship(zomLocalPlayerID(), a.leaderId);
+      const relationshipB = getRelationship(zomLocalPlayerID(), b.leaderId);
       return relationshipB.amount - relationshipA.amount;
     }
     function sortBySettlementName(a, b) {

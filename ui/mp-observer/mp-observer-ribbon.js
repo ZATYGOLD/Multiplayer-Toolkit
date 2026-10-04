@@ -36,7 +36,7 @@
  */
 import { DiploRibbonData } from 'fs://game/base-standard/ui/diplo-ribbon/model-diplo-ribbon.js';
 import { PanelDiploRibbon } from 'fs://game/base-standard/ui/diplo-ribbon/panel-diplo-ribbon.js';
-import { createLogger, wrapMethod } from '../mpt-shared/mpt-util.js';
+import { createLogger, wrapMethod } from '../zom-shared/zom-util.js';
 import { CONFIG, OBSERVER_VIEW } from './mp-observer-config.js';
 import { inDiplomacyMode, inLeaderPanel, isObserverSeat, watchedPlayers } from './mp-observer-core.js';
 import { bestByType, pantheonBadge, productionItems, researchItems, scoreItems, yieldsItems } from './mp-observer-ribbon-data.js';

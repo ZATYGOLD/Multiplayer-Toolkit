@@ -70,7 +70,7 @@ rankings, Civ Unlocks or Age-transition choices, and complete no Triumphs.
   script near the bottom-centre of the map (moved onto ice when possible),
   sees 128 tiles through terrain, keeps every unit visible and is kept asleep.
 - UI only: the Observer counts as having met everyone, and screens read the
-  picked leader through `MPTLeaderView`.
+  picked leader through `ZOMLeaderView`.
 - Zoom past the engine's 0..1 range changes the field of view, as Zoom+ does.
 
 ### Known limits
@@ -84,7 +84,7 @@ rankings, Civ Unlocks or Age-transition choices, and complete no Triumphs.
 ## Project structure
 
 ```
-zatygolds-oberver-mode.modinfo   # manifest, observer-in-game criteria
+zatygolds-oberver-mode.modinfo   # manifest, zom-observer-in-game criteria
 ├─ config/                       # lobby DB: Observer leader / civs, hidden "Observer in game" option
 ├─ data/observer/                # gameplay DB: Observer leader, civs, Eye, Triumph / defeat exemptions
 ├─ icons/                        # Observer art
@@ -93,15 +93,15 @@ zatygolds-oberver-mode.modinfo   # manifest, observer-in-game criteria
 │  ui/tech-tree/, ui/culture-tree/, ui/tree-grid/   # base-game overrides: screens for a picked leader
 ├─ text/en_us/                   # mod info and in-game strings
 └─ ui/
-   ├─ mpt-shared/                # logger, method wrapping, deferred patching, Observer identity
+   ├─ zom-shared/                # logger, method wrapping, deferred patching, Observer identity
    ├─ mp-lobby/                  # Observer lobby role
    └─ mp-observer/               # in-game Observer (no-op for other players)
 ```
 
 Each feature has a `*-config.js` for settings, and modules patch the base UI at
-runtime. Base-game overrides are verbatim copies with changes marked `MPT:`;
+runtime. Base-game overrides are verbatim copies with changes marked `ZOM:`;
 they load only in a game with an Observer (modinfo criteria
-`observer-in-game`), so other games run the untouched files. Diagnostics go to
+`zom-observer-in-game`), so other games run the untouched files. Diagnostics go to
 `UI.log`.
 
 ---
@@ -114,6 +114,9 @@ they load only in a game with an Observer (modinfo criteria
   (`zatygolds-oberver-mode`); the pause, Competitive timer and lobby tooltip
   features stay in Multiplayer Toolkit. Earlier entries are the Observer's
   history inside Multiplayer Toolkit.
+- **Runs alongside Multiplayer Toolkit** — every identifier (leader, civs,
+  unit, text, icons, game option, UI elements, saved history) uses its own
+  `ZOM` prefix, so both mods can be enabled together.
 - **Yield Graphs redesign** — built from the Victories screen's own parts
   like its Economic tab: the ornate frame and tab bar, Rank / Leader / Per
   Turn rows with each leader's banner, portrait and line colour (click a row

@@ -10,13 +10,13 @@ import { activeTraditionCards, activePolicyCards, activeCrisisCards, availablePo
 /*
  * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/ui/policies/model-policies.js
- * (build dated 2026-09-16). The only changes are marked "MPT:", plus every
- * GameContext.localPlayerID read as mptLocalPlayerID(): for the Observer the
+ * (build dated 2026-09-16). The only changes are marked "ZOM:", plus every
+ * GameContext.localPlayerID read as zomLocalPlayerID(): for the Observer the
  * leader picked in the screen's leader row. Game actions keep the real local
  * player.
  * Re-apply after game updates; see ui/mp-observer/mp-observer-leader-view.js.
  */
-const mptLocalPlayerID = () => globalThis.MPTLeaderView?.playerID() ?? GameContext.localPlayerID;   // MPT: the leader the Observer views (everyone else: the local player)
+const zomLocalPlayerID = () => globalThis.ZOMLeaderView?.playerID() ?? GameContext.localPlayerID;   // ZOM: the leader the Observer views (everyone else: the local player)
 
 var PolicyCardIdeology = /* @__PURE__ */ ((PolicyCardIdeology2) => {
   PolicyCardIdeology2[PolicyCardIdeology2["NONE"] = 0] = "NONE";
@@ -45,7 +45,7 @@ function createPoliciesModel() {
   let _policySlots = 0;
   let _tradSlots = 0;
   let _crisisSlots = 0;
-  const localPlayer = Players.get(mptLocalPlayerID());
+  const localPlayer = Players.get(zomLocalPlayerID());
   const localPlayerCulture = localPlayer.Culture;
   const unlockedPolicies = localPlayerCulture.getUnlockedTraditions(
     CultureSlotTypes.POLICY_CULTURE_SLOT
@@ -459,7 +459,7 @@ function createPoliciesModel() {
   function handleOnClose() {
     ContextManager.pop("screen-policies");
   }
-  const mptReadOnly = mptLocalPlayerID() !== GameContext.localPlayerID;   // MPT: a viewed leader's policies cannot be changed
+  const zomReadOnly = zomLocalPlayerID() !== GameContext.localPlayerID;   // ZOM: a viewed leader's policies cannot be changed
   const model = createMutable({
     activePolicies: getActivePolicies(),
     availablePolicies: getAvailablePolicies(),
@@ -472,15 +472,15 @@ function createPoliciesModel() {
     policySlots: _policySlots,
     tradSlots: _tradSlots,
     crisisSlots: _crisisSlots,
-    canSwapPolicies: !mptReadOnly && canSwapNormalPolicies,   // MPT
-    canSwapCrisis: !mptReadOnly && canSwapCrisisPolicies,   // MPT
+    canSwapPolicies: !zomReadOnly && canSwapNormalPolicies,   // ZOM
+    canSwapCrisis: !zomReadOnly && canSwapCrisisPolicies,   // ZOM
     confirmDisable: false,
     isSmallScreen: isSmallScreenSize,
-    onCardClick: mptReadOnly ? () => {} : handleOnCardClick,   // MPT
-    onConfirmClick: mptReadOnly ? handleOnClose : handleOnConfirmClick,   // MPT
+    onCardClick: zomReadOnly ? () => {} : handleOnCardClick,   // ZOM
+    onConfirmClick: zomReadOnly ? handleOnClose : handleOnConfirmClick,   // ZOM
     onCloseClick: handleOnClose,
     clearArrays,
-    canSlotCard: mptReadOnly ? () => false : handleCanSlotCard,   // MPT
+    canSlotCard: zomReadOnly ? () => false : handleCanSlotCard,   // ZOM
     autoFocusCard: getAvailablePolicies()[0] != void 0 ? getAvailablePolicies()[0].$index : -1
   });
   return model;

@@ -30,7 +30,7 @@
  *   - While observing, the civilization and team dropdowns are locked and the
  *     team column shows the eye badge. The leader dropdown stays open so the
  *     player can switch back.
- *   - The host keeps the hidden game option MPTObserverInGame set while any
+ *   - The host keeps the hidden game option ZOMObserverInGame set while any
  *     player is the Observer; the modinfo loads the Observer's base-game
  *     overrides only in such a game.
  *   - The Observer is multiplayer-only: single-player game setup never lists
@@ -41,11 +41,11 @@
  */
 import MPLobbyModel, { MPLobbyDataModel } from 'fs://game/core/ui/shell/mp-staging/model-mp-staging-new.js';
 import { MPStagingTeamDropdown } from 'fs://game/core/ui/shell/mp-staging/mp-staging-team-dropdown.js';
-import { createLogger, isObserverCiv, OBSERVER_CIV_PREFIX, OBSERVER_LEADER, wrapMethod } from '../mpt-shared/mpt-util.js';
+import { createLogger, isObserverCiv, OBSERVER_CIV_PREFIX, OBSERVER_LEADER, wrapMethod } from '../zom-shared/zom-util.js';
 import { CONFIG } from './mp-lobby-config.js';
 
-const OBSERVER_ICON = 'fs://game/icons/mpt_observer.png';
-const OBSERVER_CIV_ICON = 'fs://game/icons/mpt_observer_civ.png';
+const OBSERVER_ICON = 'fs://game/icons/zom_observer.png';
+const OBSERVER_CIV_ICON = 'fs://game/icons/zom_observer_civ.png';
 const PARAM_LEADER = 'PlayerLeader';
 const PARAM_CIV = 'PlayerCivilization';
 const DROPDOWN_PARAM = 'DROPDOWN_TYPE_PLAYER_PARAM';
@@ -137,13 +137,13 @@ function shapeLeaderDropdown(dropdown, playerID) {
  */
 function shapeTeamDropdown(dropdown, playerID) {
   const observing = isObserverRow(playerID);
-  const items = (dropdown.itemList ?? []).filter((it) => !it.mptObserver);
+  const items = (dropdown.itemList ?? []).filter((it) => !it.zomObserver);
   if (observing) for (const it of items) it.disabled = true;
   items.push({
-    label: Locale.compose('LOC_MPT_TEAM_OBSERVER'),
+    label: Locale.compose('LOC_ZOM_TEAM_OBSERVER'),
     teamID: NO_TEAM,
-    mptObserver: true,
-    tooltip: 'LOC_MPT_TEAM_OBSERVER_DESC',
+    zomObserver: true,
+    tooltip: 'LOC_ZOM_TEAM_OBSERVER_DESC',
     disabled: false
   });
   dropdown.itemList = items;
@@ -157,7 +157,7 @@ function shapeTeamDropdown(dropdown, playerID) {
 
 // ============================ Observer-in-game flag ============================
 
-const PARAM_OBSERVER_IN_GAME = 'MPTObserverInGame';
+const PARAM_OBSERVER_IN_GAME = 'ZOMObserverInGame';
 let flagQueued = false;
 
 function isHost() {
@@ -278,7 +278,7 @@ function install() {
     try {
       const playerID = parseInt(event?.target?.getAttribute?.('data-player-id') ?? '');
       if (Number.isInteger(playerID)) {
-        if (event?.detail?.selectedItem?.mptObserver) {
+        if (event?.detail?.selectedItem?.zomObserver) {
           if (playerLeader(playerID) !== OBSERVER_LEADER) setParam(playerID, PARAM_LEADER, OBSERVER_LEADER);
           syncSelection(playerID, PARAM_LEADER, OBSERVER_LEADER);
           return;
@@ -296,7 +296,7 @@ function install() {
     try {
       if (name !== 'selected-item-index' && name !== 'dropdown-items') return;
       const index = parseInt(this.Root.getAttribute('selected-item-index') ?? '-1');
-      const observing = !!this.dropdownItems?.[index]?.mptObserver;
+      const observing = !!this.dropdownItems?.[index]?.zomObserver;
       if (observing) {
         this.Root.setAttribute('icon-container-innerhtml',
           `<div class='absolute w-16 h-16' style='background-image: url("${OBSERVER_ICON}"); background-size: contain; background-repeat: no-repeat; background-position: center;'></div>`);

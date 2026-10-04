@@ -34,7 +34,7 @@
  */
 import { ContextManager } from 'fs://game/core/ui/context-manager/context-manager.js';
 import PopupSequencer from 'fs://game/base-standard/ui/popup-sequencer/popup-sequencer.js';
-import { wrapMethod } from '../mpt-shared/mpt-util.js';
+import { wrapMethod } from '../zom-shared/zom-util.js';
 import { isObserverSeat } from './mp-observer-core.js';
 import { CHOOSER_TAGS, openFullTree } from './mp-observer-leader-screens.js';
 import { OVERVIEW_PANEL_TAG, setOverviewSource } from './mp-observer-overview.js';

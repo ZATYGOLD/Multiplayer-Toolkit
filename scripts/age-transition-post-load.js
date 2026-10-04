@@ -5,16 +5,16 @@ import { removeRuralDistrict, placeRuralDistrict, replaceIslandResources } from 
 import { tileClassIdFromValidBiome, prepareResourceSet, VERBOSE_LOGGING, getTileId, getDenseTileGroupId, isResourceAllowedOnLandmass, NUM_LANDMASS_GROUPS, NUM_TILE_GROUPS, buildPlacementContext, DENSITY_TARGET, tileClassFromId, buildBlueNoiseWindows, MAX_DENSITY, placeResourcesWithBlueNoise } from '../maps/resource-placement-common.js';
 import { profileScope } from './profiling.js';
 import { RandomImpl } from './random-pcg-32.js';
-import { placeObserverEyes } from '../maps/mpt-observer-eye.js';   // MPT
+import { placeObserverEyes } from '../maps/zom-observer-eye.js';   // ZOM
 
 /*
  * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/scripts/age-transition-post-load.js
- * (build dated 2026-09-30); the ONLY changes are the "MPT:" import and the call
+ * (build dated 2026-09-30); the ONLY changes are the "ZOM:" import and the call
  * at the end of generateTransition. Re-apply after game updates.
  *
- * MPT: an Age transition resets every unit, so each Observer gets a new
- * Observer's Eye (its vision) on the marine ice (../maps/mpt-observer-eye.js).
+ * ZOM: an Age transition resets every unit, so each Observer gets a new
+ * Observer's Eye (its vision) on the marine ice (../maps/zom-observer-eye.js).
  */
 
 console.log("Loading age-transition-post-load.ts");
@@ -74,7 +74,7 @@ function generateTransition() {
     generateRetainCityCards(iPlayer, regressedCities);
     Players.AdvancedStart.get(iPlayer)?.dynamicCardsAddedComplete();
   }
-  try { placeObserverEyes(); } catch (e) { console.log("[MPT observer-eye] placement failed: " + e); }   // MPT
+  try { placeObserverEyes(); } catch (e) { console.log("[ZOM observer-eye] placement failed: " + e); }   // ZOM
 }
 function removeObsoleteResources(aGeneratedResourceHashes) {
   const scope = new profileScope("Removing old resources");

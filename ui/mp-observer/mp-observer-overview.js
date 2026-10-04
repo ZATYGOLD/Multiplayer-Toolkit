@@ -29,18 +29,18 @@
 import Panel from 'fs://game/core/ui/panel-support.js';
 import { FocusManager } from 'fs://game/core/ui-next/services/focus-manager.js';
 import { InputEngineEventName } from 'fs://game/core/ui/input/input-support.js';
-import { clearChildren } from '../mpt-shared/mpt-util.js';
+import { clearChildren } from '../zom-shared/zom-util.js';
 import { watchedPlayers } from './mp-observer-core.js';
 
-const PANEL_TAG = 'mpt-observer-overview';
+const PANEL_TAG = 'zom-observer-overview';
 const PANTHEON_STYLES = 'fs://game/base-standard/ui/pantheon-complete/panel-pantheon-complete.css';
 
 const CONTENT = `
 <fxs-subsystem-frame class="pantheon-frame items-center shrink pointer-events-auto" tabindex="-1" backDrop="fs://game/pant_altarbg.png">
   <div class="flex flex-col items-center" data-slot="header">
-    <fxs-header class="mpt-overview-title tracking-150 justify-center flex w-96" data-slot="header"></fxs-header>
+    <fxs-header class="zom-overview-title tracking-150 justify-center flex w-96" data-slot="header"></fxs-header>
   </div>
-  <div class="mpt-overview-list mx-6 flex items-center flex-col flex-auto relative"></div>
+  <div class="zom-overview-list mx-6 flex items-center flex-col flex-auto relative"></div>
 </fxs-subsystem-frame>`;
 
 // ============================ Sources ============================
@@ -56,7 +56,7 @@ function pantheonEntries(player) {
 }
 
 const SOURCES = {
-  pantheons: { title: 'LOC_BELIEF_CLASS_PANTHEON_NAME', entries: pantheonEntries, empty: 'LOC_MPT_OBSERVER_NO_PANTHEON' }
+  pantheons: { title: 'LOC_BELIEF_CLASS_PANTHEON_NAME', entries: pantheonEntries, empty: 'LOC_ZOM_OBSERVER_NO_PANTHEON' }
 };
 
 let requestedSource = 'pantheons';
@@ -96,8 +96,8 @@ class ObserverOverviewPanel extends Panel {
   }
 
   render(source) {
-    this.Root.querySelector('.mpt-overview-title')?.setAttribute('title', source.title);
-    const list = this.Root.querySelector('.mpt-overview-list');
+    this.Root.querySelector('.zom-overview-title')?.setAttribute('title', source.title);
+    const list = this.Root.querySelector('.zom-overview-list');
     if (!list) return;
     clearChildren(list);
     for (const player of watchedPlayers()) {

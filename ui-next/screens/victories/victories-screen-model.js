@@ -16,20 +16,20 @@ import { createEngineEvent } from '../../../../core/ui-next/utilities/game-core-
  * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/ui-next/screens/victories/
  * victories-screen-model.js (build dated 2026-09-16). The only changes are
- * marked "MPT:": Observer players (LEADER_MPT_OBSERVER) are left out of every
+ * marked "ZOM:": Observer players (LEADER_ZOM_OBSERVER) are left out of every
  * player list on the Victories screens, and an Observer sees every leader's
  * real name instead of "An unmet Player". Re-apply after game updates.
  */
-const MPT_OBSERVER_LEADER = 'LEADER_MPT_OBSERVER';
-function mptIsObserver(playerId) {
+const ZOM_OBSERVER_LEADER = 'LEADER_ZOM_OBSERVER';
+function zomIsObserver(playerId) {
   try {
     const p = Players.get(playerId);
-    return !!p && GameInfo.Leaders.lookup(p.leaderType)?.LeaderType === MPT_OBSERVER_LEADER;
+    return !!p && GameInfo.Leaders.lookup(p.leaderType)?.LeaderType === ZOM_OBSERVER_LEADER;
   } catch (e) { return false; }
 }
 /** An Observer has "met" everyone; otherwise the normal diplomacy check. */
-function mptHasMet(diplomacy, playerId) {
-  if (mptIsObserver(GameContext.localPlayerID)) return true;
+function zomHasMet(diplomacy, playerId) {
+  if (zomIsObserver(GameContext.localPlayerID)) return true;
   return diplomacy.hasMet(playerId);
 }
 
@@ -514,8 +514,8 @@ function createVictoriesScreenModel(isEndGame, allowOneMoreTurn, showNextTurnBut
     applyUnFocusPlayer(playerId, tabType);
   }
   function getPlayerList() {
-    const PlayerList = Players.getAlive().filter((player) => !mptIsObserver(player.id));   // MPT: no observers
-    if (!mptIsObserver(GameContext.localPlayerID) && !PlayerList.find((player) => player.id == GameContext.localPlayerID)) {
+    const PlayerList = Players.getAlive().filter((player) => !zomIsObserver(player.id));   // ZOM: no observers
+    if (!zomIsObserver(GameContext.localPlayerID) && !PlayerList.find((player) => player.id == GameContext.localPlayerID)) {
       const localPlayer = Players.get(GameContext.localPlayerID);
       if (localPlayer) {
         PlayerList.push(localPlayer);
@@ -827,7 +827,7 @@ function createVictoriesScreenModel(isEndGame, allowOneMoreTurn, showNextTurnBut
           if (localPlayer) {
             const localPlayerDiplomacy = localPlayer.Diplomacy;
             if (localPlayerDiplomacy) {
-              const hasMet = mptHasMet(localPlayerDiplomacy, player.id) || player.id == GameContext.localPlayerID;
+              const hasMet = zomHasMet(localPlayerDiplomacy, player.id) || player.id == GameContext.localPlayerID;
               tempSheet.metPlayer = hasMet;
               if (tempSheet.items.length > 0 || tempSheet.prereqs.length > 0) {
                 if (!hasMet) {
@@ -890,13 +890,13 @@ function createVictoriesScreenModel(isEndGame, allowOneMoreTurn, showNextTurnBut
           turnsProgress,
           turnsTotal,
           dominant,
-          hasMet: mptHasMet(localDiplo, player.id) || player.id == GameContext.localPlayerID,
+          hasMet: zomHasMet(localDiplo, player.id) || player.id == GameContext.localPlayerID,
           winner: isWinner
         });
       }
     });
     playerScores.sort((a, b) => b.score - a.score);
-    const numTopPlayers = mptIsObserver(GameContext.localPlayerID) ? playerScores.length : Math.min(playerScores.length, 3);   // MPT: Observer sees all
+    const numTopPlayers = zomIsObserver(GameContext.localPlayerID) ? playerScores.length : Math.min(playerScores.length, 3);   // ZOM: Observer sees all
     let userInTop3 = false;
     for (let i = 0; i < numTopPlayers; i++) {
       if (playerScores[i].player.id == GameContext.localPlayerID) {
@@ -984,7 +984,7 @@ function createVictoriesScreenModel(isEndGame, allowOneMoreTurn, showNextTurnBut
         }
       }
       if (localPlayerDiplomacy) {
-        playerInfo.playerIsMet = mptHasMet(localPlayerDiplomacy, player.id) || player.id == GameContext.localPlayerID;
+        playerInfo.playerIsMet = zomHasMet(localPlayerDiplomacy, player.id) || player.id == GameContext.localPlayerID;
       }
     }
     if (player.Diplomacy) {
@@ -1150,7 +1150,7 @@ function createVictoriesScreenModel(isEndGame, allowOneMoreTurn, showNextTurnBut
             }
             const localPlayer = Players.get(GameContext.localPlayerID);
             if (localPlayer && localPlayer.Diplomacy) {
-              structureInfo.hasMet = mptHasMet(localPlayer.Diplomacy, player.id) || player.id == GameContext.localPlayerID;
+              structureInfo.hasMet = zomHasMet(localPlayer.Diplomacy, player.id) || player.id == GameContext.localPlayerID;
             }
             playerMilDetail.structures.push(structureInfo);
           }

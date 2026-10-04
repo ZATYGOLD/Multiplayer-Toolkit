@@ -7,13 +7,13 @@ import { getLegacyCardStyling } from './legacies-support.js';
 /*
  * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/ui-next/screens/legacies/legacies-model.js
- * (build dated 2026-09-16). The only changes are marked "MPT:", plus every
- * GameContext.localPlayerID read as mptLocalPlayerID(): for the Observer the
+ * (build dated 2026-09-16). The only changes are marked "ZOM:", plus every
+ * GameContext.localPlayerID read as zomLocalPlayerID(): for the Observer the
  * leader picked in the screen's leader row. Game actions keep the real local
  * player.
  * Re-apply after game updates; see ui/mp-observer/mp-observer-leader-view.js.
  */
-const mptLocalPlayerID = () => globalThis.MPTLeaderView?.playerID() ?? GameContext.localPlayerID;   // MPT: the leader the Observer views (everyone else: the local player)
+const zomLocalPlayerID = () => globalThis.ZOMLeaderView?.playerID() ?? GameContext.localPlayerID;   // ZOM: the leader the Observer views (everyone else: the local player)
 
 var TriumphFilterOptions = /* @__PURE__ */ ((TriumphFilterOptions2) => {
   TriumphFilterOptions2["DEFAULT"] = "DEFAULT";
@@ -44,7 +44,7 @@ var CivFilterOptions = /* @__PURE__ */ ((CivFilterOptions2) => {
   return CivFilterOptions2;
 })(CivFilterOptions || {});
 function createTriumphData(triumphDef) {
-  const playerLegacies = Players.get(mptLocalPlayerID())?.Legacies;
+  const playerLegacies = Players.get(zomLocalPlayerID())?.Legacies;
   const questTracker = getQuestTracker();
   if (!playerLegacies) {
     console.error("legacies-model: Unable to get legacies object for local player while creating the legacy car");
@@ -70,7 +70,7 @@ function createTriumphData(triumphDef) {
   }
   let lockedReason;
   for (const id of Players.getWasEverAliveMajorIds()) {
-    if (id == mptLocalPlayerID()) {
+    if (id == zomLocalPlayerID()) {
       break;
     }
     const player = Players.get(Players.getWasEverAliveMajorIds()[id]);
@@ -96,7 +96,7 @@ function createTriumphData(triumphDef) {
   if (isTriggered) {
     filterOptions.push("COMPLETE" /* COMPLETE */);
   } else {
-    if (!(triumphProgress?.raceWinner != mptLocalPlayerID() && triumphProgress?.raceWinner != -1)) {
+    if (!(triumphProgress?.raceWinner != zomLocalPlayerID() && triumphProgress?.raceWinner != -1)) {
       filterOptions.push("INCOMPLETE" /* INCOMPLETE */);
     }
   }
@@ -115,7 +115,7 @@ function createTriumphData(triumphDef) {
     progressGoal: progressGoal ?? 0,
     triumphRequirements: triumphDef.TriggerDescription,
     triumphDescription: triumphDef.Description,
-    isFirstOnly: triumphDef.FirstPlayerOnly && triumphProgress?.raceWinner != mptLocalPlayerID() && triumphProgress?.raceWinner != -1,
+    isFirstOnly: triumphDef.FirstPlayerOnly && triumphProgress?.raceWinner != zomLocalPlayerID() && triumphProgress?.raceWinner != -1,
     traitIcon,
     bgColor,
     descriptionBG,
@@ -133,7 +133,7 @@ function createTriumphData(triumphDef) {
     legacyData.progressPips = progressPips;
   }
   if (triumphProgress && triumphProgress?.raceWinner != -1) {
-    const localPlayerDiplomacy = Players.get(mptLocalPlayerID())?.Diplomacy;
+    const localPlayerDiplomacy = Players.get(zomLocalPlayerID())?.Diplomacy;
     const playerName = localPlayerDiplomacy?.hasMet(triumphProgress?.raceWinner) ? Players.get(triumphProgress?.raceWinner)?.name : Locale.compose("LOC_UI_UNMET_PLAYER_NAME");
     if (playerName) {
       legacyData.raceWinnerName = playerName;
@@ -151,7 +151,7 @@ function populateTriumphData() {
     titleText: "LOC_LEGACIES_MINOR_TRIUMPHS",
     triumphs: []
   };
-  const playerLegacies = Players.get(mptLocalPlayerID())?.Legacies;
+  const playerLegacies = Players.get(zomLocalPlayerID())?.Legacies;
   if (!playerLegacies) {
     return allTriumphData;
   }
@@ -178,7 +178,7 @@ function createLegaciesScreenModel() {
   }
   let bgSrc = "";
   let playerColor = "";
-  const localPlayer = Players.get(mptLocalPlayerID());
+  const localPlayer = Players.get(zomLocalPlayerID());
   if (localPlayer != null) {
     const civDefinition = GameInfo.Civilizations.lookup(localPlayer.civilizationType);
     if (civDefinition) {
@@ -187,7 +187,7 @@ function createLegaciesScreenModel() {
       const civImage = civImagePath ? `url(${civImagePath})` : "";
       bgSrc = civImage;
     }
-    const bgColor = UI.Color.getPlayerColors(mptLocalPlayerID());
+    const bgColor = UI.Color.getPlayerColors(zomLocalPlayerID());
     if (bgColor) {
       const variants = UI.Color.createPlayerColorVariants(bgColor);
       playerColor = variants.primaryColor.tintColor;

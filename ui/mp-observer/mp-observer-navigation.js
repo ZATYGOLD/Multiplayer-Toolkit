@@ -31,7 +31,7 @@
  */
 import { RaiseDiplomacyEvent } from 'fs://game/base-standard/ui/diplomacy/diplomacy-events.js';
 import WorldInput from 'fs://game/base-standard/ui/world-input/world-input.js';
-import { createLogger, findAncestor, isObserverPlayer, wrapMethod } from '../mpt-shared/mpt-util.js';
+import { createLogger, findAncestor, isObserverPlayer, wrapMethod } from '../zom-shared/zom-util.js';
 import { CONFIG } from './mp-observer-config.js';
 import { isObserverSeat, watchedPlayers } from './mp-observer-core.js';
 import { isDetailsHidden, setDetailsHidden } from './mp-observer-ribbon-style.js';

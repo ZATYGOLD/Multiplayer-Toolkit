@@ -17,7 +17,7 @@ import style from './screen-policies.scss.js';
 /*
  * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/ui/policies/government-hub.js
- * (build dated 2026-09-16). The only changes are marked "MPT:": for the
+ * (build dated 2026-09-16). The only changes are marked "ZOM:": for the
  * Observer, a row of leader portraits above the tabs picks the leader shown,
  * and the open tab is kept when another leader is picked.
  * Re-apply after game updates; see ui/mp-observer/mp-observer-leader-view.js.
@@ -56,10 +56,10 @@ const GovermentScreenComponent = (_props) => {
               return isMobile();
             },
             get children() {
-              return [globalThis.MPTLeaderView?.playerBar('screen-policies') ?? null, createComponent(Tab, {   // MPT: the Observer's leader picker
-                activeTab: () => { const tab = activePolicyTab(); return globalThis.MPTLeaderView?.restoredTab('screen-policies') ?? tab; },   // MPT: same tab after a leader switch
-                get defaultTab() { return globalThis.MPTLeaderView?.restoredTab('screen-policies'); },   // MPT: applied as the tabs register
-                onTabChanged: globalThis.MPTLeaderView?.trackTab('screen-policies'),   // MPT: remember the open tab
+              return [globalThis.ZOMLeaderView?.playerBar('screen-policies') ?? null, createComponent(Tab, {   // ZOM: the Observer's leader picker
+                activeTab: () => { const tab = activePolicyTab(); return globalThis.ZOMLeaderView?.restoredTab('screen-policies') ?? tab; },   // ZOM: same tab after a leader switch
+                get defaultTab() { return globalThis.ZOMLeaderView?.restoredTab('screen-policies'); },   // ZOM: applied as the tabs register
+                onTabChanged: globalThis.ZOMLeaderView?.trackTab('screen-policies'),   // ZOM: remember the open tab
                 "class": "w-full relative flex flex-col flex-auto pointer-events-auto",
                 get children() {
                   return [createComponent(Tab.TabList, {

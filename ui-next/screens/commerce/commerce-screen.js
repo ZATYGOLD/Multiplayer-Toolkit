@@ -17,7 +17,7 @@ import style from './commerce-screen.scss.js';
 /*
  * Zatygold's Observer Mode - base-game override.
  * Copied verbatim from the game's base-standard/ui-next/screens/commerce/commerce-screen.js
- * (build dated 2026-09-16). The only changes are marked "MPT:": for the
+ * (build dated 2026-09-16). The only changes are marked "ZOM:": for the
  * Observer, a row of leader portraits above the tabs picks the leader shown,
  * and the open tab is kept when another leader is picked.
  * Re-apply after game updates; see ui/mp-observer/mp-observer-leader-view.js.
@@ -27,7 +27,7 @@ const CommerceScreenComponent = (_props) => {
   const model = createCommerceScreenModel();
   const audioTrigger = useAudio("CommerceScreenPopup");
   const realLocalPlayerId = useLocalPlayerId();
-  const localPlayerId = () => globalThis.MPTLeaderView?.playerID() ?? realLocalPlayerId();   // MPT: the viewed leader
+  const localPlayerId = () => globalThis.ZOMLeaderView?.playerID() ?? realLocalPlayerId();   // ZOM: the viewed leader
   const civName = createMemo(() => {
     const player = Players.get(localPlayerId());
     if (!player) {
@@ -72,12 +72,12 @@ const CommerceScreenComponent = (_props) => {
         },
         onContextChanged,
         get children() {
-          return [globalThis.MPTLeaderView?.playerBar('screen-resource-allocation') ?? null, createComponent(Tab, {   // MPT: the Observer's leader picker
+          return [globalThis.ZOMLeaderView?.playerBar('screen-resource-allocation') ?? null, createComponent(Tab, {   // ZOM: the Observer's leader picker
             "class": "w-full flex flex-col flex-auto pointer-events-auto relative",
             get onTabChanged() {
-              return globalThis.MPTLeaderView?.trackTab('screen-resource-allocation', model.onTabChanged) ?? model.onTabChanged;   // MPT: remember the open tab
+              return globalThis.ZOMLeaderView?.trackTab('screen-resource-allocation', model.onTabChanged) ?? model.onTabChanged;   // ZOM: remember the open tab
             },
-            get defaultTab() { return globalThis.MPTLeaderView?.restoredTab('screen-resource-allocation'); },   // MPT: same tab after a leader switch
+            get defaultTab() { return globalThis.ZOMLeaderView?.restoredTab('screen-resource-allocation'); },   // ZOM: same tab after a leader switch
             get children() {
               return [createComponent(Tab.TabList, {
                 get ["class"]() {

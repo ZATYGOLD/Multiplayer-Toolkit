@@ -31,10 +31,10 @@
  * the map) but accepts the move. Without ice the Eye stays on the nearest
  * open water.
  */
-const OBSERVER_LEADER = 'LEADER_MPT_OBSERVER';
-const EYE_UNIT = 'UNIT_MPT_OBSERVER_EYE';
+const OBSERVER_LEADER = 'LEADER_ZOM_OBSERVER';
+const EYE_UNIT = 'UNIT_ZOM_OBSERVER_EYE';
 
-const log = (m) => console.log('[MPT observer-eye] ' + m);
+const log = (m) => console.log('[ZOM observer-eye] ' + m);
 
 function isObserverPlayerId(playerId) {
   try { return GameInfo.Leaders.lookup(Players.get(playerId)?.leaderType)?.LeaderType === OBSERVER_LEADER; }

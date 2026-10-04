@@ -1,179 +1,179 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Database>
   <EnglishText>
-    <!-- MPT Observer leader & civilizations -->
-    <Row Tag="LOC_MPT_OBSERVER_NO_PANTHEON">
+    <!-- ZOM Observer leader & civilizations -->
+    <Row Tag="LOC_ZOM_OBSERVER_NO_PANTHEON">
       <Text>No Pantheon yet.</Text>
     </Row>
-    <Row Tag="LOC_MPT_OBSERVER_CITIZENS">
+    <Row Tag="LOC_ZOM_OBSERVER_CITIZENS">
       <Text>Citizens</Text>
     </Row>
-    <Row Tag="LOC_MPT_OBSERVER_TECHS_COMPLETED">
+    <Row Tag="LOC_ZOM_OBSERVER_TECHS_COMPLETED">
       <Text>Technologies Completed</Text>
     </Row>
-    <Row Tag="LOC_MPT_OBSERVER_CIVICS_COMPLETED">
+    <Row Tag="LOC_ZOM_OBSERVER_CIVICS_COMPLETED">
       <Text>Civics Completed</Text>
     </Row>
-    <Row Tag="LOC_MPT_OBSERVER_WONDERS_BUILT">
+    <Row Tag="LOC_ZOM_OBSERVER_WONDERS_BUILT">
       <Text>Wonders Built</Text>
     </Row>
-    <Row Tag="LOC_MPT_OBSERVER_MILITARY_STRENGTH">
+    <Row Tag="LOC_ZOM_OBSERVER_MILITARY_STRENGTH">
       <Text>Military Strength</Text>
     </Row>
-    <Row Tag="LOC_MPT_OBSERVER_HIDE_DETAILS">
+    <Row Tag="LOC_ZOM_OBSERVER_HIDE_DETAILS">
       <Text>Hide Leader Details</Text>
     </Row>
-    <Row Tag="LOC_MPT_OBSERVER_SHOW_DETAILS">
+    <Row Tag="LOC_ZOM_OBSERVER_SHOW_DETAILS">
       <Text>Show Leader Details</Text>
     </Row>
-    <Row Tag="LOC_MPT_GRAPHS_TITLE">
+    <Row Tag="LOC_ZOM_GRAPHS_TITLE">
       <Text>Yield Graphs</Text>
     </Row>
-    <Row Tag="LOC_MPT_GRAPH_SCIENCE">
+    <Row Tag="LOC_ZOM_GRAPH_SCIENCE">
       <Text>Science</Text>
     </Row>
-    <Row Tag="LOC_MPT_GRAPH_CULTURE">
+    <Row Tag="LOC_ZOM_GRAPH_CULTURE">
       <Text>Culture</Text>
     </Row>
-    <Row Tag="LOC_MPT_GRAPH_GOLD">
+    <Row Tag="LOC_ZOM_GRAPH_GOLD">
       <Text>Gold</Text>
     </Row>
-    <Row Tag="LOC_MPT_GRAPH_INFLUENCE">
+    <Row Tag="LOC_ZOM_GRAPH_INFLUENCE">
       <Text>Influence</Text>
     </Row>
-    <Row Tag="LOC_MPT_GRAPH_PER_TURN">
+    <Row Tag="LOC_ZOM_GRAPH_PER_TURN">
       <Text>{1_Yield} per Turn</Text>
     </Row>
-    <Row Tag="LOC_MPT_GRAPH_OVERALL">
+    <Row Tag="LOC_ZOM_GRAPH_OVERALL">
       <Text>Overall</Text>
     </Row>
-    <Row Tag="LOC_MPT_GRAPH_HIDE_LINE">
+    <Row Tag="LOC_ZOM_GRAPH_HIDE_LINE">
       <Text>Click to hide this leader's line.</Text>
     </Row>
-    <Row Tag="LOC_MPT_GRAPH_SHOW_LINE">
+    <Row Tag="LOC_ZOM_GRAPH_SHOW_LINE">
       <Text>Click to show this leader's line.</Text>
     </Row>
-    <Row Tag="LOC_MPT_GRAPH_PER_TURN_COLUMN">
+    <Row Tag="LOC_ZOM_GRAPH_PER_TURN_COLUMN">
       <Text>Per Turn</Text>
     </Row>
-    <Row Tag="LOC_MPT_GRAPH_DESCRIPTION">
+    <Row Tag="LOC_ZOM_GRAPH_DESCRIPTION">
       <Text>Each leader's {1_Yield} per turn, recorded every turn of the game.</Text>
     </Row>
-    <Row Tag="LOC_MPT_GRAPH_FOOD">
+    <Row Tag="LOC_ZOM_GRAPH_FOOD">
       <Text>Food</Text>
     </Row>
-    <Row Tag="LOC_MPT_GRAPH_PRODUCTION">
+    <Row Tag="LOC_ZOM_GRAPH_PRODUCTION">
       <Text>Production</Text>
     </Row>
-    <Row Tag="LOC_MPT_GRAPH_NO_DATA">
+    <Row Tag="LOC_ZOM_GRAPH_NO_DATA">
       <Text>No turns recorded yet. Yields are recorded at the start of every turn.</Text>
     </Row>
-    <Row Tag="LOC_MPT_OBSERVER_PORTRAIT_TT">
+    <Row Tag="LOC_ZOM_OBSERVER_PORTRAIT_TT">
       <Text>{1_Leader}[N]Right-click: {2_Action}</Text>
     </Row>
-    <Row Tag="LOC_MPT_OBSERVER_AUTO_END_TURN_ON">
+    <Row Tag="LOC_ZOM_OBSERVER_AUTO_END_TURN_ON">
       <Text>Auto End Turn: On</Text>
     </Row>
-    <Row Tag="LOC_MPT_OBSERVER_AUTO_END_TURN_OFF">
+    <Row Tag="LOC_ZOM_OBSERVER_AUTO_END_TURN_OFF">
       <Text>Auto End Turn: Off</Text>
     </Row>
-    <Row Tag="LOC_MPT_OBSERVER_AT_WAR_WITH">
+    <Row Tag="LOC_ZOM_OBSERVER_AT_WAR_WITH">
       <Text>At war with {1_Leader}</Text>
     </Row>
-    <Row Tag="LOC_MPT_OBSERVER_NO_WARS">
+    <Row Tag="LOC_ZOM_OBSERVER_NO_WARS">
       <Text>Not at war.</Text>
     </Row>
-    <Row Tag="LOC_MPT_OBSERVER_COMBAT_ESTIMATE">
+    <Row Tag="LOC_ZOM_OBSERVER_COMBAT_ESTIMATE">
       <Text>Estimate: base strengths only</Text>
     </Row>
-    <Row Tag="LOC_MPT_OBSERVER_TECHS_CIVICS">
+    <Row Tag="LOC_ZOM_OBSERVER_TECHS_CIVICS">
       <Text>Techs &amp; Civics</Text>
     </Row>
-    <Row Tag="LOC_MPT_OBSERVER_YIELDS">
+    <Row Tag="LOC_ZOM_OBSERVER_YIELDS">
       <Text>Yields</Text>
     </Row>
-    <Row Tag="LOC_MPT_OBSERVER_RESEARCH">
+    <Row Tag="LOC_ZOM_OBSERVER_RESEARCH">
       <Text>Research</Text>
     </Row>
-    <Row Tag="LOC_MPT_OBSERVER_PRODUCTION">
+    <Row Tag="LOC_ZOM_OBSERVER_PRODUCTION">
       <Text>Production</Text>
     </Row>
-    <Row Tag="LOC_MPT_OBSERVER_SCORE">
+    <Row Tag="LOC_ZOM_OBSERVER_SCORE">
       <Text>Score</Text>
     </Row>
-    <Row Tag="LOC_MPT_OBSERVER_RESEARCH_TECH">
+    <Row Tag="LOC_ZOM_OBSERVER_RESEARCH_TECH">
       <Text>Researching</Text>
     </Row>
-    <Row Tag="LOC_MPT_OBSERVER_RESEARCH_CIVIC">
+    <Row Tag="LOC_ZOM_OBSERVER_RESEARCH_CIVIC">
       <Text>Current Civic</Text>
     </Row>
-    <Row Tag="LOC_MPT_OBSERVER_NONE">
+    <Row Tag="LOC_ZOM_OBSERVER_NONE">
       <Text>—</Text>
     </Row>
-    <Row Tag="LOC_MPT_OBSERVER_NO_RELIGION">
+    <Row Tag="LOC_ZOM_OBSERVER_NO_RELIGION">
       <Text>{1_Leader} has not founded a religion yet.</Text>
     </Row>
-    <Row Tag="LOC_MPT_OBSERVER_IN_GAME">
+    <Row Tag="LOC_ZOM_OBSERVER_IN_GAME">
       <Text>Observer in game</Text>
     </Row>
-    <Row Tag="LOC_MPT_TEAM_OBSERVER">
+    <Row Tag="LOC_ZOM_TEAM_OBSERVER">
       <Text>Observer</Text>
     </Row>
-    <Row Tag="LOC_MPT_TEAM_OBSERVER_DESC">
+    <Row Tag="LOC_ZOM_TEAM_OBSERVER_DESC">
       <Text>Observers have no team. Pick another leader to play.</Text>
     </Row>
-    <Row Tag="LOC_LEADER_MPT_OBSERVER_NAME">
+    <Row Tag="LOC_LEADER_ZOM_OBSERVER_NAME">
       <Text>Observer</Text>
     </Row>
-    <Row Tag="LOC_LEADER_MPT_OBSERVER_DESCRIPTION">
+    <Row Tag="LOC_LEADER_ZOM_OBSERVER_DESCRIPTION">
       <Text>Watch the game without playing. The Observer has no abilities, founds no settlement and sees the whole map. Pair with the Observer civilization.</Text>
     </Row>
-    <Row Tag="LOC_LEADER_MPT_OBSERVER_QUOTE">
+    <Row Tag="LOC_LEADER_ZOM_OBSERVER_QUOTE">
       <Text>"To see everything, hold nothing."</Text>
     </Row>
-    <Row Tag="LOC_LOADING_LEADER_INTRO_TEXT_MPT_OBSERVER">
+    <Row Tag="LOC_LOADING_LEADER_INTRO_TEXT_ZOM_OBSERVER">
       <Text>You are here to watch. Added by Zatygold's Observer Mode.</Text>
     </Row>
-    <Row Tag="LOC_TRAIT_MPT_OBSERVER_LEADER_NAME">
+    <Row Tag="LOC_TRAIT_ZOM_OBSERVER_LEADER_NAME">
       <Text>All-Seeing</Text>
     </Row>
-    <Row Tag="LOC_TRAIT_MPT_OBSERVER_LEADER_DESCRIPTION">
+    <Row Tag="LOC_TRAIT_ZOM_OBSERVER_LEADER_DESCRIPTION">
       <Text>Never eliminated for having no settlements.</Text>
     </Row>
-    <Row Tag="LOC_CIVILIZATION_MPT_OBSERVER_NAME">
+    <Row Tag="LOC_CIVILIZATION_ZOM_OBSERVER_NAME">
       <Text>Observer</Text>
     </Row>
-    <Row Tag="LOC_CIVILIZATION_MPT_OBSERVER_FULLNAME">
+    <Row Tag="LOC_CIVILIZATION_ZOM_OBSERVER_FULLNAME">
       <Text>Observer</Text>
     </Row>
-    <Row Tag="LOC_CIVILIZATION_MPT_OBSERVER_ADJECTIVE">
+    <Row Tag="LOC_CIVILIZATION_ZOM_OBSERVER_ADJECTIVE">
       <Text>Observer</Text>
     </Row>
-    <Row Tag="LOC_CIVILIZATION_MPT_OBSERVER_DESCRIPTION">
+    <Row Tag="LOC_CIVILIZATION_ZOM_OBSERVER_DESCRIPTION">
       <Text>A civilization that never settles. In place of a Founder it starts with the Observer's Eye, which sees every plot and every unit. Added by Zatygold's Observer Mode.</Text>
     </Row>
-    <Row Tag="LOC_LOADING_CIV_INTRO_TEXT_MPT_OBSERVER">
+    <Row Tag="LOC_LOADING_CIV_INTRO_TEXT_ZOM_OBSERVER">
       <Text>No cities, no score - only the view.</Text>
     </Row>
-    <Row Tag="LOC_CITY_NAME_MPT_OBSERVER1">
+    <Row Tag="LOC_CITY_NAME_ZOM_OBSERVER1">
       <Text>Overlook</Text>
     </Row>
-    <Row Tag="LOC_TRAIT_MPT_OBSERVER_NAME">
+    <Row Tag="LOC_TRAIT_ZOM_OBSERVER_NAME">
       <Text>Spectator</Text>
     </Row>
-    <Row Tag="LOC_TRAIT_MPT_OBSERVER_DESCRIPTION">
+    <Row Tag="LOC_TRAIT_ZOM_OBSERVER_DESCRIPTION">
       <Text>Starts with the Observer's Eye in place of a Founder. No bonuses.</Text>
     </Row>
-    <Row Tag="LOC_UNIT_MPT_OBSERVER_EYE_NAME">
+    <Row Tag="LOC_UNIT_ZOM_OBSERVER_EYE_NAME">
       <Text>Observer's Eye</Text>
     </Row>
-    <Row Tag="LOC_UNIT_MPT_OBSERVER_EYE_DESCRIPTION">
+    <Row Tag="LOC_UNIT_ZOM_OBSERVER_EYE_DESCRIPTION">
       <Text>Sees the whole map through terrain and vegetation, and keeps every unit in sight. Hidden from other players; cannot found a city or be damaged.</Text>
     </Row>
-    <Row Tag="LOC_UNLOCK_PLAY_AS_MPT_OBSERVER_DESCRIPTION">
+    <Row Tag="LOC_UNLOCK_PLAY_AS_ZOM_OBSERVER_DESCRIPTION">
       <Text>Play as [B]Observer[/B].</Text>
     </Row>
-    <Row Tag="LOC_UNLOCK_PLAY_AS_MPT_OBSERVER_TOOLTIP">
+    <Row Tag="LOC_UNLOCK_PLAY_AS_ZOM_OBSERVER_TOOLTIP">
       <Text>The [B]Observer[/B] watches as the [B]Observer[/B] civilization in every Age.</Text>
     </Row>
   </EnglishText>

@@ -41,20 +41,20 @@
 import { HIGHLIGHT, ROW_COLORS } from './mp-observer-config.js';
 import { diplomacySnapshot } from './mp-observer-core.js';
 
-const STYLE_ID = 'mpt-observer-ribbon-style';
-const SIZED_CLASS = 'mpt-observer-ribbon';
-const HIDDEN_CLASS = 'mpt-observer-hub-hidden';
-const CELEBRATING_CLASS = 'mpt-celebrating';
-const AT_WAR_CLASS = 'mpt-at-war';
-const ALLY_CLASS_PREFIX = 'mpt-ally-';
-const PIPS_CLASS = 'mpt-war-pips';
-const BEST_CLASS = 'mpt-best';
-const NEGATIVE_CLASS = 'mpt-negative';
-const OWN_CARD_CLASS = 'mpt-observer-own-card';
-const DETAILS_CHANGED_EVENT = 'mpt-ribbon-details-changed';
+const STYLE_ID = 'zom-observer-ribbon-style';
+const SIZED_CLASS = 'zom-observer-ribbon';
+const HIDDEN_CLASS = 'zom-observer-hub-hidden';
+const CELEBRATING_CLASS = 'zom-celebrating';
+const AT_WAR_CLASS = 'zom-at-war';
+const ALLY_CLASS_PREFIX = 'zom-ally-';
+const PIPS_CLASS = 'zom-war-pips';
+const BEST_CLASS = 'zom-best';
+const NEGATIVE_CLASS = 'zom-negative';
+const OWN_CARD_CLASS = 'zom-observer-own-card';
+const DETAILS_CHANGED_EVENT = 'zom-ribbon-details-changed';
 const DETAILS_OPTION = ['user', 'Interface', 'RibbonStats'];   // System > "Always Show Ribbon Yields"
 const ROW_TYPE_PREFIX = 'yield-colors--';
-const SIGNATURE_ATTR = 'data-mpt-highlight';
+const SIGNATURE_ATTR = 'data-zom-highlight';
 const CONTENT_WIDTH = '4.25rem';       // 90% of .diplo-ribbon_content-container in the base stylesheet (4.72rem)
 const CARD_GAP = '0.1111111111rem';   // 2px between neighbouring cards
 
@@ -196,7 +196,7 @@ function warPips(cardEl, wars, playerId) {
     const pip = document.createElement('div');
     pip.classList.add('pointer-events-auto');
     pip.style.cssText = `width: 0.6rem; height: 0.6rem; margin: 0 0.1rem; border-radius: 0.3rem; background-color: ${HIGHLIGHT.wars[war.color]}; border: 0.0555555556rem solid #000000;`;
-    if (enemy) pip.setAttribute('data-tooltip-content', Locale.compose('LOC_MPT_OBSERVER_AT_WAR_WITH', enemy.name));
+    if (enemy) pip.setAttribute('data-tooltip-content', Locale.compose('LOC_ZOM_OBSERVER_AT_WAR_WITH', enemy.name));
     pips.appendChild(pip);
   }
   (cardEl.querySelector('.diplo-ribbon__relation-container') ?? cardEl).appendChild(pips);

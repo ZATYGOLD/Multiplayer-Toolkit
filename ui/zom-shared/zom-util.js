@@ -23,17 +23,17 @@
  *
  * Logging, method wrapping, deferred component patching and DOM lookups used
  * by every feature, plus Observer identity (the Observer is a real player
- * whose leader is LEADER_MPT_OBSERVER).
+ * whose leader is LEADER_ZOM_OBSERVER).
  */
-const OBSERVER_LEADER = 'LEADER_MPT_OBSERVER';
-const OBSERVER_CIV_PREFIX = 'CIVILIZATION_MPT_OBSERVER_';
+const OBSERVER_LEADER = 'LEADER_ZOM_OBSERVER';
+const OBSERVER_CIV_PREFIX = 'CIVILIZATION_ZOM_OBSERVER_';
 
 /** True for any Age's Observer civilization type name. */
 function isObserverCiv(civType) { return typeof civType === 'string' && civType.startsWith(OBSERVER_CIV_PREFIX); }
 
 /** Logger that reaches UI.log (console.log output does not). */
 function createLogger(tag) {
-  return (message) => { try { console.warn(`[MPT ${tag}] ${message}`); } catch (e) { /* ignore */ } };
+  return (message) => { try { console.warn(`[ZOM ${tag}] ${message}`); } catch (e) { /* ignore */ } };
 }
 
 /**

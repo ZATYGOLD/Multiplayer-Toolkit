@@ -3,7 +3,7 @@
 <Database>
   <PlayerColors>
     <Row>
-      <Type>LEADER_MPT_OBSERVER</Type>
+      <Type>LEADER_ZOM_OBSERVER</Type>
       <Usage>Unique</Usage>
       <PrimaryColor>COLOR_STANDARD_WHITE_LT</PrimaryColor>
       <SecondaryColor>COLOR_STANDARD_AQUA_DK</SecondaryColor>

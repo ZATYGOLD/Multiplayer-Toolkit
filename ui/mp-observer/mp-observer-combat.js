@@ -33,14 +33,14 @@ import 'fs://game/base-standard/ui/unit-combat-preview/panel-unit-combat-preview
 import { PlotCursor } from 'fs://game/core/ui/input/plot-cursor.js';
 import { ComponentID } from 'fs://game/core/ui/utilities/utilities-component-id.js';
 import { Icon } from 'fs://game/core/ui/utilities/utilities-image.js';
-import { createLogger, wrapMethod } from '../mpt-shared/mpt-util.js';
+import { createLogger, wrapMethod } from '../zom-shared/zom-util.js';
 import { CONFIG } from './mp-observer-config.js';
 import { meleeStrength, rangedStrength } from './mp-observer-core.js';
 import { inspectableUnits, isForeign } from './mp-observer-units.js';
 
 const log = createLogger('observer-combat');
 const PREVIEW_TAG = 'panel-unit-combat-preview';
-const ESTIMATE_CLASS = 'mpt-combat-estimate';
+const ESTIMATE_CLASS = 'zom-combat-estimate';
 const DAMAGE_BASE = 30;
 const DAMAGE_SCALE = 25;
 const HP_PER_STRENGTH = 10;
@@ -111,7 +111,7 @@ function setEstimateNote(root, visible) {
     note.classList.add(ESTIMATE_CLASS, 'font-body', 'text-sm', 'text-accent-1');
     note.style.cssText = 'position: absolute; bottom: 100%; left: -2.5rem; right: -2.5rem; margin-bottom: 0.3rem; padding: 0.15rem 0.5rem; text-align: center; ' +
       'border-radius: 0.3rem; background-color: rgba(10, 10, 12, 0.85); border: 0.0555555556rem solid rgba(140, 126, 98, 0.9);';
-    note.setAttribute('data-l10n-id', 'LOC_MPT_OBSERVER_COMBAT_ESTIMATE');
+    note.setAttribute('data-l10n-id', 'LOC_ZOM_OBSERVER_COMBAT_ESTIMATE');
     outcome.appendChild(note);
   }
   note.style.display = visible ? 'block' : 'none';

@@ -30,7 +30,7 @@
  */
 import DiplomacyManager from 'fs://game/base-standard/ui/diplomacy/diplomacy-manager.js';
 import { PanelYieldBanner } from 'fs://game/base-standard/ui/diplo-ribbon/panel-yield-banner.js';
-import { createLogger, wrapMethod } from '../mpt-shared/mpt-util.js';
+import { createLogger, wrapMethod } from '../zom-shared/zom-util.js';
 import { CONFIG } from './mp-observer-config.js';
 import { inLeaderPanel, isObserverSeat } from './mp-observer-core.js';
 
@@ -64,10 +64,10 @@ function setEntry(element, value, extra = {}) {
 
 /** Food and production entries, placed before the settlement limit (once per bar). */
 function ensureExtraEntries(banner) {
-  if (banner.mptExtraEntries) return;
+  if (banner.zomExtraEntries) return;
   const anchor = banner.settlementCapElement;
   if (!anchor?.parentElement) return;
-  banner.mptExtraEntries = EXTRA_YIELDS.map(({ type, tooltip, textClass }) => {
+  banner.zomExtraEntries = EXTRA_YIELDS.map(({ type, tooltip, textClass }) => {
     const entry = document.createElement('yield-bar-entry');
     entry.dataset.icon = type;
     entry.dataset.tooltipContent = tooltip;
@@ -85,7 +85,7 @@ function fillBanner(banner, player) {
   setEntry(entries[YieldTypes.YIELD_GOLD], stats.getNetYield(YieldTypes.YIELD_GOLD), { stored: player.Treasury?.goldBalance ?? 0 });
   setEntry(entries[YieldTypes.YIELD_DIPLOMACY], stats.getNetYield(YieldTypes.YIELD_DIPLOMACY), { stored: player.DiplomacyTreasury?.diplomacyBalance ?? 0 });
   for (const type of [YieldTypes.YIELD_SCIENCE, YieldTypes.YIELD_CULTURE, YieldTypes.YIELD_HAPPINESS]) setEntry(entries[type], stats.getNetYield(type));
-  for (const { type, entry } of banner.mptExtraEntries ?? []) setEntry(entry, stats.getNetYield(YieldTypes[type]));
+  for (const { type, entry } of banner.zomExtraEntries ?? []) setEntry(entry, stats.getNetYield(YieldTypes[type]));
   setEntry(banner.settlementCapElement, stats.numSettlements, { max: stats.settlementCap });
   setEntry(banner.cityCapElement, stats.numCities, { max: player.Cities?.getCityLimit?.() ?? 0 });
 }

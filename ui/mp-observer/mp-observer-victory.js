@@ -27,7 +27,7 @@
  * override (ui-next/screens/victories/victories-screen-model.js).
  */
 import VictoryManager from 'fs://game/base-standard/ui/victory-manager/victory-manager.js';
-import { createLogger, isObserverPlayer, wrapMethod } from '../mpt-shared/mpt-util.js';
+import { createLogger, isObserverPlayer, wrapMethod } from '../zom-shared/zom-util.js';
 
 const log = createLogger('observer-victory');
 const proto = Object.getPrototypeOf(VictoryManager);

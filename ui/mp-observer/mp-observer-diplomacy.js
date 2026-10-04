@@ -30,12 +30,12 @@
  */
 import DiplomacyManager from 'fs://game/base-standard/ui/diplomacy/diplomacy-manager.js';
 import 'fs://game/base-standard/ui/diplomacy-actions/panel-other-diplomacy.js';   // defines PANEL_TAG
-import { clearChildren, createLogger, isObserverPlayer, wrapMethod } from '../mpt-shared/mpt-util.js';
+import { clearChildren, createLogger, isObserverPlayer, wrapMethod } from '../zom-shared/zom-util.js';
 import { isObserverSeat } from './mp-observer-core.js';
 
 const log = createLogger('observer-diplomacy');
 const PANEL_TAG = 'panel-other-player-diplomacy-actions';
-const OMIT_CLASS = 'mpt-observer-omit';
+const OMIT_CLASS = 'zom-observer-omit';
 const OWN_RELATIONSHIP = '#panel-diplomacy-actions__relationship-event-container';
 const OTHER_RELATIONSHIPS = '#panel-diplomacy-actions__other-relationships-container';
 
@@ -115,7 +115,7 @@ function patchPanel(proto) {
     this.firstFocusSection = null;
     const wars = warsOf(DiplomacyManager.selectedPlayerID);
     slot.appendChild(header('LOC_DIPLOMACY_WAR_HEADER'));
-    if (wars.length === 0) { slot.appendChild(note('LOC_MPT_OBSERVER_NO_WARS')); return; }
+    if (wars.length === 0) { slot.appendChild(note('LOC_ZOM_OBSERVER_NO_WARS')); return; }
     for (const war of wars) {
       const item = this.createWarInfoElement(war);
       item.addEventListener('action-activate', () => this.clickOngoingAction(war.uniqueID));

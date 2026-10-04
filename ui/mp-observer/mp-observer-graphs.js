@@ -43,15 +43,15 @@ import { isMobile } from 'fs://game/core/ui-next/services/view-experience.js';
 import { LeaderWithRibbon } from 'fs://game/base-standard/ui-next/components/leader-with-ribbon.js';
 import { ScreenFrame } from 'fs://game/base-standard/ui-next/components/screen-frame.js';
 import victoriesStyle from 'fs://game/base-standard/ui-next/screens/victories/victories-screen.scss.js';
-import { createLogger, whenDefined, wrapMethod } from '../mpt-shared/mpt-util.js';
+import { createLogger, whenDefined, wrapMethod } from '../zom-shared/zom-util.js';
 import { CONFIG } from './mp-observer-config.js';
 import { isObserverSeat } from './mp-observer-core.js';
 import { HISTORY_EVENT, HISTORY_YIELDS, yieldHistory } from './mp-observer-history.js';
 
 const log = createLogger('observer-graphs');
-const GRAPHS_TAG = 'mpt-observer-graphs';
+const GRAPHS_TAG = 'zom-observer-graphs';
 const DOCK_TAG = 'panel-sub-system-dock';
-const DOCK_BUTTON_CLASS = 'mpt-graphs-dock-button';
+const DOCK_BUTTON_CLASS = 'zom-graphs-dock-button';
 // Age dropdown values are non-empty strings: the dropdown treats a falsy value (Antiquity's 0) as nothing selected.
 const OVERALL = 'overall';
 const ageOption = (chronology) => `age-${chronology}`;
@@ -90,7 +90,7 @@ const ages = () => [...GameInfo.Ages].sort((a, b) => a.ChronologyIndex - b.Chron
 const currentChronology = () => GameInfo.Ages.lookup(Game.age)?.ChronologyIndex ?? 0;
 
 function ageLabel(option) {
-  if (option === OVERALL) return Locale.compose('LOC_MPT_GRAPH_OVERALL');
+  if (option === OVERALL) return Locale.compose('LOC_ZOM_GRAPH_OVERALL');
   const age = ages().find((a) => a.ChronologyIndex === optionChronology(option));
   return age ? Locale.compose('LOC_VICTORY_AGE_NAME', age.Name) : '';
 }
@@ -173,7 +173,7 @@ const LeaderRow = (props) => {
   createRenderEffect(() => {
     const hidden = props.hidden();
     row.style.opacity = hidden ? '0.4' : '1';
-    row.setAttribute('data-tooltip-content', Locale.compose(hidden ? 'LOC_MPT_GRAPH_SHOW_LINE' : 'LOC_MPT_GRAPH_HIDE_LINE'));
+    row.setAttribute('data-tooltip-content', Locale.compose(hidden ? 'LOC_ZOM_GRAPH_SHOW_LINE' : 'LOC_ZOM_GRAPH_HIDE_LINE'));
   });
   row.addEventListener('mouseleave', () => banner.classList.replace('opacity-60', 'opacity-30'));
   return row;
@@ -190,7 +190,7 @@ const YieldPanel = (props) => {
   background.style.backgroundImage = `url(${look.background})`;
 
   const description = T.description();
-  description.firstChild.textContent = Locale.compose('LOC_MPT_GRAPH_DESCRIPTION', Locale.compose(props.yieldDef.label));
+  description.firstChild.textContent = Locale.compose('LOC_ZOM_GRAPH_DESCRIPTION', Locale.compose(props.yieldDef.label));
   const title = T.title();
   const heading = title.firstChild;
   heading.style.color = look.color;
@@ -200,7 +200,7 @@ const YieldPanel = (props) => {
   const [rankHead, leaderHead, valueHead, ageHead] = Array.from(header.children);
   rankHead.textContent = Locale.compose('LOC_GENERIC_RANK');
   leaderHead.textContent = Locale.compose('LOC_GENERIC_LEADER');
-  valueHead.firstChild.firstChild.textContent = Locale.compose('LOC_MPT_GRAPH_PER_TURN_COLUMN');
+  valueHead.firstChild.firstChild.textContent = Locale.compose('LOC_ZOM_GRAPH_PER_TURN_COLUMN');
   insert(ageHead.firstChild.firstChild, createComponent(Dropdown, {
     get defaultValue() { return props.age(); },
     selectedItemTemplate: (value) => { const text = T.selected(); text.textContent = ageLabel(value); return text; },
@@ -228,7 +228,7 @@ const YieldPanel = (props) => {
   }), body.firstChild);
   insert(graph, createComponent(Show, {
     get when() { return props.samples().length > 0; },
-    get fallback() { const empty = T.empty(); empty.textContent = Locale.compose('LOC_MPT_GRAPH_NO_DATA'); return empty; },
+    get fallback() { const empty = T.empty(); empty.textContent = Locale.compose('LOC_ZOM_GRAPH_NO_DATA'); return empty; },
     get children() {
       return createComponent(LineGraph, {
         'class': 'opacity-100',
@@ -239,7 +239,7 @@ const YieldPanel = (props) => {
         minX: 1,
         gridColorX: 'rgb(255 255 255 / 30%)',
         axisLabelX: Locale.compose('LOC_GENERIC_TURN'),
-        axisLabelY: Locale.compose('LOC_MPT_GRAPH_PER_TURN', Locale.compose(props.yieldDef.label)),
+        axisLabelY: Locale.compose('LOC_ZOM_GRAPH_PER_TURN', Locale.compose(props.yieldDef.label)),
         axisNumberColor: '#b5b5b6',
         axisLabelColor: '#848486'
       });
@@ -252,7 +252,7 @@ const YieldPanel = (props) => {
 
 // ============================ Screen ============================
 
-const TOP_ICON_CLASS = 'mpt-graphs-top-icon';
+const TOP_ICON_CLASS = 'zom-graphs-top-icon';
 const TOP_ICON_ZOOM = 1.5;   // the glyph fills the frame's top medallion
 
 function ornatePanelData() {
@@ -260,7 +260,7 @@ function ornatePanelData() {
     topIconSrc: 'none',   // the medallion shows the graph glyph (placeTopIcon)
     topIconClass: `size-14 relative ${TOP_ICON_CLASS}`,
     backgroundImageSrc: '',
-    name: 'MPT-Yield-Graphs',
+    name: 'ZOM-Yield-Graphs',
     id: GRAPHS_TAG,
     isFullscreen: isMobile()
   };
@@ -287,10 +287,10 @@ const GraphsScreenComponent = () => {
   const panelProps = { samples, age, setAge, ageOptions, hidden, toggle };
 
   return createComponent(ScreenFrame, {
-    name: 'MPT-Yield-Graphs',
+    name: 'ZOM-Yield-Graphs',
     panelContext: GRAPHS_TAG,
     audioContext: 'VictoryScreen',
-    title: 'LOC_MPT_GRAPHS_TITLE',
+    title: 'LOC_ZOM_GRAPHS_TITLE',
     ornatePanelData: ornatePanelData(),
     addYieldBar: false,
     get isFullscreen() { return isMobile(); },
@@ -327,7 +327,7 @@ function placeTopIcon(attempts = 10) {
 }
 
 const GraphsScreen = ComponentRegistry.register({
-  name: 'MPTYieldGraphsScreen',
+  name: 'ZOMYieldGraphsScreen',
   styles: [victoriesStyle],
   createInstance: GraphsScreenComponent
 });
@@ -386,8 +386,8 @@ function placeDockButton(dock) {
   const root = dock?.Root;
   if (!isObserverSeat() || !root || root.querySelector('.' + DOCK_BUTTON_CLASS)) return;
   const button = dock.createButton({
-    tooltip: 'LOC_MPT_GRAPHS_TITLE',
-    modifierClass: 'mpt-graphs',
+    tooltip: 'LOC_ZOM_GRAPHS_TITLE',
+    modifierClass: 'zom-graphs',
     callback: openGraphs,
     class: DOCK_BUTTON_CLASS,
     audio: 'unlocks',
