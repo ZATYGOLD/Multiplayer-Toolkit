@@ -66,7 +66,7 @@ function isAgeEnding() {
 }
 
 /**
- * Observer leaders of companion mods (Zatygold's Observer Mode): real players
+ * Observer leaders of companion mods (Zatygold's Spectator): real players
  * who watch instead of play, so the timer and the pause treat them apart.
  */
 const OBSERVER_LEADERS = new Set(['LEADER_ZOM_OBSERVER']);

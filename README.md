@@ -11,7 +11,8 @@ built on the game's own UI components. Current version: **0.6.1**.
 - **Lobby fixes** — ability names in civ / leader tooltips; a 5-second start
   countdown.
 
-The Observer now lives in its own mod, **Zatygold's Observer Mode**.
+Works alongside **Zatygold's Spectator** (the Observer, formerly part of
+this mod).
 
 ## Installation
 
@@ -97,78 +98,31 @@ runtime (no base-game files are replaced). Diagnostics go to `UI.log`.
 
 ### 0.6.1
 
-- **The Observer moved to its own mod**, Zatygold's Observer Mode (leader,
-  civilizations, ribbon, leader screens, yield graphs and every base-game
-  copy). Multiplayer Toolkit no longer replaces any base-game file.
-- **Works with Zatygold's Observer Mode** — its Observer adds no time to the
+- **Observer removed** — the Observer is no longer part of Multiplayer
+  Toolkit; it continues as its own mod, Zatygold's Spectator. Multiplayer
+  Toolkit no longer replaces any base-game file.
+- **Works with Zatygold's Spectator** — its Observer adds no time to the
   Competitive timer (it still counts toward ending turns), never has its clock
   held, counts toward the pause's ready tally and never pauses the game by
   disconnecting.
 
-### 0.6.04
-
-- **Yield Graphs redesign** — built from the Victories screen's own parts
-  like its Economic tab: the ornate frame and tab bar, Rank / Leader / Per
-  Turn rows with each leader's banner, portrait and line colour (click a row
-  to hide or show its line), the game's line graph with thicker lines, and a
-  graph glyph in the frame's medallion.
-- **Age dropdown** — the game's own dropdown, available from Antiquity on:
-  Overall (the whole game) or one Age; no longer shows "Select an Item"
-  when switching tabs.
-- **Graphs button** — redrawn in the dock icons' look and centred.
-
-### 0.6.03
-
-- **New: Yield Graphs** (Observer) — per-turn science, culture, gold,
-  influence, food and production for every leader across all Ages, from a
-  button in the HUD's screen dock; a tab per yield and a ranked leader list;
-  history recorded each turn and saved with the game.
-
-### 0.6.02
-
-- **New:** compact Yields view with citizens, techs, civics and wonders; best
-  leader highlighted (also on Victories); red band behind negatives.
-- **New:** tech and civic trees for any leader; the research and civic buttons
-  open the full tree; the civic tree opens on the Age's main civics.
-- **New:** right-click the Observer's portrait to hide / show details.
-- **New:** pantheons on the ribbon in Antiquity.
-- **New:** Age end — Auto End Turn switches off when an Age completes; the Age
-  transition choice is skipped.
-- **Compatibility:** base-game copies load only in games with an Observer;
-  Religion and Great Works are runtime patches.
-- **Polish:** narrower cards with a gap; alliance colours kept during wars and
-  celebrations; End Turn slides away under Auto End Turn; leader switches
-  without reopen animations; zoom 30% / 55%.
-- **Fix:** Religion screen showing another leader's religion; Great Works
-  picker too low.
-
 ### 0.6.01
 
-- **New:** Observer Auto End Turn; food, production and military on Yields.
-- **New:** Resources & Trade, Legacies, Government and Great Works for any
-  leader (tab kept when switching).
-- **New:** alliance and war highlights; wider zoom; smaller notifications;
-  top yield bar follows the leader panel.
-- **New:** the Observer continues into the next Age automatically.
-- **Fix:** Competitive timer frozen for the Observer, not ending at 0, and
-  counting while paused.
-- **Fix:** the game waiting on the Observer after a pause; Observer
-  completing Triumphs; Observer civs in Civ Unlocks; editable policies; End
-  Turn showing under Auto End Turn; outdated Age-transition override.
-- **Fix:** Religion button after Antiquity opens the game's Religion screen.
-- **Performance:** cached ribbon data, fewer timer retries and rescans.
+- **Fix:** the Competitive timer kept counting while paused (when a pause
+  event was missed); it also stands still from the moment an Age is complete
+  until the next Age starts.
+- **Performance:** the Competitive timer retries an expired turn once a
+  second; the pause manager re-scans players once a turn; lobby tooltips no
+  longer rebuild the civilization data on every refresh.
 
 ### 0.6.00
 
-- Shared helpers and split Observer modules; Observers excluded from timer and
-  disconnect counts; quieter chat commands.
-- **Fix:** Observer Age transitions (new Eye, no dedication prompt); portrait
-  clicks; single-player Observer crash (now multiplayer only).
+- Shared helpers (logging, method wrapping, deferred patching) across every
+  feature; pause-menu texts localized; pause/resume chat commands no longer
+  play the chat sound or mark chat unread.
 
 ### 0.5.9
 
-- **New:** Observer leader & civilization as game data, replacing the old
-  observer slot and dashboard.
 - **Fix:** Competitive timer ending opening turns; timer-ended turns no longer
   cancel unit orders.
 
@@ -179,11 +133,7 @@ runtime (no base-game files are replaced). Diagnostics go to `UI.log`.
 
 ### 0.5.7
 
-- Observer slot fixes (pause menu, ribbons, view as player); timer retuned.
-
-### 0.5.6
-
-- Observer "view as player" (experimental).
+- Competitive timer retuned.
 
 ### 0.5.5
 
@@ -192,13 +142,13 @@ runtime (no base-game files are replaced). Diagnostics go to `UI.log`.
 
 ### 0.5.4
 
-- Observer dashboard; 5-second lobby countdown.
+- 5-second lobby countdown.
 
 ### 0.5.3
 
-- Observer lobby role; lobby tooltip ability names; timer as an action-panel
-  subclass with its own tables and a synced ring. More than 8 players is not
-  moddable (engine limit).
+- Lobby tooltip ability names; timer as an action-panel subclass with its own
+  tables and a synced ring. More than 8 players is not moddable (engine
+  limit).
 
 ### 0.5.2
 
