@@ -1,7 +1,7 @@
 # Multiplayer Toolkit
 
 Multiplayer quality-of-life features for **Sid Meier's Civilization VII**,
-built on the game's own UI components. Current version: **0.6.02**.
+built on the game's own UI components. Current version: **0.6.04**.
 
 - **Competitive turn timer** — a Turn Timer option that scales with cities,
   units, human players and the turn number, with urgency tiers and sounds.
@@ -98,6 +98,13 @@ the hidden **Observer's Eye**, whose sight shows every unit live.
 - Allies share a hex-border colour; leaders at war glow red with a pip per
   war; celebrations glow gold. Antiquity cards show the leader's pantheon.
 
+**Yield Graphs:** a button in the HUD's screen dock opens line graphs of
+every leader's science, culture, gold, influence, food and production per
+turn (a tab each), recorded every turn and saved with the game. It is built
+from the Victories screen's own frame, rows and graph, like its Economic tab:
+Rank / Leader / Per Turn rows (click one to hide or show its line), the graph
+on the right, and an Age dropdown for the whole game (Overall) or one Age.
+
 **Screens:** Resources & Trade, Legacies, Government, Great Works, Religion and
 the tech / civic trees get a row of leader portraits — pick one to see that
 screen as theirs (read-only, same tab). The tech and civic buttons open the
@@ -161,6 +168,25 @@ they load only in a game with an Observer (modinfo criteria
 ---
 
 ## Changelog
+
+### 0.6.04
+
+- **Yield Graphs redesign** — built from the Victories screen's own parts
+  like its Economic tab: the ornate frame and tab bar, Rank / Leader / Per
+  Turn rows with each leader's banner, portrait and line colour (click a row
+  to hide or show its line), the game's line graph with thicker lines, and a
+  graph glyph in the frame's medallion.
+- **Age dropdown** — the game's own dropdown, available from Antiquity on:
+  Overall (the whole game) or one Age; no longer shows "Select an Item"
+  when switching tabs.
+- **Graphs button** — redrawn in the dock icons' look and centred.
+
+### 0.6.03
+
+- **New: Yield Graphs** (Observer) — per-turn science, culture, gold,
+  influence, food and production for every leader across all Ages, from a
+  button in the HUD's screen dock; a tab per yield and a ranked leader list;
+  history recorded each turn and saved with the game.
 
 ### 0.6.02
 

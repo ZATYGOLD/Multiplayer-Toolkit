@@ -39,6 +39,7 @@ const CONFIG = {
   autoEndTurnDelayMs: 1000,             // wait after the turn starts (prompts are answered first)
   autoEndTurnRetryMs: 1000,             // retry while something still blocks the turn
   meterRefreshMs: 2000,                 // minimum gap between Research / Production meter repaints
+  historyRecordDelayMs: 500,            // wait after a turn starts before recording yields (graphs)
   ribbonSeedAttempts: 30,               // tries to populate the ribbon once the HUD exists
   ribbonSeedIntervalMs: 500,
   combatPreviewLift: 'translateY(-4.5rem)',  // keeps the combat preview above the unit panel

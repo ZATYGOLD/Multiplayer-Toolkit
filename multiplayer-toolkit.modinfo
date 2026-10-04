@@ -6,7 +6,7 @@
         <Authors>Zatygold</Authors>
         <Package>Mod</Package>
         <AffectsSavedGames>0</AffectsSavedGames>
-        <Version>0.6.02</Version>
+        <Version>0.6.04</Version>
         <LastUpdated>2026-10-03</LastUpdated>
         <ShowInBrowser>1</ShowInBrowser>
     </Properties>
@@ -168,6 +168,8 @@
                     <Item>ui/mp-observer/mp-observer-civ-lists.js</Item>
                     <Item>ui/mp-observer/mp-observer-ribbon-data.js</Item>
                     <Item>ui/mp-observer/mp-observer-ribbon-style.js</Item>
+                    <Item>ui/mp-observer/mp-observer-history.js</Item>
+                    <Item>ui/mp-observer/mp-observer-graphs.js</Item>
                     <Item>ui/mp-observer/mp-observer-turn.js</Item>
                     <Item>ui/mp-observer/mp-observer-ribbon-toolbar.js</Item>
                     <Item>ui/mp-observer/mp-observer-ribbon.js</Item>

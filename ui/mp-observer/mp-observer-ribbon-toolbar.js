@@ -86,10 +86,11 @@ const GLYPHS = {
   [OBSERVER_VIEW.SCORE]: (icon) => { icon.style.backgroundImage = `url("${ICON.victories}")`; }
 };
 
+/** View buttons by row. */
 const BUTTON_ROWS = [
-  [[OBSERVER_VIEW.YIELDS, 'LOC_MPT_OBSERVER_YIELDS'], [OBSERVER_VIEW.PRODUCTION, 'LOC_MPT_OBSERVER_PRODUCTION']],
-  [[OBSERVER_VIEW.RESEARCH, 'LOC_MPT_OBSERVER_TECHS_CIVICS']],
-  [[OBSERVER_VIEW.SCORE, 'LOC_PEDIA_VICTORIES_TITLE']]
+  [{ view: OBSERVER_VIEW.YIELDS, loc: 'LOC_MPT_OBSERVER_YIELDS' }, { view: OBSERVER_VIEW.PRODUCTION, loc: 'LOC_MPT_OBSERVER_PRODUCTION' }],
+  [{ view: OBSERVER_VIEW.RESEARCH, loc: 'LOC_MPT_OBSERVER_TECHS_CIVICS' }],
+  [{ view: OBSERVER_VIEW.SCORE, loc: 'LOC_PEDIA_VICTORIES_TITLE' }]
 ];
 
 /** A round lens-style button; drawGlyph fills its icon. */
@@ -118,8 +119,8 @@ function roundButton(tooltip, pressed, drawGlyph, onActivate) {
   return btn;
 }
 
-function viewButton(view, labelLoc, currentView, onSelect) {
-  return roundButton(Locale.compose(labelLoc), view === currentView, GLYPHS[view], () => onSelect(view));
+function viewButton(item, currentView, onSelect) {
+  return roundButton(Locale.compose(item.loc), item.view === currentView, GLYPHS[item.view], () => onSelect(item.view));
 }
 
 /** The banner toggles, top to bottom; each is pressed while on. */
@@ -190,7 +191,7 @@ function placeViewButtons(panel, currentView, onSelect) {
     for (const row of BUTTON_ROWS) {
       const line = document.createElement('div');
       line.style.cssText = 'display: flex; flex-direction: row; justify-content: center;';
-      for (const [view, loc] of row) line.appendChild(viewButton(view, loc, currentView, onSelect));
+      for (const item of row) line.appendChild(viewButton(item, currentView, onSelect));
       box.appendChild(line);
     }
     own.appendChild(box);

@@ -82,6 +82,48 @@
     <Row Tag="LOC_MPT_OBSERVER_SHOW_DETAILS">
       <Text>Show Leader Details</Text>
     </Row>
+    <Row Tag="LOC_MPT_GRAPHS_TITLE">
+      <Text>Yield Graphs</Text>
+    </Row>
+    <Row Tag="LOC_MPT_GRAPH_SCIENCE">
+      <Text>Science</Text>
+    </Row>
+    <Row Tag="LOC_MPT_GRAPH_CULTURE">
+      <Text>Culture</Text>
+    </Row>
+    <Row Tag="LOC_MPT_GRAPH_GOLD">
+      <Text>Gold</Text>
+    </Row>
+    <Row Tag="LOC_MPT_GRAPH_INFLUENCE">
+      <Text>Influence</Text>
+    </Row>
+    <Row Tag="LOC_MPT_GRAPH_PER_TURN">
+      <Text>{1_Yield} per Turn</Text>
+    </Row>
+    <Row Tag="LOC_MPT_GRAPH_OVERALL">
+      <Text>Overall</Text>
+    </Row>
+    <Row Tag="LOC_MPT_GRAPH_HIDE_LINE">
+      <Text>Click to hide this leader's line.</Text>
+    </Row>
+    <Row Tag="LOC_MPT_GRAPH_SHOW_LINE">
+      <Text>Click to show this leader's line.</Text>
+    </Row>
+    <Row Tag="LOC_MPT_GRAPH_PER_TURN_COLUMN">
+      <Text>Per Turn</Text>
+    </Row>
+    <Row Tag="LOC_MPT_GRAPH_DESCRIPTION">
+      <Text>Each leader's {1_Yield} per turn, recorded every turn of the game.</Text>
+    </Row>
+    <Row Tag="LOC_MPT_GRAPH_FOOD">
+      <Text>Food</Text>
+    </Row>
+    <Row Tag="LOC_MPT_GRAPH_PRODUCTION">
+      <Text>Production</Text>
+    </Row>
+    <Row Tag="LOC_MPT_GRAPH_NO_DATA">
+      <Text>No turns recorded yet. Yields are recorded at the start of every turn.</Text>
+    </Row>
     <Row Tag="LOC_MPT_OBSERVER_PORTRAIT_TT">
       <Text>{1_Leader}[N]Right-click: {2_Action}</Text>
     </Row>
