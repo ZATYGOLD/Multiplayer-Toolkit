@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Mod id="multiplayer-toolkit" version="00600" xmlns="ModInfo">
+<Mod id="multiplayer-toolkit" version="00610" xmlns="ModInfo">
     <Properties>
         <Name>LOC_MOD_MPT_NAME</Name>
         <Description>LOC_MOD_MPT_DESCRIPTION</Description>
         <Authors>Zatygold</Authors>
         <Package>Mod</Package>
         <AffectsSavedGames>0</AffectsSavedGames>
-        <Version>0.6.00</Version>
-        <LastUpdated>2026-09-27</LastUpdated>
+        <Version>0.6.1</Version>
+        <LastUpdated>2026-10-04</LastUpdated>
         <ShowInBrowser>1</ShowInBrowser>
     </Properties>
 
@@ -46,30 +46,10 @@
                 <UpdateDatabase>
                     <Item>config/SetupParameters.sql</Item>
                     <Item>config/mpt-input.sql</Item>
-                    <Item>config/observer-config.xml</Item>
                 </UpdateDatabase>
-                <ImportFiles>
-                    <Item>icons/mpt_observer.png</Item>
-                    <Item>icons/mpt_observer_civ.png</Item>
-                    <Item>icons/mpt_observer_leader_256.png</Item>
-                    <Item>icons/mpt_observer_leader_140.png</Item>
-                    <Item>icons/mpt_observer_leader_128.png</Item>
-                    <Item>icons/mpt_observer_leader_64.png</Item>
-                    <Item>icons/mpt_observer_circle_256.png</Item>
-                    <Item>icons/mpt_observer_circle_140.png</Item>
-                    <Item>icons/mpt_observer_circle_128.png</Item>
-                    <Item>icons/mpt_observer_circle_64.png</Item>
-                </ImportFiles>
-                <UpdateIcons>
-                    <Item>data/observer/observer-icons.xml</Item>
-                </UpdateIcons>
-                <UpdateColors>
-                    <Item>data/observer/observer-colors.xml</Item>
-                </UpdateColors>
                 <UIScripts>
                     <Item>ui/mpt-shared/mpt-util.js</Item>
                     <Item>ui/mp-lobby/mp-lobby-config.js</Item>
-                    <Item>ui/mp-lobby/mp-lobby-observer.js</Item>
                     <Item>ui/mp-lobby/mp-lobby-tooltips.js</Item>
                     <Item>ui/mp-keybind/mp-keybind.js</Item>
                 </UIScripts>
@@ -102,63 +82,6 @@
                     <Item>ui/mp-pause/mp-pause-net.js</Item>
                     <Item>ui/mp-pause/mp-pause-mgr.js</Item>
                     <Item>ui/mp-keybind/mp-keybind.js</Item>
-                </UIScripts>
-            </Actions>
-        </ActionGroup>
-
-
-
-<!--*********************** GAME: OBSERVER LEADER & CIVILIZATIONS ******************************-->
-
-        <ActionGroup id="mpt-observer" scope="game" criteria="always">
-            <Properties><LoadOrder>1000</LoadOrder></Properties>
-            <Actions>
-                <ImportFiles>
-                    <Item>maps/assign-starting-plots.js</Item>
-                    <Item>maps/mpt-observer-eye.js</Item>
-                    <Item>scripts/age-transition-post-load.js</Item>
-                    <Item>ui-next/screens/victories/victories-screen-model.js</Item>
-                </ImportFiles>
-                <UpdateDatabase>
-                    <Item>data/observer/observer-leader.xml</Item>
-                    <Item>data/observer/observer-civilizations.xml</Item>
-                    <Item>data/observer/observer-units-gameeffects.xml</Item>
-                    <Item>data/observer/observer-units.xml</Item>
-                </UpdateDatabase>
-                <ImportFiles>
-                    <Item>icons/mpt_observer.png</Item>
-                    <Item>icons/mpt_observer_civ.png</Item>
-                    <Item>icons/mpt_observer_leader_256.png</Item>
-                    <Item>icons/mpt_observer_leader_140.png</Item>
-                    <Item>icons/mpt_observer_leader_128.png</Item>
-                    <Item>icons/mpt_observer_leader_64.png</Item>
-                    <Item>icons/mpt_observer_circle_256.png</Item>
-                    <Item>icons/mpt_observer_circle_140.png</Item>
-                    <Item>icons/mpt_observer_circle_128.png</Item>
-                    <Item>icons/mpt_observer_circle_64.png</Item>
-                </ImportFiles>
-                <UpdateIcons>
-                    <Item>data/observer/observer-icons.xml</Item>
-                </UpdateIcons>
-                <UpdateColors>
-                    <Item>data/observer/observer-colors.xml</Item>
-                </UpdateColors>
-                <UIScripts>
-                    <Item>ui/mp-observer/mp-observer-config.js</Item>
-                    <Item>ui/mp-observer/mp-observer-core.js</Item>
-                    <Item>ui/mp-observer/mp-observer-overview.js</Item>
-                    <Item>ui/mp-observer/mp-observer-screens.js</Item>
-                    <Item>ui/mp-observer/mp-observer-ribbon-data.js</Item>
-                    <Item>ui/mp-observer/mp-observer-ribbon-style.js</Item>
-                    <Item>ui/mp-observer/mp-observer-ribbon-toolbar.js</Item>
-                    <Item>ui/mp-observer/mp-observer-ribbon.js</Item>
-                    <Item>ui/mp-observer/mp-observer-navigation.js</Item>
-                    <Item>ui/mp-observer/mp-observer-victory.js</Item>
-                    <Item>ui/mp-observer/mp-observer-diplomacy.js</Item>
-                    <Item>ui/mp-observer/mp-observer-units.js</Item>
-                    <Item>ui/mp-observer/mp-observer-combat.js</Item>
-                    <Item>ui/mp-observer/mp-observer-eye.js</Item>
-                    <Item>ui/mp-observer/mp-observer-prompts.js</Item>
                 </UIScripts>
             </Actions>
         </ActionGroup>

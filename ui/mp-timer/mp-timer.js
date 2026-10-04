@@ -28,7 +28,7 @@
  *   seconds = Base + PerCity*cities + PerUnit*units
  *           + PerHuman*humanPlayers + PerTurn*turnNumber
  *
- * Human players never include Observers.
+ * Human players never include a companion mod's Observer (isObserverPlayer).
  *
  * Architecture: instead of proxying the action panel's event listener, the
  * panel COMPONENT itself is replaced. Controls.define supports priority-based
@@ -53,7 +53,7 @@
  *   orangeStart..flashStart+1  orange text, urgency beep every warnEverySeconds
  *   flashStart..0              engine's red flash + per-second beeps
  */
-import { createLogger, isObserverPlayer } from '../mpt-shared/mpt-util.js';
+import { createLogger, isAgeEnding, isObserverPlayer } from '../mpt-shared/mpt-util.js';
 import { TIMER_TYPE, CONFIG, ENGINE } from './mp-timer-config.js';
 
 const COMPETITIVE_HASH = Database.makeHash(TIMER_TYPE);
@@ -64,6 +64,7 @@ const log = createLogger('timer');
 const debug = CONFIG.debug ? log : () => {};
 
 let mptLastEventMs = 0;    // last time a competitive TurnTimerUpdated was handled
+let mptLastEndAttemptMs = 0;   // last time the sweep tried to end an expired turn
 
 // ============================ Pure helpers ============================
 
@@ -111,12 +112,17 @@ function scalingValues() {
   } catch (e) { return { perHuman: 0, perTurn: 0 }; }
 }
 
-/** One pass over living major players (Observers excluded): max cities/units and human count (synced). */
+/**
+ * One pass over living major players: max cities/units and human count
+ * (Observers excluded, synced), plus human Observers (they only count
+ * toward the enforcement threshold).
+ */
 function playerTallies() {
-  const tallies = { cities: 0, units: 0, humans: 0 };
+  const tallies = { cities: 0, units: 0, humans: 0, observers: 0 };
   try {
     for (const player of Players.getAlive()) {
-      if (!player?.isMajor || isObserverPlayer(player.id)) continue;
+      if (!player?.isMajor) continue;
+      if (isObserverPlayer(player.id)) { if (player.isHuman) tallies.observers++; continue; }
       tallies.cities = Math.max(tallies.cities, player.Cities?.getCities()?.length ?? 0);
       tallies.units = Math.max(tallies.units, player.Units?.getUnits()?.length ?? 0);
       if (isHumanParticipant(player)) tallies.humans++;
@@ -133,8 +139,8 @@ function playerTallies() {
 function computeSeconds() {
   const limit = segmentLimits();
   if (!limit) return 0;
-  const { cities, units, humans } = playerTallies();
-  CLOCK.humans = humans;
+  const { cities, units, humans, observers } = playerTallies();
+  CLOCK.participants = humans + observers;
   const { perHuman, perTurn } = scalingValues();
   const raw = limit.base
     + (limit.perCity * cities)
@@ -151,13 +157,13 @@ function computeSeconds() {
 /**
  * The authoritative countdown, kept at module scope so it survives the
  * panel-action being rebuilt. Elapsed time is measured on the wall clock and
- * frozen only for a real multiplayer pause, never taken from the engine's
- * elapsedTime field.
+ * frozen while the game is paused or an Age transition is under way, never
+ * taken from the engine's elapsedTime field.
  */
 const CLOCK = {
   turn: -1,
   total: 0,
-  humans: 0,       // human players when the turn began (read by the enforcement sweep)
+  participants: 0, // human players, Observers included, when the turn began (enforcement threshold)
   startMs: 0,
   pausedAccumMs: 0,
   pausedSinceMs: 0,
@@ -172,7 +178,7 @@ const CLOCK = {
       this.total = computeSeconds();
       this.startMs = Date.now();
       this.pausedAccumMs = 0;
-      this.pausedSinceMs = 0;
+      this.pausedSinceMs = this.pausedSinceMs ? this.startMs : 0;   // a turn that begins frozen stays frozen
       this.lastWarnTick = Infinity;
       this.staleBeepSecond = Infinity;
       debug(`turn ${t}: total=${this.total}s`);
@@ -221,12 +227,31 @@ function inGrace() {
   return t < firstTurnSeen + Math.max(0, CONFIG.firstTimedTurn - 1);
 }
 
-/** True once the local player has founded at least one settlement. */
-function localHasCity() {
+let settlementFounded = false;
+
+/**
+ * True while the local player's countdown is held at full: no settlement
+ * founded yet. An Observer never founds one, so its clock always runs.
+ * Latched once a settlement exists.
+ */
+function clockHeld() {
+  if (settlementFounded) return false;
   try {
-    const player = Players.get(GameContext.localPlayerID);
-    return !!player && (player.Cities?.getCities()?.length ?? 0) > 0;
-  } catch (e) { return true; }   // unknown: don't hold the clock
+    const id = GameContext.localPlayerID;
+    settlementFounded = isObserverPlayer(id) || (Players.get(id)?.Cities?.getCities()?.length ?? 0) > 0;
+  } catch (e) { settlementFounded = true; }   // unknown: don't hold the clock
+  return !settlementFounded;
+}
+
+/** The clock stands still while the game is paused or an Age transition is under way. */
+function clockFrozen() {
+  try { if (Configuration.getGame().isPaused) return true; } catch (e) { /* unknown: not paused */ }
+  return isAgeEnding();
+}
+
+/** Read the paused / transition state directly (a missed pause event can no longer leave the clock running). */
+function syncClockFrozen() {
+  CLOCK.setPaused(clockFrozen());
 }
 
 /**
@@ -327,13 +352,17 @@ function mptBeepFromClock() {
  * capital late never lands on an already-expired clock.
  */
 function mptEnforceTick() {
+  syncClockFrozen();
   if (!localPlayerTurnActive() || inGrace()) return;
   CLOCK.syncTurn();
-  if (CLOCK.humans < CONFIG.minPlayersToEnforce) return;
-  if (!localHasCity()) { CLOCK.restart(); return; }
+  if (CLOCK.participants < CONFIG.minPlayersToEnforce || clockFrozen()) return;
+  if (clockHeld()) { CLOCK.restart(); return; }
   if (Date.now() - mptLastEventMs > CONFIG.staleEventMs) mptBeepFromClock();
   if (!CLOCK.expired()) return;
   try { if (GameContext.hasSentTurnComplete && GameContext.hasSentTurnComplete()) return; } catch (e) {}
+  const now = Date.now();
+  if (now - mptLastEndAttemptMs < CONFIG.endRetryMs) return;   // the engine is still processing the last attempt
+  mptLastEndAttemptMs = now;
   mptSkipReadyUnits();       // only if units genuinely block; automated/queued units untouched
   mptDismissTurnBlockers();  // clear pending-choice blockers (research/civic/growth/narrative)
   debug(`time expired - ending local turn (turn ${CLOCK.turn})`);
@@ -344,7 +373,7 @@ function mptEnforceTick() {
 
 /** Start the enforcement sweep and pause accounting (once, when the Competitive timer is selected). */
 function startMptEnforcement() {
-  engine.on('GamePauseStateChanged', (data) => CLOCK.setPaused(!!data && Number(data.data) === 1));
+  engine.on('GamePauseStateChanged', syncClockFrozen);
   setInterval(mptEnforceTick, CONFIG.guardianMs);
 }
 
@@ -448,8 +477,9 @@ function defineMptPanelAction(attempts) {
     mptContext(data) {
       const limit = data?.phaseTimeLimit ?? 0;
       if (limit <= 0 || limit > CONFIG.maxProxyLimit) return null;
+      syncClockFrozen();
       CLOCK.syncTurn();
-      if (!localHasCity()) CLOCK.restart();   // show a full clock until the capital exists
+      if (clockHeld()) CLOCK.restart();   // show a full clock until the capital exists
       const total = CLOCK.total;
       if (total <= 0) return null;
       const elapsed = CLOCK.elapsed();
@@ -497,6 +527,7 @@ function defineMptPanelAction(attempts) {
         el.style.animationFillMode = 'forwards';
         el.style.animationName = el.style.animationName === names[1] ? names[0] : names[1];
       }
+      this.mptFreezeRing();
     }
 
     /**
@@ -543,12 +574,14 @@ function defineMptPanelAction(attempts) {
      * while the game is paused even though the phase clock stops. Freeze it
      * during pause; the first event after unpause scrubs it back into place.
      */
-    mptOnGamePauseChanged(data) {
-      const paused = !!data && Number(data.data) === 1;
-      const rings = this.timerAnimationElements;
-      if (rings) {
-        for (const el of rings) el.style.animationPlayState = paused ? 'paused' : 'running';
-      }
+    mptOnGamePauseChanged() {
+      syncClockFrozen();
+      this.mptFreezeRing();
+    }
+
+    mptFreezeRing() {
+      const state = clockFrozen() ? 'paused' : 'running';
+      for (const el of this.timerAnimationElements ?? []) el.style.animationPlayState = state;
     }
   }
 

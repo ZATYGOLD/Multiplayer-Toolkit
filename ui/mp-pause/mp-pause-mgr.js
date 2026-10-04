@@ -57,9 +57,10 @@ function isConnected(id) {
 }
 
 /**
- * Living human major players (engine observer slots excluded). The Observer
- * leader holds a pause flag like everyone else, so it counts toward the ready
- * tally, but its disconnect never pauses the game (includeObservers = false).
+ * Living human major players (engine observer slots excluded). A companion
+ * mod's Observer holds a pause flag like everyone else, so it counts toward
+ * the ready tally, but its disconnect never pauses the game
+ * (includeObservers = false).
  */
 function humanParticipantIds(includeObservers = false) {
   try {
@@ -697,8 +698,8 @@ class MultiplayerPauseManager {
     this.watchParticipants();
     this.connectionTimer = setInterval(() => this.checkConnections(), CONFIG.connectionWatchMs);
   }
+  /** Polled: connection edges of the watched players (the set is refreshed each turn and on reconnects). */
   checkConnections() {
-    this.watchParticipants();
     for (const id of this.watchedHumans) {
       const connected = isConnected(id);
       const was = this.connState[id];
@@ -747,7 +748,9 @@ class MultiplayerPauseManager {
 
   // Layer 3 - turn-activation guard (the moment of AI takeover).
   onTurnActivated() {
-    if (!this.isMultiplayer || this.state !== STATE.IDLE) return;
+    if (!this.isMultiplayer) return;
+    this.watchParticipants();
+    if (this.state !== STATE.IDLE) return;
     if (this.disconnectedHumanExists()) {
       this.requestDisconnectPause(Locale.compose(LOC.playerIsDisconnected));
     }

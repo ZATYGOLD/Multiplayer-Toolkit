@@ -69,15 +69,34 @@ function withAbilityTitle(tooltip, abilityTitle, abilityText) {
   return tooltip.replace(text, `[STYLE:${CONFIG.titleStyle}][B]${title}[/B][/S][N]${text}`);
 }
 
+/**
+ * Ability title and text per civ / leader id from the setup data, which is
+ * expensive to build: read once, and again only for an id not seen before.
+ */
+const abilityCache = { civ: null, leader: null };
+const missedIds = new Set();
+function readAbilities(kind) {
+  const rows = kind === 'civ' ? GetCivilizationData(false) : getLeaderData(false);
+  abilityCache[kind] = new Map(rows.map((row) => [String(kind === 'civ' ? row.civID : row.leaderID), { title: row.abilityTitle, text: row.abilityText }]));
+}
+function abilityOf(kind, id) {
+  const key = String(id);
+  if (!abilityCache[kind] || (!abilityCache[kind].has(key) && !missedIds.has(kind + key))) {
+    readAbilities(kind);
+    if (!abilityCache[kind].has(key)) missedIds.add(kind + key);
+  }
+  return abilityCache[kind].get(key);
+}
+
 function patchTooltips() {
   const proto = MPLobbyDataModel.prototype;
   wrapMethod(proto, 'getCivilizationTooltip', (base, civilizationType, ...rest) => {
-    const civData = GetCivilizationData(false).find((data) => data.civID == civilizationType);
-    return withAbilityTitle(base(civilizationType, ...rest), civData?.abilityTitle, civData?.abilityText);
+    const ability = abilityOf('civ', civilizationType);
+    return withAbilityTitle(base(civilizationType, ...rest), ability?.title, ability?.text);
   });
   wrapMethod(proto, 'getLeaderTooltip', (base, leaderType, ...rest) => {
-    const leaderData = getLeaderData(false).find((data) => data.leaderID == leaderType);
-    return withAbilityTitle(base(leaderType, ...rest), leaderData?.abilityTitle, leaderData?.abilityText);
+    const ability = abilityOf('leader', leaderType);
+    return withAbilityTitle(base(leaderType, ...rest), ability?.title, ability?.text);
   });
 }
 
